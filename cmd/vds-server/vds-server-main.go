@@ -25,6 +25,7 @@ import (
 	"os"
 
 	"github.com/continusec/vds-server/apife"
+	"github.com/continusec/vds-server/kvstore"
 	"github.com/continusec/vds-server/pb"
 	"github.com/golang/protobuf/proto"
 )
@@ -45,7 +46,15 @@ func main() {
 		log.Fatalf("Error parsing server configuration: %s\n", err)
 	}
 
-	apiHandler := apife.CreateHandler()
+	bbs := &kvstore.BoltBackedService{
+		Path:     conf.BoltDbPath,
+		Accounts: conf.Accounts,
+	}
+	err = bbs.Init()
+	if err != nil {
+		log.Fatalf("Error initializing BoltBackedService: %s\n", err)
+	}
+	apiHandler := apife.CreateHandler(bbs)
 
 	log.Printf("Listening on %s...", conf.ListenBind)
 	if conf.InsecureHttpServerForTesting {

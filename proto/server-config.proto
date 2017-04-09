@@ -27,4 +27,44 @@ message ServerConfig {
     string server_key_path = 2;
     string listen_bind = 3; // e.g. ":8080"
     bool insecure_http_server_for_testing = 4;
+    repeated Account accounts = 5;
+    string bolt_db_path = 6;
+}
+
+enum Permission {
+    PERM_NONE = 0;
+
+	PERM_ALL_PERMISSIONS = 1;
+
+	PERM_ACCOUNT_LIST_LOGS = 2;
+	PERM_ACCOUNT_LIST_MAPS = 3;
+
+    PERM_LOG_CREATE = 4;
+	PERM_LOG_DELETE = 5;
+
+	PERM_MAP_CREATE = 6;
+	PERM_MAP_DELETE = 7;
+
+	PERM_LOG_RAW_ADD = 8;
+	PERM_LOG_READ_ENTRY = 9;
+	PERM_LOG_READ_HASH = 10;
+	PERM_LOG_PROVE_INCLUSION = 11;
+
+	PERM_MAP_SET_VALUE = 12;
+	PERM_MAP_GET_VALUE = 13;
+
+	PERM_MAP_MUTATION_READ_ENTRY = 14;
+	PERM_MAP_MUTATION_READ_HASH = 15;
+}
+
+message AccessPolicy {
+    string api_key = 1; // API key to activate this rule
+    string name_match = 2; // which logs / maps to match against
+    repeated string allowed_fields = 3;  // list of allowed fields names. Must include an '*' for all
+    repeated Permission permissions = 4; // permissions granted
+}
+
+message Account {
+    int64 id = 1;
+    repeated AccessPolicy policy = 2;
 }

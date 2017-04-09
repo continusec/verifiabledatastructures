@@ -36,106 +36,112 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type apiServer struct {
+	clientFactory api.ClientFactory
+}
+
 // CreateHandler creates handlers for the API
-func CreateHandler() http.Handler {
+func CreateHandler(clif api.ClientFactory) http.Handler {
+	as := &apiServer{clientFactory: clif}
+
 	r := mux.NewRouter()
 
 	// Create a log
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}", wrapLogFunction(api.LogTypeUser, createLogHandler)).Methods("PUT")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}", as.wrapLogFunction(api.LogTypeUser, createLogHandler)).Methods("PUT")
 
 	// Delete a log
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}", wrapLogFunction(api.LogTypeUser, deleteLogHandler)).Methods("DELETE")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}", as.wrapLogFunction(api.LogTypeUser, deleteLogHandler)).Methods("DELETE")
 
 	// List logs
-	r.HandleFunc("/v1/account/{account:[0-9]+}/logs", wrapClientHandler(listLogsHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/logs", as.wrapClientHandler(listLogsHandler)).Methods("GET")
 
 	// Insert a log entry
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entry", wrapLogFunction(api.LogTypeUser, insertEntryHandler)).Methods("POST")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entry/xjson", wrapLogFunction(api.LogTypeUser, insertXJsonEntryHandler)).Methods("POST")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entry/xjson/redactable", wrapLogFunction(api.LogTypeUser, insertRedactableXJsonEntryHandler)).Methods("POST")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entry", as.wrapLogFunction(api.LogTypeUser, insertEntryHandler)).Methods("POST")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entry/xjson", as.wrapLogFunction(api.LogTypeUser, insertXJsonEntryHandler)).Methods("POST")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entry/xjson/redactable", as.wrapLogFunction(api.LogTypeUser, insertRedactableXJsonEntryHandler)).Methods("POST")
 
 	// Get a log entry
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entry/{number:[0-9]+}", wrapLogFunction(api.LogTypeUser, getEntryHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entry/{number:[0-9]+}/xjson", wrapLogFunction(api.LogTypeUser, getXJsonEntryHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entry/{number:[0-9]+}", as.wrapLogFunction(api.LogTypeUser, getEntryHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entry/{number:[0-9]+}/xjson", as.wrapLogFunction(api.LogTypeUser, getXJsonEntryHandler)).Methods("GET")
 
 	// Get multiple entries, last is exclusive
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entries/{first:[0-9]+}-{last:[0-9]+}", wrapLogFunction(api.LogTypeUser, getEntriesHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entries/{first:[0-9]+}-{last:[0-9]+}/xjson", wrapLogFunction(api.LogTypeUser, getXJsonEntriesHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entries/{first:[0-9]+}-{last:[0-9]+}", as.wrapLogFunction(api.LogTypeUser, getEntriesHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/entries/{first:[0-9]+}-{last:[0-9]+}/xjson", as.wrapLogFunction(api.LogTypeUser, getXJsonEntriesHandler)).Methods("GET")
 
 	// Get STH
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}", wrapLogFunction(api.LogTypeUser, getSTHHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}", as.wrapLogFunction(api.LogTypeUser, getSTHHandler)).Methods("GET")
 
 	// Get inclusion proof by Hash
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/tree/{treesize:[0-9]+}/inclusion/h/{hash:[0-9a-f]+}", wrapLogFunction(api.LogTypeUser, inclusionByHashProofHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/tree/{treesize:[0-9]+}/inclusion/s/{strentry:[0-9a-zA-Z-_]+}", wrapLogFunction(api.LogTypeUser, inclusionByStringProofHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/tree/{treesize:[0-9]+}/inclusion/{number:[0-9]+}", wrapLogFunction(api.LogTypeUser, inclusionByIndexProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/tree/{treesize:[0-9]+}/inclusion/h/{hash:[0-9a-f]+}", as.wrapLogFunction(api.LogTypeUser, inclusionByHashProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/tree/{treesize:[0-9]+}/inclusion/s/{strentry:[0-9a-zA-Z-_]+}", as.wrapLogFunction(api.LogTypeUser, inclusionByStringProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/tree/{treesize:[0-9]+}/inclusion/{number:[0-9]+}", as.wrapLogFunction(api.LogTypeUser, inclusionByIndexProofHandler)).Methods("GET")
 
 	// Get consistency proof
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/tree/{treesize:[0-9]+}/consistency/{oldsize:[0-9]+}", wrapLogFunction(api.LogTypeUser, getConsistencyProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}/tree/{treesize:[0-9]+}/consistency/{oldsize:[0-9]+}", as.wrapLogFunction(api.LogTypeUser, getConsistencyProofHandler)).Methods("GET")
 
 	// MAP STUFF
 
 	// Create Map Handler
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}", wrapClientHandler(createMapHandler)).Methods("PUT")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}", as.wrapClientHandler(createMapHandler)).Methods("PUT")
 
 	// Delete Map Handler
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}", wrapClientHandler(deleteMapHandler)).Methods("DELETE")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}", as.wrapClientHandler(deleteMapHandler)).Methods("DELETE")
 
 	// List maps Handler
-	r.HandleFunc("/v1/account/{account:[0-9]+}/maps", wrapClientHandler(listMapsHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/maps", as.wrapClientHandler(listMapsHandler)).Methods("GET")
 
 	// Insert and modify map entry
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/h/{key:[0-9a-f]+}", createSetMapEntryHandler("hex", "std")).Methods("PUT")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/s/{key:[0-9a-zA-Z-_]+}", createSetMapEntryHandler("str", "std")).Methods("PUT")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/h/{key:[0-9a-f]+}/xjson", createSetMapEntryHandler("hex", "xjson")).Methods("PUT")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/s/{key:[0-9a-zA-Z-_]+}/xjson", createSetMapEntryHandler("str", "xjson")).Methods("PUT")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/h/{key:[0-9a-f]+}/xjson/redactable", createSetMapEntryHandler("hex", "redactablejson")).Methods("PUT")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/s/{key:[0-9a-zA-Z-_]+}/xjson/redactable", createSetMapEntryHandler("str", "redactablejson")).Methods("PUT")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/h/{key:[0-9a-f]+}", as.createSetMapEntryHandler("hex", "std")).Methods("PUT")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/s/{key:[0-9a-zA-Z-_]+}", as.createSetMapEntryHandler("str", "std")).Methods("PUT")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/h/{key:[0-9a-f]+}/xjson", as.createSetMapEntryHandler("hex", "xjson")).Methods("PUT")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/s/{key:[0-9a-zA-Z-_]+}/xjson", as.createSetMapEntryHandler("str", "xjson")).Methods("PUT")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/h/{key:[0-9a-f]+}/xjson/redactable", as.createSetMapEntryHandler("hex", "redactablejson")).Methods("PUT")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/s/{key:[0-9a-zA-Z-_]+}/xjson/redactable", as.createSetMapEntryHandler("str", "redactablejson")).Methods("PUT")
 
 	// Get value + proof
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/h/{key:[0-9a-f]+}", createGetMapEntryHandler("hex", "std")).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/s/{key:[0-9a-zA-Z-_]+}", createGetMapEntryHandler("str", "std")).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/h/{key:[0-9a-f]+}/xjson", createGetMapEntryHandler("hex", "xjson")).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/s/{key:[0-9a-zA-Z-_]+}/xjson", createGetMapEntryHandler("str", "xjson")).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/h/{key:[0-9a-f]+}", as.createGetMapEntryHandler("hex", "std")).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/s/{key:[0-9a-zA-Z-_]+}", as.createGetMapEntryHandler("str", "std")).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/h/{key:[0-9a-f]+}/xjson", as.createGetMapEntryHandler("hex", "xjson")).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/s/{key:[0-9a-zA-Z-_]+}/xjson", as.createGetMapEntryHandler("str", "xjson")).Methods("GET")
 
 	// Delete a map entry
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/h/{key:[0-9a-f]+}", wrapClientHandler(deleteHexMapEntryHandler)).Methods("DELETE")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/s/{key:[0-9a-zA-Z-_]+}", wrapClientHandler(deleteStrMapEntryHandler)).Methods("DELETE")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/h/{key:[0-9a-f]+}", as.wrapClientHandler(deleteHexMapEntryHandler)).Methods("DELETE")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/s/{key:[0-9a-zA-Z-_]+}", as.wrapClientHandler(deleteStrMapEntryHandler)).Methods("DELETE")
 
 	// Get STH
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}", wrapClientHandler(getMapRootHashHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}", as.wrapClientHandler(getMapRootHashHandler)).Methods("GET")
 
 	//////////////
 	// LOG OPERATIONS ON INPUT / OUTPUT OF MAP
 	//////////////
 	// Get a log entry
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/entry/{number:[0-9]+}", wrapLogFunction(api.LogTypeMapMutation, getEntryHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/entry/{number:[0-9]+}", wrapLogFunction(api.LogTypeMapTreeHead, getEntryHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/entry/{number:[0-9]+}/xjson", wrapLogFunction(api.LogTypeMapMutation, getXJsonEntryHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/entry/{number:[0-9]+}/xjson", wrapLogFunction(api.LogTypeMapTreeHead, getXJsonEntryHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/entry/{number:[0-9]+}", as.wrapLogFunction(api.LogTypeMapMutation, getEntryHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/entry/{number:[0-9]+}", as.wrapLogFunction(api.LogTypeMapTreeHead, getEntryHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/entry/{number:[0-9]+}/xjson", as.wrapLogFunction(api.LogTypeMapMutation, getXJsonEntryHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/entry/{number:[0-9]+}/xjson", as.wrapLogFunction(api.LogTypeMapTreeHead, getXJsonEntryHandler)).Methods("GET")
 
 	// Get multiple entries, last is exclusive
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/entries/{first:[0-9]+}-{last:[0-9]+}", wrapLogFunction(api.LogTypeMapMutation, getEntriesHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/entries/{first:[0-9]+}-{last:[0-9]+}", wrapLogFunction(api.LogTypeMapTreeHead, getEntriesHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/entries/{first:[0-9]+}-{last:[0-9]+}/xjson", wrapLogFunction(api.LogTypeMapMutation, getXJsonEntriesHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/entries/{first:[0-9]+}-{last:[0-9]+}/xjson/mutation", wrapLogFunction(api.LogTypeMapMutation, getSpecialMutationsHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/entries/{first:[0-9]+}-{last:[0-9]+}/xjson", wrapLogFunction(api.LogTypeMapTreeHead, getXJsonEntriesHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/entries/{first:[0-9]+}-{last:[0-9]+}", as.wrapLogFunction(api.LogTypeMapMutation, getEntriesHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/entries/{first:[0-9]+}-{last:[0-9]+}", as.wrapLogFunction(api.LogTypeMapTreeHead, getEntriesHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/entries/{first:[0-9]+}-{last:[0-9]+}/xjson", as.wrapLogFunction(api.LogTypeMapMutation, getXJsonEntriesHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/entries/{first:[0-9]+}-{last:[0-9]+}/xjson/mutation", as.wrapLogFunction(api.LogTypeMapMutation, getSpecialMutationsHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/entries/{first:[0-9]+}-{last:[0-9]+}/xjson", as.wrapLogFunction(api.LogTypeMapTreeHead, getXJsonEntriesHandler)).Methods("GET")
 
 	// Get STH
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/tree/{treesize:(?:[0-9]+)|head}", wrapLogFunction(api.LogTypeMapMutation, getSTHHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/tree/{treesize:(?:[0-9]+)|head}", wrapLogFunction(api.LogTypeMapTreeHead, getSTHHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/tree/{treesize:(?:[0-9]+)|head}", as.wrapLogFunction(api.LogTypeMapMutation, getSTHHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/tree/{treesize:(?:[0-9]+)|head}", as.wrapLogFunction(api.LogTypeMapTreeHead, getSTHHandler)).Methods("GET")
 
 	// Get inclusion proof by Hash
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/tree/{treesize:[0-9]+}/inclusion/h/{hash:[0-9a-f]+}", wrapLogFunction(api.LogTypeMapMutation, inclusionByHashProofHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/tree/{treesize:[0-9]+}/inclusion/s/{strentry:[0-9a-zA-Z-_]+}", wrapLogFunction(api.LogTypeMapMutation, inclusionByStringProofHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/tree/{treesize:[0-9]+}/inclusion/{number:[0-9]+}", wrapLogFunction(api.LogTypeMapMutation, inclusionByIndexProofHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/tree/{treesize:[0-9]+}/inclusion/h/{hash:[0-9a-f]+}", wrapLogFunction(api.LogTypeMapTreeHead, inclusionByHashProofHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/tree/{treesize:[0-9]+}/inclusion/s/{strentry:[0-9a-zA-Z-_]+}", wrapLogFunction(api.LogTypeMapTreeHead, inclusionByStringProofHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/tree/{treesize:[0-9]+}/inclusion/{number:[0-9]+}", wrapLogFunction(api.LogTypeMapTreeHead, inclusionByIndexProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/tree/{treesize:[0-9]+}/inclusion/h/{hash:[0-9a-f]+}", as.wrapLogFunction(api.LogTypeMapMutation, inclusionByHashProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/tree/{treesize:[0-9]+}/inclusion/s/{strentry:[0-9a-zA-Z-_]+}", as.wrapLogFunction(api.LogTypeMapMutation, inclusionByStringProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/tree/{treesize:[0-9]+}/inclusion/{number:[0-9]+}", as.wrapLogFunction(api.LogTypeMapMutation, inclusionByIndexProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/tree/{treesize:[0-9]+}/inclusion/h/{hash:[0-9a-f]+}", as.wrapLogFunction(api.LogTypeMapTreeHead, inclusionByHashProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/tree/{treesize:[0-9]+}/inclusion/s/{strentry:[0-9a-zA-Z-_]+}", as.wrapLogFunction(api.LogTypeMapTreeHead, inclusionByStringProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/tree/{treesize:[0-9]+}/inclusion/{number:[0-9]+}", as.wrapLogFunction(api.LogTypeMapTreeHead, inclusionByIndexProofHandler)).Methods("GET")
 
 	// Get consistency proof
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/tree/{treesize:[0-9]+}/consistency/{oldsize:[0-9]+}", wrapLogFunction(api.LogTypeMapMutation, getConsistencyProofHandler)).Methods("GET")
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/tree/{treesize:[0-9]+}/consistency/{oldsize:[0-9]+}", wrapLogFunction(api.LogTypeMapTreeHead, getConsistencyProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/mutation/tree/{treesize:[0-9]+}/consistency/{oldsize:[0-9]+}", as.wrapLogFunction(api.LogTypeMapMutation, getConsistencyProofHandler)).Methods("GET")
+	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/log/treehead/tree/{treesize:[0-9]+}/consistency/{oldsize:[0-9]+}", as.wrapLogFunction(api.LogTypeMapTreeHead, getConsistencyProofHandler)).Methods("GET")
 
 	// Make sure we return 200 for OPTIONS requests since handlers below will fall through to us
 	r.HandleFunc("/{thing:.*}", func(w http.ResponseWriter, r *http.Request) {
@@ -151,9 +157,9 @@ func CreateHandler() http.Handler {
 	)(r)
 }
 
-func wrapClientHandler(f func(api.VerifiableDataStructuresService, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func (as *apiServer) wrapClientHandler(f func(api.VerifiableDataStructuresService, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars, client, err := clientFromRequest(r)
+		vars, client, err := as.clientFromRequest(r)
 		if err != nil {
 			handleError(err, r, w)
 			return
@@ -162,10 +168,10 @@ func wrapClientHandler(f func(api.VerifiableDataStructuresService, map[string]st
 	}
 }
 
-func wrapLogFunction(logType int8, f func(api.Log, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func (as *apiServer) wrapLogFunction(logType int8, f func(api.Log, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	switch logType {
 	case api.LogTypeUser:
-		return wrapClientHandler(func(client api.VerifiableDataStructuresService, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+		return as.wrapClientHandler(func(client api.VerifiableDataStructuresService, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 			log, err := makeLogFromRequest(client, vars, api.LogTypeUser)
 			if err != nil {
 				handleError(err, r, w)
@@ -174,7 +180,7 @@ func wrapLogFunction(logType int8, f func(api.Log, map[string]string, http.Respo
 			f(log, vars, w, r)
 		})
 	case api.LogTypeMapMutation:
-		return wrapClientHandler(func(client api.VerifiableDataStructuresService, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+		return as.wrapClientHandler(func(client api.VerifiableDataStructuresService, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 			vmap, err := makeMapFromRequest(client, vars)
 			if err != nil {
 				handleError(err, r, w)
@@ -188,7 +194,7 @@ func wrapLogFunction(logType int8, f func(api.Log, map[string]string, http.Respo
 			f(ml, vars, w, r)
 		})
 	case api.LogTypeMapTreeHead:
-		return wrapClientHandler(func(client api.VerifiableDataStructuresService, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+		return as.wrapClientHandler(func(client api.VerifiableDataStructuresService, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 			vmap, err := makeMapFromRequest(client, vars)
 			if err != nil {
 				handleError(err, r, w)
@@ -346,13 +352,13 @@ type objectListResponse struct {
 	Items []*objectResponse `json:"results"`
 }
 
-func clientFromRequest(r *http.Request) (map[string]string, api.VerifiableDataStructuresService, error) {
+func (as *apiServer) clientFromRequest(r *http.Request) (map[string]string, api.VerifiableDataStructuresService, error) {
 	vars := mux.Vars(r)
 	accID, err := resolveAccountID(vars["account"])
 	if err != nil {
 		return nil, nil, err
 	}
-	client, err := api.CreateVerifiableDataStructuresClient(accID, getAuthorizationContext(r))
+	client, err := as.clientFactory.CreateClient(accID, getAuthorizationContext(r))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -389,8 +395,8 @@ func listMapsHandler(client api.VerifiableDataStructuresService, vars map[string
 	json.NewEncoder(w).Encode(&objectListResponse{Items: rv})
 }
 
-func createSetMapEntryHandler(keyFormat, valueFormat string) func(http.ResponseWriter, *http.Request) {
-	return wrapClientHandler(func(client api.VerifiableDataStructuresService, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) createSetMapEntryHandler(keyFormat, valueFormat string) func(http.ResponseWriter, *http.Request) {
+	return as.wrapClientHandler(func(client api.VerifiableDataStructuresService, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		var k []byte
 		var err error
 		switch keyFormat {
@@ -456,8 +462,8 @@ func createSetMapEntryHandler(keyFormat, valueFormat string) func(http.ResponseW
 	})
 }
 
-func createGetMapEntryHandler(keyFormat, valueFormat string) func(http.ResponseWriter, *http.Request) {
-	return wrapClientHandler(func(client api.VerifiableDataStructuresService, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) createGetMapEntryHandler(keyFormat, valueFormat string) func(http.ResponseWriter, *http.Request) {
+	return as.wrapClientHandler(func(client api.VerifiableDataStructuresService, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		vmap, err := makeMapFromRequest(client, vars)
 		if err != nil {
 			handleError(err, r, w)

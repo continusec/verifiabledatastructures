@@ -119,6 +119,6 @@ type VerifiableDataStructuresService interface {
 	ListMaps() ([]Map, error)
 }
 
-func CreateVerifiableDataStructuresClient(account int64, auth *AuthorizationContext) (VerifiableDataStructuresService, error) {
-	return nil, nil // TODO
+type ClientFactory interface {
+	CreateClient(account int64, auth *AuthorizationContext) (VerifiableDataStructuresService, error)
 }
