@@ -28,4 +28,18 @@ go install github.com/continusec/vds-server/cmd/vds-server
 
 listen_bind: ":8092"
 insecure_http_server_for_testing: true
+
+# Bolt DB path:
+bolt_db_path: "bolt.db"
+
+# Accounts supported by this server
+accounts: <
+    id: 1234
+    policy: <
+        api_key: "secret"
+        name_match: "*"
+        allowed_fields: "*"
+        permissions: PERM_ALL_PERMISSIONS
+    >
+>
 ```
