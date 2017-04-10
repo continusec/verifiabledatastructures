@@ -1,0 +1,1 @@
+{"Request":{"URL":"https://api.continusec.com/v1/account/7981306761429961588/map/nnewtestmap/key/h/666f6f","Method":"DELETE","Headers":{"Authorization":["Key allseeing"]},"Body":""},"Response":{"StatusCode":200,"Headers":{"Content-Type":["text/json"]},"Body":"eyJsZWFmX2hhc2giOiI1T1lTMWdKSmRETnNPUk9VMFc3eXFYc1A3eHFQbVJLMmJISldVaml3WEh3PSJ9Cg=="}}

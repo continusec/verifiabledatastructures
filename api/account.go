@@ -18,7 +18,9 @@ limitations under the License.
 
 package api
 
-import "github.com/continusec/go-client/continusec"
+import (
+	"github.com/continusec/verifiabledatastructures/client"
+)
 
 type serverAccount struct {
 	Service *LocalService
@@ -29,7 +31,7 @@ type serverAccount struct {
 // VerifiableMap returns an object representing a Verifiable Map. This function simply
 // returns a pointer to an object that can be used to interact with the Map, and won't
 // by itself cause any API calls to be generated.
-func (acc *serverAccount) VerifiableMap(name string) continusec.VerifiableMap {
+func (acc *serverAccount) VerifiableMap(name string) client.VerifiableMap {
 	return &serverMap{
 		account: acc,
 		name:    name,
@@ -39,7 +41,7 @@ func (acc *serverAccount) VerifiableMap(name string) continusec.VerifiableMap {
 // VerifiableLog returns an object representing a Verifiable Log. This function simply
 // returns a pointer to an object that can be used to interact with the Log, and won't
 // by itself cause any API calls to be generated.
-func (acc *serverAccount) VerifiableLog(name string) continusec.VerifiableLog {
+func (acc *serverAccount) VerifiableLog(name string) client.VerifiableLog {
 	return &serverLog{
 		account: acc,
 		name:    name,
@@ -48,11 +50,11 @@ func (acc *serverAccount) VerifiableLog(name string) continusec.VerifiableLog {
 }
 
 // ListLogs returns a list of logs held by the account
-func (acc *serverAccount) ListLogs() ([]continusec.VerifiableLog, error) {
+func (acc *serverAccount) ListLogs() ([]client.VerifiableLog, error) {
 	return nil, ErrNotImplemented
 }
 
 // ListMaps returns a list of maps held by the account
-func (acc *serverAccount) ListMaps() ([]continusec.VerifiableMap, error) {
+func (acc *serverAccount) ListMaps() ([]client.VerifiableMap, error) {
 	return nil, ErrNotImplemented
 }

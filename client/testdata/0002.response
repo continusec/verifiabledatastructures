@@ -1,0 +1,1 @@
+{"Request":{"URL":"https://api.continusec.com/v1/account/wrongaccount/log/newtestlog/tree/0","Method":"GET","Headers":{"Authorization":["Key wrongcred"]},"Body":""},"Response":{"StatusCode":404,"Headers":{"Content-Type":["text/plain; charset=utf-8"]},"Body":"NDA0IHBhZ2Ugbm90IGZvdW5kCg=="}}

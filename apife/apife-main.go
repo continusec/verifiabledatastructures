@@ -22,8 +22,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/continusec/go-client/continusec"
 	"github.com/continusec/verifiabledatastructures/api"
+	vdbclient "github.com/continusec/verifiabledatastructures/client"
 
 	"crypto/sha256"
 	"encoding/hex"
@@ -44,11 +44,11 @@ const (
 )
 
 type apiServer struct {
-	clientFactory continusec.Service
+	clientFactory vdbclient.Service
 }
 
 // CreateHandler creates handlers for the API
-func CreateHandler(clif continusec.Service) http.Handler {
+func CreateHandler(clif vdbclient.Service) http.Handler {
 	as := &apiServer{clientFactory: clif}
 
 	r := mux.NewRouter()
@@ -164,25 +164,25 @@ func CreateHandler(clif continusec.Service) http.Handler {
 	)(r)
 }
 
-func (as *apiServer) wrapClientHandler(f func(continusec.Account, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func (as *apiServer) wrapClientHandler(f func(vdbclient.Account, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars, client := as.clientFromRequest(r)
 		f(client, vars, w, r)
 	}
 }
 
-func (as *apiServer) wrapLogFunction(logType int8, f func(continusec.VerifiableLog, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func (as *apiServer) wrapLogFunction(logType int8, f func(vdbclient.VerifiableLog, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	switch logType {
 	case logTypeUser:
-		return as.wrapClientHandler(func(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+		return as.wrapClientHandler(func(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 			f(makeLogFromRequest(client, vars), vars, w, r)
 		})
 	case logTypeMapMutation:
-		return as.wrapClientHandler(func(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+		return as.wrapClientHandler(func(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 			f(makeMapFromRequest(client, vars).MutationLog(), vars, w, r)
 		})
 	case logTypeMapTreeHead:
-		return as.wrapClientHandler(func(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+		return as.wrapClientHandler(func(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 			f(makeMapFromRequest(client, vars).TreeHeadLog(), vars, w, r)
 		})
 	default:
@@ -190,10 +190,10 @@ func (as *apiServer) wrapLogFunction(logType int8, f func(continusec.VerifiableL
 	}
 }
 
-func insertEntryHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func insertEntryHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
 
-	mtlHash, err := log.Add(&continusec.RawDataEntry{RawBytes: body})
+	mtlHash, err := log.Add(&vdbclient.RawDataEntry{RawBytes: body})
 
 	if err != nil {
 		handleError(err, r, w)
@@ -202,13 +202,13 @@ func insertEntryHandler(log continusec.VerifiableLog, vars map[string]string, w 
 
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(&continusec.JSONAddEntryResponse{Hash: mtlHash.EntryLeafHash})
+	json.NewEncoder(w).Encode(&vdbclient.JSONAddEntryResponse{Hash: mtlHash.EntryLeafHash})
 }
 
-func insertRedactableXJsonEntryHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func insertRedactableXJsonEntryHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
 
-	mtlHash, err := log.Add(&continusec.RedactableJsonEntry{JsonBytes: body})
+	mtlHash, err := log.Add(&vdbclient.RedactableJsonEntry{JsonBytes: body})
 
 	if err != nil {
 		handleError(err, r, w)
@@ -217,13 +217,13 @@ func insertRedactableXJsonEntryHandler(log continusec.VerifiableLog, vars map[st
 
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(&continusec.JSONAddEntryResponse{Hash: mtlHash.EntryLeafHash})
+	json.NewEncoder(w).Encode(&vdbclient.JSONAddEntryResponse{Hash: mtlHash.EntryLeafHash})
 }
 
-func insertXJsonEntryHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func insertXJsonEntryHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
 
-	mtlHash, err := log.Add(&continusec.JsonEntry{JsonBytes: body})
+	mtlHash, err := log.Add(&vdbclient.JsonEntry{JsonBytes: body})
 
 	if err != nil {
 		handleError(err, r, w)
@@ -232,7 +232,7 @@ func insertXJsonEntryHandler(log continusec.VerifiableLog, vars map[string]strin
 
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(&continusec.JSONAddEntryResponse{Hash: mtlHash.EntryLeafHash})
+	json.NewEncoder(w).Encode(&vdbclient.JSONAddEntryResponse{Hash: mtlHash.EntryLeafHash})
 }
 
 func getAPIKey(r *http.Request) string {
@@ -267,51 +267,51 @@ func handleError(err error, r *http.Request, w http.ResponseWriter) {
 	}
 }
 
-func makeLogFromRequest(client continusec.Account, vars map[string]string) continusec.VerifiableLog {
+func makeLogFromRequest(client vdbclient.Account, vars map[string]string) vdbclient.VerifiableLog {
 	return client.VerifiableLog(vars["log"])
 }
 
-func makeMapFromRequest(client continusec.Account, vars map[string]string) continusec.VerifiableMap {
+func makeMapFromRequest(client vdbclient.Account, vars map[string]string) vdbclient.VerifiableMap {
 	return client.VerifiableMap(vars["map"])
 }
 
-func (as *apiServer) clientFromRequest(r *http.Request) (map[string]string, continusec.Account) {
+func (as *apiServer) clientFromRequest(r *http.Request) (map[string]string, vdbclient.Account) {
 	vars := mux.Vars(r)
 	return vars, as.clientFactory.Account(vars["account"], getAPIKey(r))
 }
 
-func listLogsHandler(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func listLogsHandler(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	logs, err := client.ListLogs()
 	if err != nil {
 		handleError(err, r, w)
 		return
 	}
-	rv := make([]*continusec.JSONLogInfoResponse, len(logs))
+	rv := make([]*vdbclient.JSONLogInfoResponse, len(logs))
 	for idx, l := range logs {
-		rv[idx] = &continusec.JSONLogInfoResponse{Name: l.Name()}
+		rv[idx] = &vdbclient.JSONLogInfoResponse{Name: l.Name()}
 	}
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(&continusec.JSONLogListResponse{Items: rv})
+	json.NewEncoder(w).Encode(&vdbclient.JSONLogListResponse{Items: rv})
 }
 
-func listMapsHandler(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func listMapsHandler(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	logs, err := client.ListMaps()
 	if err != nil {
 		handleError(err, r, w)
 		return
 	}
-	rv := make([]*continusec.JSONMapInfoResponse, len(logs))
+	rv := make([]*vdbclient.JSONMapInfoResponse, len(logs))
 	for idx, l := range logs {
-		rv[idx] = &continusec.JSONMapInfoResponse{Name: l.Name()}
+		rv[idx] = &vdbclient.JSONMapInfoResponse{Name: l.Name()}
 	}
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(&continusec.JSONMapListResponse{Items: rv})
+	json.NewEncoder(w).Encode(&vdbclient.JSONMapListResponse{Items: rv})
 }
 
 func (as *apiServer) createSetMapEntryHandler(keyFormat, valueFormat string) func(http.ResponseWriter, *http.Request) {
-	return as.wrapClientHandler(func(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+	return as.wrapClientHandler(func(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		var k []byte
 		var err error
 		switch keyFormat {
@@ -327,15 +327,15 @@ func (as *apiServer) createSetMapEntryHandler(keyFormat, valueFormat string) fun
 
 		body, _ := ioutil.ReadAll(r.Body)
 
-		var ef continusec.UploadableEntry
+		var ef vdbclient.UploadableEntry
 
 		switch valueFormat {
 		case "std":
-			ef = &continusec.RawDataEntry{RawBytes: body}
+			ef = &vdbclient.RawDataEntry{RawBytes: body}
 		case "xjson":
-			ef = &continusec.JsonEntry{JsonBytes: body}
+			ef = &vdbclient.JsonEntry{JsonBytes: body}
 		case "redactablejson":
-			ef = &continusec.RedactableJsonEntry{JsonBytes: body}
+			ef = &vdbclient.RedactableJsonEntry{JsonBytes: body}
 		}
 
 		prevLeafHashString := strings.TrimSpace(r.Header.Get("X-Previous-LeafHash"))
@@ -355,9 +355,9 @@ func (as *apiServer) createSetMapEntryHandler(keyFormat, valueFormat string) fun
 
 		vmap := makeMapFromRequest(client, vars)
 
-		var mtlHash *continusec.AddEntryResponse
+		var mtlHash *vdbclient.AddEntryResponse
 		if len(prevLeafHash) > 0 { // if we specified a previous leaf hash, then we meant to update
-			mtlHash, err = vmap.Update(k, ef, &continusec.AddEntryResponse{EntryLeafHash: prevLeafHash})
+			mtlHash, err = vmap.Update(k, ef, &vdbclient.AddEntryResponse{EntryLeafHash: prevLeafHash})
 		} else { // else we meant to set.
 			mtlHash, err = vmap.Set(k, ef)
 		}
@@ -369,12 +369,12 @@ func (as *apiServer) createSetMapEntryHandler(keyFormat, valueFormat string) fun
 
 		w.Header().Set("Content-Type", "text/json")
 		w.WriteHeader(200)
-		json.NewEncoder(w).Encode(&continusec.JSONAddEntryResponse{Hash: mtlHash.EntryLeafHash})
+		json.NewEncoder(w).Encode(&vdbclient.JSONAddEntryResponse{Hash: mtlHash.EntryLeafHash})
 	})
 }
 
 func (as *apiServer) createGetMapEntryHandler(keyFormat, valueFormat string) func(http.ResponseWriter, *http.Request) {
-	return as.wrapClientHandler(func(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+	return as.wrapClientHandler(func(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		vmap := makeMapFromRequest(client, vars)
 
 		var k []byte
@@ -390,13 +390,13 @@ func (as *apiServer) createGetMapEntryHandler(keyFormat, valueFormat string) fun
 			k = []byte(vars["key"])
 		}
 
-		var ef continusec.VerifiableEntryFactory
+		var ef vdbclient.VerifiableEntryFactory
 
 		switch valueFormat {
 		case "std":
-			ef = continusec.RawDataEntryFactory
+			ef = vdbclient.RawDataEntryFactory
 		case "xjson":
-			ef = continusec.RedactedJsonEntryFactory
+			ef = vdbclient.RedactedJsonEntryFactory
 		}
 
 		if k == nil || ef == nil {
@@ -441,7 +441,7 @@ func (as *apiServer) createGetMapEntryHandler(keyFormat, valueFormat string) fun
 	})
 }
 
-func getMapRootHashHandler(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func getMapRootHashHandler(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	vmap := makeMapFromRequest(client, vars)
 	var treeSize int64
 	if vars["treesize"] == "head" {
@@ -464,16 +464,16 @@ func getMapRootHashHandler(client continusec.Account, vars map[string]string, w 
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
 
-	json.NewEncoder(w).Encode(&continusec.JSONMapTreeHeadResponse{
+	json.NewEncoder(w).Encode(&vdbclient.JSONMapTreeHeadResponse{
 		MapHash: mth.RootHash,
-		LogTreeHead: &continusec.JSONLogTreeHeadResponse{
+		LogTreeHead: &vdbclient.JSONLogTreeHeadResponse{
 			Hash:     mth.MutationLogTreeHead.RootHash,
 			TreeSize: mth.MutationLogTreeHead.TreeSize,
 		},
 	})
 }
 
-func deleteMapEntryHandler(client continusec.Account, vars map[string]string, key []byte, w http.ResponseWriter, r *http.Request) {
+func deleteMapEntryHandler(client vdbclient.Account, vars map[string]string, key []byte, w http.ResponseWriter, r *http.Request) {
 	vmap := makeMapFromRequest(client, vars)
 	mtlHash, err := vmap.Delete([]byte(key))
 
@@ -484,14 +484,14 @@ func deleteMapEntryHandler(client continusec.Account, vars map[string]string, ke
 
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(&continusec.JSONAddEntryResponse{Hash: mtlHash.EntryLeafHash})
+	json.NewEncoder(w).Encode(&vdbclient.JSONAddEntryResponse{Hash: mtlHash.EntryLeafHash})
 }
 
-func deleteStrMapEntryHandler(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func deleteStrMapEntryHandler(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	deleteMapEntryHandler(client, vars, []byte(vars["key"]), w, r)
 }
 
-func deleteHexMapEntryHandler(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func deleteHexMapEntryHandler(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	b, err := hex.DecodeString(vars["key"])
 	if err != nil {
 		handleError(err, r, w)
@@ -500,15 +500,15 @@ func deleteHexMapEntryHandler(client continusec.Account, vars map[string]string,
 	deleteMapEntryHandler(client, vars, b, w, r)
 }
 
-func getXJsonEntryHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	baseGetEntryHandler(log, vars, continusec.RedactedJsonEntryFactory, w, r)
+func getXJsonEntryHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+	baseGetEntryHandler(log, vars, vdbclient.RedactedJsonEntryFactory, w, r)
 }
 
-func getEntryHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	baseGetEntryHandler(log, vars, continusec.RawDataEntryFactory, w, r)
+func getEntryHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+	baseGetEntryHandler(log, vars, vdbclient.RawDataEntryFactory, w, r)
 }
 
-func baseGetEntryHandler(log continusec.VerifiableLog, vars map[string]string, ef continusec.VerifiableEntryFactory, w http.ResponseWriter, r *http.Request) {
+func baseGetEntryHandler(log vdbclient.VerifiableLog, vars map[string]string, ef vdbclient.VerifiableEntryFactory, w http.ResponseWriter, r *http.Request) {
 	number, err := strconv.Atoi(vars["number"])
 	if err != nil {
 		w.WriteHeader(400)
@@ -532,19 +532,19 @@ func baseGetEntryHandler(log continusec.VerifiableLog, vars map[string]string, e
 	w.Write(val)
 }
 
-func getSpecialMutationsHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	baseEntriesHandler(log, vars, continusec.RedactedJsonEntryFactory, w, r, true)
+func getSpecialMutationsHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+	baseEntriesHandler(log, vars, vdbclient.RedactedJsonEntryFactory, w, r, true)
 }
 
-func getXJsonEntriesHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	baseEntriesHandler(log, vars, continusec.RedactedJsonEntryFactory, w, r, false)
+func getXJsonEntriesHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+	baseEntriesHandler(log, vars, vdbclient.RedactedJsonEntryFactory, w, r, false)
 }
 
-func getEntriesHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	baseEntriesHandler(log, vars, continusec.RawDataEntryFactory, w, r, false)
+func getEntriesHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+	baseEntriesHandler(log, vars, vdbclient.RawDataEntryFactory, w, r, false)
 }
 
-func baseEntriesHandler(log continusec.VerifiableLog, vars map[string]string, ef continusec.VerifiableEntryFactory, w http.ResponseWriter, r *http.Request, doSpecialMutationJank bool) {
+func baseEntriesHandler(log vdbclient.VerifiableLog, vars map[string]string, ef vdbclient.VerifiableEntryFactory, w http.ResponseWriter, r *http.Request, doSpecialMutationJank bool) {
 	first, err := strconv.Atoi(vars["first"])
 	if err != nil {
 		w.WriteHeader(400)
@@ -557,7 +557,7 @@ func baseEntriesHandler(log continusec.VerifiableLog, vars map[string]string, ef
 		return
 	}
 
-	rrv := make([]*continusec.JSONGetEntryResponse, 0, last-first)
+	rrv := make([]*vdbclient.JSONGetEntryResponse, 0, last-first)
 	i := first
 	/* TODO, proper context and cancel on error below */
 	for d := range log.Entries(context.TODO(), int64(first), int64(last), ef) {
@@ -566,19 +566,19 @@ func baseEntriesHandler(log continusec.VerifiableLog, vars map[string]string, ef
 			w.WriteHeader(500)
 			return
 		}
-		rrv = append(rrv, &continusec.JSONGetEntryResponse{Number: int64(i + first), Data: val})
+		rrv = append(rrv, &vdbclient.JSONGetEntryResponse{Number: int64(i + first), Data: val})
 		i++
 	}
 
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
 
-	json.NewEncoder(w).Encode(&continusec.JSONGetEntriesResponse{
+	json.NewEncoder(w).Encode(&vdbclient.JSONGetEntriesResponse{
 		Entries: rrv,
 	})
 }
 
-func inclusionByIndexProofHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func inclusionByIndexProofHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	treeSize, err := strconv.Atoi(vars["treesize"])
 	if err != nil {
 		w.WriteHeader(400)
@@ -600,7 +600,7 @@ func inclusionByIndexProofHandler(log continusec.VerifiableLog, vars map[string]
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
 
-	json.NewEncoder(w).Encode(&continusec.JSONInclusionProofResponse{
+	json.NewEncoder(w).Encode(&vdbclient.JSONInclusionProofResponse{
 		Number:   mip.LeafIndex,
 		TreeSize: mip.TreeSize,
 		Proof:    mip.AuditPath,
@@ -614,11 +614,11 @@ func leafHash(b []byte) []byte {
 	return h.Sum(nil)
 }
 
-func inclusionByStringProofHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func inclusionByStringProofHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	inclusionProofHandler(leafHash([]byte(vars["strentry"])), log, vars, w, r)
 }
 
-func inclusionByHashProofHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func inclusionByHashProofHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	mtlHash, err := hex.DecodeString(vars["hash"])
 	if err != nil {
 		handleError(err, r, w)
@@ -627,7 +627,7 @@ func inclusionByHashProofHandler(log continusec.VerifiableLog, vars map[string]s
 	inclusionProofHandler(mtlHash, log, vars, w, r)
 }
 
-func createMapHandler(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func createMapHandler(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	vmap := makeMapFromRequest(client, vars)
 
 	err := vmap.Create()
@@ -639,7 +639,7 @@ func createMapHandler(client continusec.Account, vars map[string]string, w http.
 	w.WriteHeader(200)
 }
 
-func deleteMapHandler(client continusec.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func deleteMapHandler(client vdbclient.Account, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	vmap := makeMapFromRequest(client, vars)
 
 	err := vmap.Destroy()
@@ -651,7 +651,7 @@ func deleteMapHandler(client continusec.Account, vars map[string]string, w http.
 	w.WriteHeader(200)
 }
 
-func createLogHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func createLogHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	err := log.Create()
 	if err != nil {
 		handleError(err, r, w)
@@ -660,7 +660,7 @@ func createLogHandler(log continusec.VerifiableLog, vars map[string]string, w ht
 	w.WriteHeader(200)
 }
 
-func deleteLogHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func deleteLogHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	err := log.Destroy()
 	if err != nil {
 		handleError(err, r, w)
@@ -669,14 +669,14 @@ func deleteLogHandler(log continusec.VerifiableLog, vars map[string]string, w ht
 	w.WriteHeader(200)
 }
 
-func inclusionProofHandler(mtlHash []byte, flog continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func inclusionProofHandler(mtlHash []byte, flog vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	treeSize, err := strconv.Atoi(vars["treesize"])
 	if err != nil {
 		w.WriteHeader(400)
 		return
 	}
 
-	mip, err := flog.InclusionProof(int64(treeSize), &continusec.AddEntryResponse{EntryLeafHash: mtlHash})
+	mip, err := flog.InclusionProof(int64(treeSize), &vdbclient.AddEntryResponse{EntryLeafHash: mtlHash})
 	if err != nil {
 		handleError(err, r, w)
 		return
@@ -685,14 +685,14 @@ func inclusionProofHandler(mtlHash []byte, flog continusec.VerifiableLog, vars m
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
 
-	json.NewEncoder(w).Encode(&continusec.JSONInclusionProofResponse{
+	json.NewEncoder(w).Encode(&vdbclient.JSONInclusionProofResponse{
 		Number:   mip.LeafIndex,
 		TreeSize: mip.TreeSize,
 		Proof:    mip.AuditPath,
 	})
 }
 
-func getConsistencyProofHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func getConsistencyProofHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	treeSize, err := strconv.Atoi(vars["treesize"])
 	if err != nil {
 		w.WriteHeader(400)
@@ -713,14 +713,14 @@ func getConsistencyProofHandler(log continusec.VerifiableLog, vars map[string]st
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
 
-	json.NewEncoder(w).Encode(&continusec.JSONConsistencyProofResponse{
+	json.NewEncoder(w).Encode(&vdbclient.JSONConsistencyProofResponse{
 		First:  cproof.FirstSize,
 		Second: cproof.SecondSize,
 		Proof:  cproof.AuditPath,
 	})
 }
 
-func getSTHHandler(log continusec.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func getSTHHandler(log vdbclient.VerifiableLog, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	var treeSize int64
 	if vars["treesize"] == "head" {
 		treeSize = 0
@@ -742,7 +742,7 @@ func getSTHHandler(log continusec.VerifiableLog, vars map[string]string, w http.
 	w.Header().Set("Content-Type", "text/json")
 	w.WriteHeader(200)
 
-	json.NewEncoder(w).Encode(&continusec.JSONLogTreeHeadResponse{
+	json.NewEncoder(w).Encode(&vdbclient.JSONLogTreeHeadResponse{
 		TreeSize: sth.TreeSize,
 		Hash:     sth.RootHash,
 	})

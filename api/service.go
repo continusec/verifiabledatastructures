@@ -18,7 +18,7 @@ limitations under the License.
 
 package api
 
-import "github.com/continusec/go-client/continusec"
+import "github.com/continusec/verifiabledatastructures/client"
 
 type LocalService struct {
 	Mutator      MutatorService
@@ -26,7 +26,7 @@ type LocalService struct {
 	Reader       StorageReader
 }
 
-func (ls *LocalService) Account(account string, apiKey string) continusec.Account {
+func (ls *LocalService) Account(account string, apiKey string) client.Account {
 	return &serverAccount{
 		Service: ls,
 		Account: account,

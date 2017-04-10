@@ -23,8 +23,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/continusec/go-client/continusec"
 	"github.com/continusec/objecthash"
+	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
@@ -173,7 +173,7 @@ func (l *serverLog) Destroy() error {
 // entry is sequenced in the underlying log in an asynchronous fashion, so the tree size
 // will not immediately increase, and inclusion proof checks will not reflect the new entry
 // until it is sequenced.
-func (l *serverLog) Add(e continusec.UploadableEntry) (*continusec.AddEntryResponse, error) {
+func (l *serverLog) Add(e client.UploadableEntry) (*client.AddEntryResponse, error) {
 	err := l.verifyAccessForOperation(operationRawAdd)
 	if err != nil {
 		return nil, err
@@ -188,7 +188,7 @@ func (l *serverLog) Add(e continusec.UploadableEntry) (*continusec.AddEntryRespo
 		return nil, err
 	}
 
-	leafHash := continusec.LeafMerkleTreeHash(leafInput)
+	leafHash := client.LeafMerkleTreeHash(leafInput)
 
 	_, err = l.account.Service.Mutator.QueueMutation(&pb.Mutation{
 		Account:   l.account.Account,
@@ -201,7 +201,7 @@ func (l *serverLog) Add(e continusec.UploadableEntry) (*continusec.AddEntryRespo
 		return nil, err
 	}
 
-	return &continusec.AddEntryResponse{EntryLeafHash: leafHash}, nil
+	return &client.AddEntryResponse{EntryLeafHash: leafHash}, nil
 }
 
 func (l *serverLog) readIntoProto(kr KeyReader, key []byte, m proto.Message) error {
@@ -232,9 +232,9 @@ func (l *serverLog) getLogTreeHead(kr KeyReader) (*pb.LogTreeHash, error) {
 	}
 }
 
-// TreeHead returns tree root hash for the log at the given tree size. Specify continusec.Head
+// TreeHead returns tree root hash for the log at the given tree size. Specify client.Head
 // to receive a root hash for the latest tree size.
-func (l *serverLog) TreeHead(treeSize int64) (*continusec.LogTreeHead, error) {
+func (l *serverLog) TreeHead(treeSize int64) (*client.LogTreeHead, error) {
 	err := l.verifyAccessForOperation(operationReadHash)
 	if err != nil {
 		return nil, err
@@ -244,7 +244,7 @@ func (l *serverLog) TreeHead(treeSize int64) (*continusec.LogTreeHead, error) {
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *continusec.LogTreeHead
+	var rv *client.LogTreeHead
 	err = l.account.Service.Reader.ExecuteReadOnly(func(kr KeyReader) error {
 		head, err := l.getLogTreeHead(kr)
 		if err != nil {
@@ -261,7 +261,7 @@ func (l *serverLog) TreeHead(treeSize int64) (*continusec.LogTreeHead, error) {
 			}
 		} // else, we have the right one, so return it
 
-		rv = &continusec.LogTreeHead{
+		rv = &client.LogTreeHead{
 			RootHash: head.Hash,
 			TreeSize: head.Size,
 		}
@@ -281,7 +281,7 @@ func (l *serverLog) TreeHead(treeSize int64) (*continusec.LogTreeHead, error) {
 // leaf hash to generate the root tree hash for the log.
 //
 // Most clients instead use VerifyInclusion which additionally verifies the returned proof.
-func (l *serverLog) InclusionProof(treeSize int64, leaf continusec.MerkleTreeLeaf) (*continusec.LogInclusionProof, error) {
+func (l *serverLog) InclusionProof(treeSize int64, leaf client.MerkleTreeLeaf) (*client.LogInclusionProof, error) {
 	err := l.verifyAccessForOperation(operationProveInclusion)
 	if err != nil {
 		return nil, err
@@ -297,7 +297,7 @@ func (l *serverLog) InclusionProof(treeSize int64, leaf continusec.MerkleTreeLea
 	}
 	key := append(hashPrefix, lh...)
 
-	var rv *continusec.LogInclusionProof
+	var rv *client.LogInclusionProof
 	err = l.account.Service.Reader.ExecuteReadOnly(func(kr KeyReader) error {
 		var ln pb.LeafNode
 		err := l.readIntoProto(kr, key, &ln)
@@ -314,7 +314,7 @@ func (l *serverLog) InclusionProof(treeSize int64, leaf continusec.MerkleTreeLea
 	return rv, nil
 }
 
-func (l *serverLog) inclusionProof(kr KeyReader, treeSize int64, ln *pb.LeafNode) (*continusec.LogInclusionProof, error) {
+func (l *serverLog) inclusionProof(kr KeyReader, treeSize int64, ln *pb.LeafNode) (*client.LogInclusionProof, error) {
 	head, err := l.getLogTreeHead(kr)
 	if err != nil {
 		return nil, err
@@ -341,14 +341,14 @@ func (l *serverLog) inclusionProof(kr KeyReader, treeSize int64, ln *pb.LeafNode
 	}
 
 	// Ranges are good
-	ranges := continusec.Path(ln.Index, 0, treeSize)
+	ranges := client.Path(ln.Index, 0, treeSize)
 	path, err := l.fetchSubTreeHashes(kr, ranges, false)
 	if err != nil {
 		return nil, err
 	}
 	for i, rr := range ranges {
 		if len(path[i]) == 0 {
-			if continusec.IsPow2(rr[1] - rr[0]) {
+			if client.IsPow2(rr[1] - rr[0]) {
 				// Would have been nice if GetSubTreeHashes could better handle these
 				return nil, ErrNotFound
 			}
@@ -359,7 +359,7 @@ func (l *serverLog) inclusionProof(kr KeyReader, treeSize int64, ln *pb.LeafNode
 		}
 	}
 
-	return &continusec.LogInclusionProof{
+	return &client.LogInclusionProof{
 		LeafHash:  ln.Mtl,
 		LeafIndex: ln.Index,
 		TreeSize:  treeSize,
@@ -372,7 +372,7 @@ func (l *serverLog) inclusionProof(kr KeyReader, treeSize int64, ln *pb.LeafNode
 // The LogInclusionProof returned by this method will not have the LeafHash filled in and as such will fail to verify.
 //
 // Typical clients will instead use VerifyInclusionProof().
-func (l *serverLog) InclusionProofByIndex(treeSize, leafIndex int64) (*continusec.LogInclusionProof, error) {
+func (l *serverLog) InclusionProofByIndex(treeSize, leafIndex int64) (*client.LogInclusionProof, error) {
 	err := l.verifyAccessForOperation(operationProveInclusion)
 	if err != nil {
 		return nil, err
@@ -382,7 +382,7 @@ func (l *serverLog) InclusionProofByIndex(treeSize, leafIndex int64) (*continuse
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *continusec.LogInclusionProof
+	var rv *client.LogInclusionProof
 	err = l.account.Service.Reader.ExecuteReadOnly(func(kr KeyReader) error {
 		var ln pb.LeafNode
 		err := l.readIntoProto(kr, keyForIdx(leafPrefix, uint64(leafIndex)), &ln)
@@ -404,7 +404,7 @@ func (l *serverLog) calcSubTreeHash(kr KeyReader, start, end int64) ([]byte, err
 	r := make([][2]int64, 0, 8) // magic number bad - why did we do this?
 
 	for start != end {
-		k := continusec.CalcK((end - start) + 1)
+		k := client.CalcK((end - start) + 1)
 		r = append(r, [2]int64{start, start + k})
 		start += k
 	}
@@ -420,7 +420,7 @@ func (l *serverLog) calcSubTreeHash(kr KeyReader, start, end int64) ([]byte, err
 
 	rv := hashes[len(hashes)-1]
 	for i := len(hashes) - 2; i >= 0; i-- {
-		rv = continusec.NodeMerkleTreeHash(hashes[i], rv)
+		rv = client.NodeMerkleTreeHash(hashes[i], rv)
 	}
 
 	return rv, nil
@@ -467,7 +467,7 @@ func (l *serverLog) fetchSubTreeHashes(kr KeyReader, ranges [][2]int64, failOnMi
 // that demonstrate how the root hash is calculated for both the first and second tree sizes.
 //
 // Most clients instead use VerifyInclusionProof which additionally verifies the returned proof.
-func (l *serverLog) ConsistencyProof(first, second int64) (*continusec.LogConsistencyProof, error) {
+func (l *serverLog) ConsistencyProof(first, second int64) (*client.LogConsistencyProof, error) {
 	err := l.verifyAccessForOperation(operationReadHash)
 	if err != nil {
 		return nil, err
@@ -481,7 +481,7 @@ func (l *serverLog) ConsistencyProof(first, second int64) (*continusec.LogConsis
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *continusec.LogConsistencyProof
+	var rv *client.LogConsistencyProof
 	err = l.account.Service.Reader.ExecuteReadOnly(func(kr KeyReader) error {
 		head, err := l.getLogTreeHead(kr)
 		if err != nil {
@@ -500,14 +500,14 @@ func (l *serverLog) ConsistencyProof(first, second int64) (*continusec.LogConsis
 		}
 
 		// Ranges are good
-		ranges := continusec.SubProof(first, 0, second, true)
+		ranges := client.SubProof(first, 0, second, true)
 		path, err := l.fetchSubTreeHashes(kr, ranges, false)
 		if err != nil {
 			return err
 		}
 		for i, rr := range ranges {
 			if len(path[i]) == 0 {
-				if continusec.IsPow2(rr[1] - rr[0]) {
+				if client.IsPow2(rr[1] - rr[0]) {
 					// Would have been nice if GetSubTreeHashes could better handle these
 					return ErrNoSuchKey
 				}
@@ -517,7 +517,7 @@ func (l *serverLog) ConsistencyProof(first, second int64) (*continusec.LogConsis
 				}
 			}
 		}
-		rv = &continusec.LogConsistencyProof{
+		rv = &client.LogConsistencyProof{
 			FirstSize:  first,
 			SecondSize: second,
 			AuditPath:  path,
@@ -532,7 +532,7 @@ func (l *serverLog) ConsistencyProof(first, second int64) (*continusec.LogConsis
 // This is normally one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
 // If the entry was stored using one of the ObjectHash formats, then the data returned by a RawDataEntryFactory,
 // then the object hash itself is returned as the contents. To get the data itself, use JsonEntryFactory.
-func (l *serverLog) Entry(idx int64, factory continusec.VerifiableEntryFactory) (continusec.VerifiableEntry, error) {
+func (l *serverLog) Entry(idx int64, factory client.VerifiableEntryFactory) (client.VerifiableEntry, error) {
 	err := l.verifyAccessForOperation(operationReadEntry)
 	if err != nil {
 		return nil, err
@@ -546,7 +546,7 @@ func (l *serverLog) Entry(idx int64, factory continusec.VerifiableEntryFactory) 
 // encountered, the channel will be closed early before all items are returned.
 //
 // factory is normally one of one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
-func (l *serverLog) Entries(ctx context.Context, start, end int64, factory continusec.VerifiableEntryFactory) <-chan continusec.VerifiableEntry {
+func (l *serverLog) Entries(ctx context.Context, start, end int64, factory client.VerifiableEntryFactory) <-chan client.VerifiableEntry {
 	err := l.verifyAccessForOperation(operationReadEntry)
 	if err != nil {
 		return nil
