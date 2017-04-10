@@ -16,26 +16,20 @@ limitations under the License.
 
 */
 
-package kvstore
+package api
 
-import (
-	"time"
+import "github.com/continusec/go-client/continusec"
 
-	"github.com/boltdb/bolt"
-	"github.com/continusec/vds-server/pb"
-)
-
-// BoltBackedService gives a service that persists to a BoltDB file.
-type BoltBackedService struct {
-	Path     string
-	Accounts []*pb.Account
-
-	db *bolt.DB
+type LocalService struct {
+	Mutator      MutatorService
+	AccessPolicy AuthorizationOracle
+	Reader       StorageReader
 }
 
-// Init must be called before use
-func (bbs *BoltBackedService) Init() error {
-	var err error
-	bbs.db, err = bolt.Open(bbs.Path, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	return err
+func (ls *LocalService) Account(account string, apiKey string) continusec.Account {
+	return &serverAccount{
+		Service: ls,
+		Account: account,
+		APIKey:  apiKey,
+	}
 }

@@ -18,7 +18,11 @@ limitations under the License.
 
 package api
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/continusec/vds-server/pb"
+)
 
 var (
 	ErrInvalidJSON                    = errors.New("ErrInvalidJSON")
@@ -30,4 +34,29 @@ var (
 	ErrNotReadyYet                    = errors.New("Tree hashes still calculating")
 	ErrLogAlreadyExists               = errors.New("ErrLogAlreadyExists")
 	ErrLogUnsafeForAccess             = errors.New("ErrLogUnsafeForAccess")
+	ErrNotImplemented                 = errors.New("ErrNotImplemented")
+	ErrInvalidRequest                 = errors.New("ErrInvalidRequest")
+	ErrNoSuchKey                      = errors.New("ErrNoSuchKey")
 )
+
+type MutatorService interface {
+	QueueMutation(mut *pb.Mutation) (MutatorPromise, error)
+}
+
+type MutatorPromise interface {
+	WaitUntilDone() error
+}
+
+type AuthorizationOracle interface {
+	// VerifyAllowed returns nil if operation is allowed. Other values means no
+	VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) error
+}
+
+type StorageReader interface {
+	ExecuteReadOnly(f func(db KeyReader) error) error
+}
+
+type KeyReader interface {
+	// Get returns ErrNoSuchKey if none found
+	Get(bucket, key []byte) ([]byte, error)
+}

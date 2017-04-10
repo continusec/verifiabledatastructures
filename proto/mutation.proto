@@ -16,26 +16,31 @@ limitations under the License.
 
 */
 
-package kvstore
+syntax = "proto3";
 
-import (
-	"time"
+package continusec.vds;
+option go_package = "pb";
 
-	"github.com/boltdb/bolt"
-	"github.com/continusec/vds-server/pb"
-)
 
-// BoltBackedService gives a service that persists to a BoltDB file.
-type BoltBackedService struct {
-	Path     string
-	Accounts []*pb.Account
-
-	db *bolt.DB
+enum MutationType {
+    MUT_UNKNOWN = 0;
+    MUT_LOG_CREATE = 1;
+    MUT_LOG_DESTROY = 2;
+    MUT_LOG_ADD = 3;
+    MUT_MAP_CREATE = 4;
+    MUT_MAP_DESTROY = 5;
 }
 
-// Init must be called before use
-func (bbs *BoltBackedService) Init() error {
-	var err error
-	bbs.db, err = bolt.Open(bbs.Path, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	return err
+message Mutation {
+    MutationType operation = 1;
+    string account = 2;
+    string name = 3;
+    bytes mtl = 4;   // mtl hash of entry
+    bytes value = 5; // data to save
+    bytes extra = 6; // hack needed for mutation log entry
+}
+
+message LogTreeHash {
+    int64 size = 1;
+    bytes hash = 2;
 }

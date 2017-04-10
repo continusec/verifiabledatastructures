@@ -16,21 +16,21 @@ limitations under the License.
 
 */
 
-package kvstore
+package api
 
 import "github.com/continusec/go-client/continusec"
 
-type bbAccount struct {
-	service *BoltBackedService
-	apiKey  string
-	account string
+type serverAccount struct {
+	Service *LocalService
+	APIKey  string
+	Account string
 }
 
 // VerifiableMap returns an object representing a Verifiable Map. This function simply
 // returns a pointer to an object that can be used to interact with the Map, and won't
 // by itself cause any API calls to be generated.
-func (acc *bbAccount) VerifiableMap(name string) continusec.VerifiableMap {
-	return &bbMap{
+func (acc *serverAccount) VerifiableMap(name string) continusec.VerifiableMap {
+	return &serverMap{
 		account: acc,
 		name:    name,
 	}
@@ -39,8 +39,8 @@ func (acc *bbAccount) VerifiableMap(name string) continusec.VerifiableMap {
 // VerifiableLog returns an object representing a Verifiable Log. This function simply
 // returns a pointer to an object that can be used to interact with the Log, and won't
 // by itself cause any API calls to be generated.
-func (acc *bbAccount) VerifiableLog(name string) continusec.VerifiableLog {
-	return &bbLog{
+func (acc *serverAccount) VerifiableLog(name string) continusec.VerifiableLog {
+	return &serverLog{
 		account: acc,
 		name:    name,
 		logType: logTypeUser,
@@ -48,11 +48,11 @@ func (acc *bbAccount) VerifiableLog(name string) continusec.VerifiableLog {
 }
 
 // ListLogs returns a list of logs held by the account
-func (acc *bbAccount) ListLogs() ([]continusec.VerifiableLog, error) {
+func (acc *serverAccount) ListLogs() ([]continusec.VerifiableLog, error) {
 	return nil, ErrNotImplemented
 }
 
 // ListMaps returns a list of maps held by the account
-func (acc *bbAccount) ListMaps() ([]continusec.VerifiableMap, error) {
+func (acc *serverAccount) ListMaps() ([]continusec.VerifiableMap, error) {
 	return nil, ErrNotImplemented
 }

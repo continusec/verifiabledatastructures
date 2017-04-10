@@ -7,11 +7,14 @@ Package pb is a generated protocol buffer package.
 
 It is generated from these files:
 	server-config.proto
+	mutation.proto
 
 It has these top-level messages:
 	ServerConfig
 	AccessPolicy
 	Account
+	Mutation
+	LogTreeHash
 */
 package pb
 
