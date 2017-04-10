@@ -11,7 +11,7 @@ Enjoy.
 ```bash
 rm -rf pb
 mkdir pb
-protoc --go_out=pb -Iproto proto/server-config.proto proto/mutation.proto
+go generate
 ```
 
 ## Rebuild server
