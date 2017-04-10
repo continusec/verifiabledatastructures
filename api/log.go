@@ -19,6 +19,8 @@ limitations under the License.
 package api
 
 import (
+	"encoding/binary"
+
 	"golang.org/x/net/context"
 
 	"github.com/continusec/go-client/continusec"
@@ -62,8 +64,18 @@ var (
 )
 
 var (
-	logHead = []byte("head")
+	logHead    = []byte("head")
+	indexTree  = []byte("tree")
+	leafPrefix = []byte("leaf")
+	nodePrefix = []byte("node")
 )
+
+func keyForIdx(prefix []byte, i uint64) []byte {
+	rv := make([]byte, len(prefix)+8)
+	copy(rv, prefix)
+	binary.BigEndian.PutUint64(rv[len(prefix):], i)
+	return rv
+}
 
 type serverLog struct {
 	account *serverAccount
@@ -197,6 +209,20 @@ func (l *serverLog) readIntoProto(kr KeyReader, key []byte, m proto.Message) err
 	return proto.Unmarshal(val, m)
 }
 
+func (l *serverLog) getLogTreeHead(kr KeyReader) (*pb.LogTreeHash, error) {
+	var lth pb.LogTreeHash
+	err := l.readIntoProto(kr, logHead, &lth)
+	switch err {
+	case nil:
+		return &lth, nil
+	case ErrNoSuchKey:
+		lth.Reset() // 0, nil
+		return &lth, nil
+	default:
+		return nil, err
+	}
+}
+
 // TreeHead returns tree root hash for the log at the given tree size. Specify continusec.Head
 // to receive a root hash for the latest tree size.
 func (l *serverLog) TreeHead(treeSize int64) (*continusec.LogTreeHead, error) {
@@ -211,21 +237,26 @@ func (l *serverLog) TreeHead(treeSize int64) (*continusec.LogTreeHead, error) {
 
 	var rv *continusec.LogTreeHead
 	err = l.account.Service.Reader.ExecuteReadOnly(func(kr KeyReader) error {
-		var lth pb.LogTreeHash
-		err := l.readIntoProto(kr, logHead, &lth)
-		switch err {
-		case nil:
-		// pass
-		case ErrNoSuchKey:
-			lth.Reset()
-		default:
+		head, err := l.getLogTreeHead(kr)
+		if err != nil {
 			return err
 		}
 
+		if treeSize > head.Size {
+			return ErrInvalidTreeRange
+		} else if treeSize < head.Size {
+			head = &pb.LogTreeHash{}
+			err = l.readIntoProto(kr, keyForIdx(indexTree, uint64(treeSize)), head)
+			if err != nil {
+				return err
+			}
+		} // else, we have the right one, so return it
+
 		rv = &continusec.LogTreeHead{
-			RootHash: lth.Hash,
-			TreeSize: lth.Size,
+			RootHash: head.Hash,
+			TreeSize: head.Size,
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -264,6 +295,70 @@ func (l *serverLog) InclusionProofByIndex(treeSize, leafIndex int64) (*continuse
 	return nil, ErrNotImplemented
 }
 
+/* Assumes all args are range checked first */
+func (l *serverLog) calcSubTreeHash(kr KeyReader, start, end int64) ([]byte, error) {
+	r := make([][2]int64, 0, 8) // magic number bad TODO
+
+	for start != end {
+		k := continusec.CalcK((end - start) + 1)
+		r = append(r, [2]int64{start, start + k})
+		start += k
+	}
+
+	hashes, err := l.fetchSubTreeHashes(kr, r, true)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(hashes) == 0 {
+		return nil, ErrInvalidTreeRange
+	}
+
+	rv := hashes[len(hashes)-1]
+	for i := len(hashes) - 2; i >= 0; i-- {
+		rv = continusec.NodeMerkleTreeHash(hashes[i], rv)
+	}
+
+	return rv, nil
+}
+
+/* MUST be pow2. Assumes all args are range checked first */
+/* Actually, the above is a lie. If failOnMissing is set, then we fail if any values are missing.
+   Otherwise we will return nil in those spots and return what we can. */
+func (l *serverLog) fetchSubTreeHashes(kr KeyReader, ranges [][2]int64, failOnMissing bool) ([][]byte, error) {
+	/*
+		Deliberately do not always error check above, as we wish to allow
+		for some empty nodes, e.g. 4..7. These must be picked up by
+		the caller
+	*/
+	rv := make([][]byte, len(ranges))
+	for i, r := range ranges {
+		if (r[1] - r[0]) == 1 {
+			var m pb.LeafNode
+			err := l.readIntoProto(kr, keyForIdx(leafPrefix, uint64(r[0])), &m)
+			if err == nil {
+				rv[i] = m.Mtl
+			} else {
+				if failOnMissing {
+					return nil, err
+				}
+			}
+		} else {
+			var m pb.TreeNode
+			err := l.readIntoProto(kr, keyForIdx(nodePrefix, uint64(r[0])), &m)
+			if err == nil {
+				rv[i] = m.Mth
+			} else {
+				if failOnMissing {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	return rv, nil
+}
+
 // ConsistencyProof returns an audit path which contains the set of Merkle Subtree hashes
 // that demonstrate how the root hash is calculated for both the first and second tree sizes.
 //
@@ -273,6 +368,58 @@ func (l *serverLog) ConsistencyProof(first, second int64) (*continusec.LogConsis
 	if err != nil {
 		return nil, err
 	}
+
+	if first <= 0 {
+		return nil, ErrInvalidTreeRange
+	}
+
+	if second < 0 { // we allow zero for second param
+		return nil, ErrInvalidTreeRange
+	}
+
+	var rv *continusec.LogConsistencyProof
+	err = l.account.Service.Reader.ExecuteReadOnly(func(kr KeyReader) error {
+		head, err := l.getLogTreeHead(kr)
+		if err != nil {
+			return err
+		}
+
+		if second == 0 {
+			second = head.Size
+		}
+
+		if second <= 0 || second > head.Size {
+			return ErrInvalidTreeRange
+		}
+		if first >= second {
+			return ErrInvalidTreeRange
+		}
+
+		// Ranges are good
+		ranges := continusec.SubProof(first, 0, second, true)
+		path, err := l.fetchSubTreeHashes(kr, ranges, false)
+		if err != nil {
+			return err
+		}
+		for i, rr := range ranges {
+			if len(path[i]) == 0 {
+				if continusec.IsPow2(rr[1] - rr[0]) {
+					// Would have been nice if GetSubTreeHashes could better handle these
+					return ErrNoSuchKey
+				}
+				path[i], err = l.calcSubTreeHash(kr, rr[0], rr[1])
+				if err != nil {
+					return err
+				}
+			}
+		}
+		rv = &continusec.LogConsistencyProof{
+			FirstSize:  first,
+			SecondSize: second,
+			AuditPath:  path,
+		}
+		return nil
+	})
 
 	return nil, ErrNotImplemented
 }

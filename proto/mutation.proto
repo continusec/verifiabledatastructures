@@ -44,3 +44,11 @@ message LogTreeHash {
     int64 size = 1;
     bytes hash = 2;
 }
+
+message LeafNode {
+    bytes mtl = 1;
+}
+
+message TreeNode {
+    bytes mth = 1;
+}

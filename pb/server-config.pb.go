@@ -15,6 +15,8 @@ It has these top-level messages:
 	Account
 	Mutation
 	LogTreeHash
+	LeafNode
+	TreeNode
 */
 package pb
 
