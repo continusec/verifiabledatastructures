@@ -18,11 +18,7 @@ limitations under the License.
 
 package kvstore
 
-import (
-	"golang.org/x/net/context"
-
-	"github.com/continusec/go-client/continusec"
-)
+import "github.com/continusec/go-client/continusec"
 
 type bbMap struct {
 	account *bbAccount
@@ -72,13 +68,6 @@ func (m *bbMap) Get(key []byte, treeSize int64, factory continusec.VerifiableEnt
 	return nil, ErrNotImplemented
 }
 
-// VerifiedGet gets the value for the given key in the specified MapTreeState, and verifies that it is
-// included in the MapTreeHead (wrapped by the MapTreeState) before returning.
-// factory is normally one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
-func (m *bbMap) VerifiedGet(key []byte, mapHead *continusec.MapTreeState, factory continusec.VerifiableEntryFactory) (continusec.VerifiableEntry, error) {
-	return nil, ErrNotImplemented
-}
-
 // Set will generate a map mutation to set the given value for the given key.
 // While this will return quickly, the change will be reflected asynchronously in the map.
 // Returns an AddEntryResponse which contains the leaf hash for the mutation log entry.
@@ -109,72 +98,6 @@ func (m *bbMap) Delete(key []byte) (*continusec.AddEntryResponse, error) {
 func (m *bbMap) TreeHead(treeSize int64) (*continusec.MapTreeHead, error) {
 	return nil, ErrNotImplemented
 
-}
-
-// BlockUntilSize blocks until the map has caught up to a certain size. This polls
-// TreeHead() until such time as a new tree hash is produced that is of at least this
-// size.
-//
-// This is intended for test use.
-func (m *bbMap) BlockUntilSize(treeSize int64) (*continusec.MapTreeHead, error) {
-	return nil, ErrNotImplemented
-
-}
-
-// VerifiedLatestMapState fetches the latest MapTreeState, verifies it is consistent with,
-// and newer than, any previously passed state.
-func (m *bbMap) VerifiedLatestMapState(prev *continusec.MapTreeState) (*continusec.MapTreeState, error) {
-	return nil, ErrNotImplemented
-
-}
-
-// VerifiedMapState returns a wrapper for the MapTreeHead for a given tree size, along with
-// a LogTreeHead for the TreeHeadLog that has been verified to contain this map tree head.
-// The value returned by this will have been proven to be consistent with any passed prev value.
-// Note that the TreeHeadLogTreeHead returned may differ between calls, even for the same treeSize,
-// as all future LogTreeHeads can also be proven to contain the MapTreeHead.
-//
-// Typical clients that only need to access current data will instead use VerifiedLatestMapState()
-// Can return nil, nil if the map is empty (and prev was nil)
-func (m *bbMap) VerifiedMapState(prev *continusec.MapTreeState, treeSize int64) (*continusec.MapTreeState, error) {
-	return nil, ErrNotImplemented
-
-}
-
-// VerifyMap (Experimental API surface, likely to change) is a utility method for auditors
-// that wish to audit the full content of a map, as well as the map operation. This method
-// will verify every entry in the TreeHeadLogTreeHead between prev and head - and to do so
-// will retrieve *all* mutation entries from the underlying mutation log, and play them
-// forward in an in-memory map copy.
-//
-// In addition to verifying the correct operation of the map itself, a client also specifies
-// an auditFunc that is called for each set value operation that results in a change to the
-// map itself. As such a client can also verify any property desired around the actual
-// key/values themselves that are being manipulated. Note that not every mutation will result
-// in a call to auditFunc - operations that result in no change to the map will not call
-// the audit function.
-//
-// To verify all every log tree head entry, pass nil for prev, which will also bypass consistency proof checking. Head must not be nil.
-//
-// Example usage:
-//
-//	latestMapState, err := vmap.VerifiedLatestMapState(nil)
-//	if err != nil {
-//		...
-//	}
-//
-//	err = vmap.VerifyMap(ctx, nil, latestMapState, continusec.RedactedJsonEntryFactory, func(ctx context.Context, idx int64, key []byte, value continusec.VerifiableEntry) error {
-//		... // verify anything you like about the content
-//		return nil
-//	})
-//	if err != nil {
-//		...
-//	}
-//
-// While suitable for small to medium maps, this requires the entire map be built in-memory
-// which may not be suitable for larger systems that will have more complex requirements.
-func (m *bbMap) VerifyMap(ctx context.Context, prev *continusec.MapTreeState, head *continusec.MapTreeState, factory continusec.VerifiableEntryFactory, auditFunc continusec.MapAuditFunction) error {
-	return ErrNotImplemented
 }
 
 // Name returns the name of the map

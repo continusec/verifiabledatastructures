@@ -74,12 +74,6 @@ func (l *bbLog) InclusionProof(treeSize int64, leaf continusec.MerkleTreeLeaf) (
 	return nil, ErrNotImplemented
 }
 
-// VerifyInclusion will fetch a proof the the specified MerkleTreeHash is included in the
-// log and verify that it can produce the root hash in the specified LogTreeHead.
-func (l *bbLog) VerifyInclusion(head *continusec.LogTreeHead, leaf continusec.MerkleTreeLeaf) error {
-	return ErrNotImplemented
-}
-
 // InclusionProofByIndex will return an inclusion proof for a specified tree size and leaf index.
 // This is not used by typical clients, however it can be useful for certain audit operations and debugging tools.
 // The LogInclusionProof returned by this method will not have the LeafHash filled in and as such will fail to verify.
@@ -97,12 +91,6 @@ func (l *bbLog) ConsistencyProof(first, second int64) (*continusec.LogConsistenc
 	return nil, ErrNotImplemented
 }
 
-// VerifyConsistency takes two tree heads, retrieves a consistency proof, verifies it,
-// and returns the result. The two tree heads may be in either order (even equal), but both must be greater than zero and non-nil.
-func (l *bbLog) VerifyConsistency(a, b *continusec.LogTreeHead) error {
-	return ErrNotImplemented
-}
-
 // Entry returns the entry stored for the given index using the passed in factory to instantiate the entry.
 // This is normally one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
 // If the entry was stored using one of the ObjectHash formats, then the data returned by a RawDataEntryFactory,
@@ -118,50 +106,6 @@ func (l *bbLog) Entry(idx int64, factory continusec.VerifiableEntryFactory) (con
 // factory is normally one of one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
 func (l *bbLog) Entries(ctx context.Context, start, end int64, factory continusec.VerifiableEntryFactory) <-chan continusec.VerifiableEntry {
 	panic(ErrNotImplemented)
-}
-
-// BlockUntilPresent blocks until the log is able to produce a LogTreeHead that includes the
-// specified MerkleTreeLeaf. This polls TreeHead() and InclusionProof() until such time as a new
-// tree hash is produced that includes the given MerkleTreeLeaf. Exponential back-off is used
-// when no new tree hash is available.
-//
-// This is intended for test use.
-func (l *bbLog) BlockUntilPresent(leaf continusec.MerkleTreeLeaf) (*continusec.LogTreeHead, error) {
-	return nil, ErrNotImplemented
-}
-
-// VerifiedLatestTreeHead calls VerifiedTreeHead() with Head to fetch the latest tree head,
-// and additionally verifies that it is newer than the previously passed tree head.
-// For first use, pass nil to skip consistency checking.
-func (l *bbLog) VerifiedLatestTreeHead(prev *continusec.LogTreeHead) (*continusec.LogTreeHead, error) {
-	return nil, ErrNotImplemented
-}
-
-// VerifiedTreeHead is a utility method to fetch a LogTreeHead and verifies that it is consistent with
-// a tree head earlier fetched and persisted. For first use, pass nil for prev, which will
-// bypass consistency proof checking. Tree size may be older or newer than the previous head value.
-//
-// Clients typically use VerifyLatestTreeHead().
-func (l *bbLog) VerifiedTreeHead(prev *continusec.LogTreeHead, treeSize int64) (*continusec.LogTreeHead, error) {
-	return nil, ErrNotImplemented
-}
-
-// VerifySuppliedInclusionProof is a utility method that fetches any required tree heads that are needed
-// to verify a supplied log inclusion proof. Additionally it will ensure that any fetched tree heads are consistent
-// with any prior supplied LogTreeHead (which may be nil, to skip consistency checks).
-//
-// Upon success, the LogTreeHead returned is the one used to verify the inclusion proof - it may be newer or older than the one passed in.
-// In either case, it will have been verified as consistent.
-func (l *bbLog) VerifySuppliedInclusionProof(prev *continusec.LogTreeHead, proof *continusec.LogInclusionProof) (*continusec.LogTreeHead, error) {
-	return nil, ErrNotImplemented
-}
-
-// VerifyEntries is a utility method for auditors that wish to audit the full content of
-// a log, as well as the log operation. This method will retrieve all entries in batch from
-// the log between the passed in prev and head LogTreeHeads, and ensure that the root hash in head can be confirmed to accurately represent
-// the contents of all of the log entries retrieved. To start at entry zero, pass nil for prev, which will also bypass consistency proof checking. Head must not be nil.
-func (l *bbLog) VerifyEntries(ctx context.Context, prev *continusec.LogTreeHead, head *continusec.LogTreeHead, factory continusec.VerifiableEntryFactory, auditFunc continusec.LogAuditFunction) error {
-	return ErrNotImplemented
 }
 
 // Name returns the name of the log
