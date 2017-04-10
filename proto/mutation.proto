@@ -47,6 +47,7 @@ message LogTreeHash {
 
 message LeafNode {
     bytes mtl = 1;
+    int64 index = 2;
 }
 
 message TreeNode {

@@ -64,16 +64,25 @@ var (
 )
 
 var (
-	logHead    = []byte("head")
-	indexTree  = []byte("tree")
-	leafPrefix = []byte("leaf")
-	nodePrefix = []byte("node")
+	logHead    = []byte("head") // pb.LogTreeHash
+	indexTree  = []byte("root") // followed by uint64 index -> pb.LogTreeHash
+	leafPrefix = []byte("leaf") // followed by uint64 index -> pb.LeafNode
+	nodePrefix = []byte("node") // followed by uint64 uint64 -> pb.TreeNode
+	hashPrefix = []byte("hash") // followed by leaf node hash -> pb.LeafNode
 )
 
 func keyForIdx(prefix []byte, i uint64) []byte {
 	rv := make([]byte, len(prefix)+8)
 	copy(rv, prefix)
 	binary.BigEndian.PutUint64(rv[len(prefix):], i)
+	return rv
+}
+
+func keyForDoubleIdx(prefix []byte, i, j uint64) []byte {
+	rv := make([]byte, len(prefix)+8+8)
+	copy(rv, prefix)
+	binary.BigEndian.PutUint64(rv[len(prefix):], i)
+	binary.BigEndian.PutUint64(rv[len(prefix)+8:], j)
 	return rv
 }
 
@@ -278,7 +287,84 @@ func (l *serverLog) InclusionProof(treeSize int64, leaf continusec.MerkleTreeLea
 		return nil, err
 	}
 
-	return nil, ErrNotImplemented
+	if treeSize < 0 {
+		return nil, ErrInvalidTreeRange
+	}
+
+	lh, err := leaf.LeafHash()
+	if err != nil {
+		return nil, err
+	}
+	key := append(hashPrefix, lh...)
+
+	var rv *continusec.LogInclusionProof
+	err = l.account.Service.Reader.ExecuteReadOnly(func(kr KeyReader) error {
+		var ln pb.LeafNode
+		err := l.readIntoProto(kr, key, &ln)
+		if err != nil {
+			return err
+		}
+		rv, err = l.inclusionProof(kr, treeSize, &ln)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return rv, nil
+}
+
+func (l *serverLog) inclusionProof(kr KeyReader, treeSize int64, ln *pb.LeafNode) (*continusec.LogInclusionProof, error) {
+	head, err := l.getLogTreeHead(kr)
+	if err != nil {
+		return nil, err
+	}
+
+	if treeSize == 0 {
+		treeSize = head.Size
+	}
+
+	// We technically shouldn't have found it (it may not be completely written yet)
+	if ln.Index >= head.Size {
+		// we use the NotFound error code so that normal usage of GetInclusionProof, that calls this, returns a uniform error.
+		return nil, ErrNotFound
+	}
+
+	// Bad input
+	if treeSize <= 0 || treeSize > head.Size {
+		return nil, ErrInvalidTreeRange
+	}
+
+	// Client needs a new STH
+	if ln.Index >= treeSize {
+		return nil, ErrInvalidTreeRange
+	}
+
+	// Ranges are good
+	ranges := continusec.Path(ln.Index, 0, treeSize)
+	path, err := l.fetchSubTreeHashes(kr, ranges, false)
+	if err != nil {
+		return nil, err
+	}
+	for i, rr := range ranges {
+		if len(path[i]) == 0 {
+			if continusec.IsPow2(rr[1] - rr[0]) {
+				// Would have been nice if GetSubTreeHashes could better handle these
+				return nil, ErrNotFound
+			}
+			path[i], err = l.calcSubTreeHash(kr, rr[0], rr[1])
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return &continusec.LogInclusionProof{
+		LeafHash:  ln.Mtl,
+		LeafIndex: ln.Index,
+		TreeSize:  treeSize,
+		AuditPath: path,
+	}, nil
 }
 
 // InclusionProofByIndex will return an inclusion proof for a specified tree size and leaf index.
@@ -292,12 +378,30 @@ func (l *serverLog) InclusionProofByIndex(treeSize, leafIndex int64) (*continuse
 		return nil, err
 	}
 
-	return nil, ErrNotImplemented
+	if leafIndex < 0 || treeSize < 0 {
+		return nil, ErrInvalidTreeRange
+	}
+
+	var rv *continusec.LogInclusionProof
+	err = l.account.Service.Reader.ExecuteReadOnly(func(kr KeyReader) error {
+		var ln pb.LeafNode
+		err := l.readIntoProto(kr, keyForIdx(leafPrefix, uint64(leafIndex)), &ln)
+		if err != nil {
+			return err
+		}
+		rv, err = l.inclusionProof(kr, treeSize, &ln)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return rv, nil
 }
 
 /* Assumes all args are range checked first */
 func (l *serverLog) calcSubTreeHash(kr KeyReader, start, end int64) ([]byte, error) {
-	r := make([][2]int64, 0, 8) // magic number bad TODO
+	r := make([][2]int64, 0, 8) // magic number bad - why did we do this?
 
 	for start != end {
 		k := continusec.CalcK((end - start) + 1)
@@ -345,7 +449,7 @@ func (l *serverLog) fetchSubTreeHashes(kr KeyReader, ranges [][2]int64, failOnMi
 			}
 		} else {
 			var m pb.TreeNode
-			err := l.readIntoProto(kr, keyForIdx(nodePrefix, uint64(r[0])), &m)
+			err := l.readIntoProto(kr, keyForDoubleIdx(nodePrefix, uint64(r[0]), uint64(r[1])), &m)
 			if err == nil {
 				rv[i] = m.Mth
 			} else {
@@ -421,7 +525,7 @@ func (l *serverLog) ConsistencyProof(first, second int64) (*continusec.LogConsis
 		return nil
 	})
 
-	return nil, ErrNotImplemented
+	return rv, nil
 }
 
 // Entry returns the entry stored for the given index using the passed in factory to instantiate the entry.
