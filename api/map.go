@@ -20,7 +20,7 @@ package api
 
 import (
 	"github.com/continusec/go-client/continusec"
-	"github.com/continusec/vds-server/pb"
+	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 type serverMap struct {

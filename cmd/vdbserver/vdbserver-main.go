@@ -24,9 +24,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/continusec/vds-server/apife"
-	"github.com/continusec/vds-server/kvstore"
-	"github.com/continusec/vds-server/pb"
+	"github.com/continusec/verifiabledatastructures/apife"
+	"github.com/continusec/verifiabledatastructures/kvstore"
+	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
 

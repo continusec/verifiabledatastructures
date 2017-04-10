@@ -23,7 +23,7 @@ import (
 	"log"
 
 	"github.com/continusec/go-client/continusec"
-	"github.com/continusec/vds-server/api"
+	"github.com/continusec/verifiabledatastructures/api"
 
 	"crypto/sha256"
 	"encoding/hex"

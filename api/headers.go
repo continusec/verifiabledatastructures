@@ -21,7 +21,7 @@ package api
 import (
 	"errors"
 
-	"github.com/continusec/vds-server/pb"
+	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 var (

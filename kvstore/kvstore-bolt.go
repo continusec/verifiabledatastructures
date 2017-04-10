@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/continusec/vds-server/pb"
+	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 // BoltBackedService gives a service that persists to a BoltDB file.

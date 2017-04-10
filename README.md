@@ -16,7 +16,7 @@ go generate
 
 ## Rebuild server
 ```bash
-go install github.com/continusec/vds-server/cmd/vds-server
+go install github.com/continusec/verifiabledatastructures/cmd/vdbserver
 ```
 
 ## Sample config file for server

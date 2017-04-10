@@ -25,7 +25,7 @@ import (
 
 	"github.com/continusec/go-client/continusec"
 	"github.com/continusec/objecthash"
-	"github.com/continusec/vds-server/pb"
+	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
 
