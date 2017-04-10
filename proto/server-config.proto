@@ -65,6 +65,6 @@ message AccessPolicy {
 }
 
 message Account {
-    int64 id = 1;
+    string id = 1;
     repeated AccessPolicy policy = 2;
 }

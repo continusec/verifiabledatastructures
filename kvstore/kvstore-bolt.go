@@ -19,11 +19,16 @@ limitations under the License.
 package kvstore
 
 import (
+	"errors"
 	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/continusec/vds-server/api"
+	"github.com/continusec/go-client/continusec"
 	"github.com/continusec/vds-server/pb"
+)
+
+var (
+	ErrNotImplemented = errors.New("ErrNotImplemented")
 )
 
 // BoltBackedService gives a service that persists to a BoltDB file.
@@ -42,16 +47,10 @@ func (bbs *BoltBackedService) Init() error {
 }
 
 // CreateClient returns a client to the BoltBackedService.
-func (bbs *BoltBackedService) CreateClient(account int64, auth *api.AuthorizationContext) (api.VerifiableDataStructuresService, error) {
-	return &bbClient{
+func (bbs *BoltBackedService) Account(account string, apiKey string) continusec.Account {
+	return &bbAccount{
 		service: bbs,
-		auth:    auth,
 		account: account,
-	}, nil
-}
-
-type bbClient struct {
-	service *BoltBackedService
-	auth    *api.AuthorizationContext
-	account int64
+		apiKey:  apiKey,
+	}
 }
