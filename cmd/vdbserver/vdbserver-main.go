@@ -28,8 +28,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/continusec/verifiabledatastructures/api"
 	"github.com/continusec/verifiabledatastructures/apife"
-	"github.com/continusec/verifiabledatastructures/kvstore"
 	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
@@ -39,18 +39,18 @@ func startGRPCServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresSe
 	if err != nil {
 		log.Fatalf("Error establishing server listener: %s\n", err)
 	}
-	var creds grpc.ServerOption
+	var grpcServer *grpc.Server
 	if conf.InsecureServerForTesting {
 		log.Println("WARNING: InsecureServerForTesting is set, your connections will not be encrypted")
+		grpcServer = grpc.NewServer()
 	} else {
 		tc, err := credentials.NewServerTLSFromFile(conf.ServerCertPath, conf.ServerKeyPath)
 		if err != nil {
 			log.Fatalf("Error reading server keys/certs: %s\n", err)
 		}
-		creds = grpc.Creds(tc)
+		grpcServer = grpc.NewServer(grpc.Creds(tc))
 	}
 
-	grpcServer := grpc.NewServer(creds)
 	pb.RegisterVerifiableDataStructuresServiceServer(grpcServer, server)
 
 	log.Printf("Listening grpc on %s...", conf.GrpcListenBind)
@@ -96,15 +96,6 @@ func main() {
 		log.Fatalf("Error parsing server configuration: %s\n", err)
 	}
 
-	bbs := &kvstore.BoltBackedService{
-		Path:     conf.BoltDbPath,
-		Accounts: conf.Accounts,
-	}
-	err = bbs.Init()
-	if err != nil {
-		log.Fatalf("Error initializing BoltBackedService: %s\n", err)
-	}
-
-	startServers(conf, nil)
+	startServers(conf, &api.LocalService{})
 	waitForever()
 }
