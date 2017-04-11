@@ -36,9 +36,7 @@ func (s *LocalService) LogDelete(ctx context.Context, req *pb.LogDeleteRequest) 
 		return nil, ErrInvalidRequest
 	}
 	promise, err := s.Mutator.QueueMutation(&pb.Mutation{
-		Account:   req.Log.Account.Id,
-		Name:      req.Log.Name,
-		Operation: pb.MutationType_MUT_LOG_DESTROY,
+		LogDelete: req,
 	})
 	if err != nil {
 		return nil, err

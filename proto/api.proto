@@ -163,8 +163,7 @@ message LogConsistencyProofResponse {
 enum EntryFormat {
     ENTRY_FORMAT_RAW = 0;
     ENTRY_FORMAT_JSON = 1;
-    ENTRY_FORMAT_JSON_REDACTED = 2;
-    ENTRY_FORMAT_MUTATION = 4;
+    ENTRY_FORMAT_MUTATION = 2;
 }
 
 message HashableData {

@@ -46,14 +46,6 @@ func (s *LocalService) MapList(ctx context.Context, req *pb.MapListRequest) (*pb
 	return nil, ErrNotImplemented
 }
 
-func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
-	err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_SET_VALUE)
-	if err != nil {
-		return nil, err
-	}
-	return nil, ErrNotImplemented
-}
-
 func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
 	err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
 	if err != nil {

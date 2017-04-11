@@ -16,8 +16,6 @@
 
 package client
 
-import "time"
-
 type JSONAddEntryResponse struct {
 	Number int64  `json:"leaf_index"`
 	Hash   []byte `json:"leaf_hash"`
@@ -57,20 +55,15 @@ type JSONMapTreeHeadResponse struct {
 
 // JSONMapMutationEntry represents an entry in the Mutation Log for a map
 type JSONMapMutationEntry struct {
-	// When the mutation entry was generated
-	Timestamp time.Time `json:"timestamp"`
-
 	// One of "set", "delete", "update"
-	Action string `json:"action"`
+	Action string `json:"action,omitempty"`
+	Key    []byte `json:"key,omitempty"`
 
-	// Which key did this affect
-	Key []byte `json:"key"`
-
-	// Used for "set" and "update". This is the value that is used to calculated the leaf hash, so for Json this is the objecthash.
-	Value []byte `json:"value"`
+	// Used for "set" and "update". This is the value that is used to calculate the leaf hash, so for JSON this is the objecthash.
+	Value []byte `json:"value,omitempty"`
 
 	// Used for "update". This is the previous leaf hash (not value).
-	PreviousLeafHash []byte `json:"previous"`
+	PreviousLeafHash []byte `json:"previous,omitempty"`
 }
 
 type JSONLogListResponse struct {

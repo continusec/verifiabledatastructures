@@ -36,9 +36,7 @@ func (s *LocalService) LogCreate(ctx context.Context, req *pb.LogCreateRequest) 
 		return nil, ErrInvalidRequest
 	}
 	promise, err := s.Mutator.QueueMutation(&pb.Mutation{
-		Account:   req.Log.Account.Id,
-		Name:      req.Log.Name,
-		Operation: pb.MutationType_MUT_LOG_CREATE,
+		LogCreate: req,
 	})
 	if err != nil {
 		return nil, err

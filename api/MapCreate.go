@@ -33,9 +33,7 @@ func (s *LocalService) MapCreate(ctx context.Context, req *pb.MapCreateRequest) 
 		return nil, ErrInvalidRequest
 	}
 	promise, err := s.Mutator.QueueMutation(&pb.Mutation{
-		Account:   req.Map.Account.Id,
-		Name:      req.Map.Name,
-		Operation: pb.MutationType_MUT_MAP_CREATE,
+		MapCreate: req,
 	})
 	if err != nil {
 		return nil, err

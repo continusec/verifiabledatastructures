@@ -157,8 +157,6 @@ func entryFormatterForHashableData(hd *pb.HashableData) (client.UploadableEntry,
 		return &client.RawDataEntry{RawBytes: hd.Value}, nil
 	case pb.EntryFormat_ENTRY_FORMAT_JSON:
 		return &client.JsonEntry{JsonBytes: hd.Value}, nil
-	case pb.EntryFormat_ENTRY_FORMAT_JSON_REDACTED:
-		return &client.RedactableJsonEntry{JsonBytes: hd.Value}, nil
 	default:
 		return nil, ErrInvalidRequest
 	}

@@ -27,6 +27,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/api"
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
@@ -45,15 +46,17 @@ const (
 	hexFormat = 1
 )
 
+type formatMetadata struct {
+	Suffix                              string
+	EntryFormat                         pb.EntryFormat
+	Gettable, Addable, Mutation, Redact bool
+}
+
 var (
-	commonSuffixes = []struct {
-		Suffix                      string
-		EntryFormat                 pb.EntryFormat
-		Gettable, Addable, Mutation bool
-	}{
+	commonSuffixes = []*formatMetadata{
 		{Suffix: "", EntryFormat: pb.EntryFormat_ENTRY_FORMAT_RAW, Gettable: true, Addable: true},
 		{Suffix: "/xjson", EntryFormat: pb.EntryFormat_ENTRY_FORMAT_JSON, Gettable: true, Addable: true},
-		{Suffix: "/xjson/redactable", EntryFormat: pb.EntryFormat_ENTRY_FORMAT_JSON_REDACTED, Addable: true},
+		{Suffix: "/xjson/redactable", EntryFormat: pb.EntryFormat_ENTRY_FORMAT_JSON, Addable: true, Redact: true},
 		{Suffix: "/xjson/mutation", EntryFormat: pb.EntryFormat_ENTRY_FORMAT_MUTATION, Mutation: true},
 	}
 )
@@ -90,15 +93,15 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 		for _, f := range commonSuffixes {
 			if t.Addable && f.Addable {
 				// Insert a log entry
-				r.HandleFunc(t.Prefix+"/entry"+f.Suffix, wrapLogFunctionWithFormat(t.LogType, f.EntryFormat, as.insertEntryHandler)).Methods("POST")
+				r.HandleFunc(t.Prefix+"/entry"+f.Suffix, wrapLogFunctionWithFormat(t.LogType, f, as.insertEntryHandler)).Methods("POST")
 			}
 
 			if f.Gettable || (f.Mutation && t.Mutation) {
 				// Get a log entry
-				r.HandleFunc(t.Prefix+"/entry/{number:[0-9]+}"+f.Suffix, wrapLogFunctionWithFormat(t.LogType, f.EntryFormat, as.getEntryHandler)).Methods("GET")
+				r.HandleFunc(t.Prefix+"/entry/{number:[0-9]+}"+f.Suffix, wrapLogFunctionWithFormat(t.LogType, f, as.getEntryHandler)).Methods("GET")
 
 				// Get multiple entries, last is exclusive
-				r.HandleFunc(t.Prefix+"/entries/{first:[0-9]+}-{last:[0-9]+}"+f.Suffix, wrapLogFunctionWithFormat(t.LogType, f.EntryFormat, as.getEntriesHandler)).Methods("GET")
+				r.HandleFunc(t.Prefix+"/entries/{first:[0-9]+}-{last:[0-9]+}"+f.Suffix, wrapLogFunctionWithFormat(t.LogType, f, as.getEntriesHandler)).Methods("GET")
 			}
 		}
 
@@ -219,7 +222,7 @@ func wrapAccountFunction(f func(*pb.AccountRef, map[string]string, http.Response
 	}
 }
 
-func wrapLogFunctionWithFormat(logType pb.LogType, ef pb.EntryFormat, f func(*pb.LogRef, pb.EntryFormat, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func wrapLogFunctionWithFormat(logType pb.LogType, ef *formatMetadata, f func(*pb.LogRef, *formatMetadata, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return wrapLogFunction(logType, func(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		f(log, ef, vars, w, r)
 	})
@@ -454,7 +457,22 @@ func (as *apiServer) inclusionByHashProofHandler(log *pb.LogRef, vars map[string
 	}, w, r)
 }
 
-func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef pb.EntryFormat, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func redactJSON(b []byte) ([]byte, error) {
+	var o interface{}
+	err := json.Unmarshal(b, &o)
+	if err != nil {
+		return nil, err
+	}
+
+	o, err = objecthash.Redactable(o)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(o)
+}
+
+func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
@@ -462,10 +480,18 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef pb.EntryFormat, vars 
 		return
 	}
 
+	if ef.Redact {
+		body, err = redactJSON(body)
+		if err != nil {
+			writeResponseHeader(w, api.ErrInvalidRequest)
+			return
+		}
+	}
+
 	resp, err := as.service.LogAddEntry(requestContext(r), &pb.LogAddEntryRequest{
 		Log: log,
 		Data: &pb.HashableData{
-			Format: ef,
+			Format: ef.EntryFormat,
 			Value:  body,
 		},
 	})
@@ -479,7 +505,7 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef pb.EntryFormat, vars 
 	})
 }
 
-func (as *apiServer) getEntryHandler(log *pb.LogRef, ef pb.EntryFormat, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	number, err := strconv.Atoi(vars["number"])
 	if err != nil {
 		writeResponseHeader(w, api.ErrInvalidRequest)
@@ -490,7 +516,7 @@ func (as *apiServer) getEntryHandler(log *pb.LogRef, ef pb.EntryFormat, vars map
 		Log:    log,
 		First:  int64(number),
 		Last:   int64(number + 1),
-		Format: ef,
+		Format: ef.EntryFormat,
 	})
 	if err != nil {
 		writeResponseHeader(w, err)
@@ -506,7 +532,7 @@ func (as *apiServer) getEntryHandler(log *pb.LogRef, ef pb.EntryFormat, vars map
 	writeSuccessContent(w, resp.Values[0].Value)
 }
 
-func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef pb.EntryFormat, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	first, err := strconv.Atoi(vars["first"])
 	if err != nil {
 		writeResponseHeader(w, api.ErrInvalidRequest)
@@ -523,7 +549,7 @@ func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef pb.EntryFormat, vars m
 		Log:    log,
 		First:  int64(first),
 		Last:   int64(last),
-		Format: ef,
+		Format: ef.EntryFormat,
 	})
 	if err != nil {
 		writeResponseHeader(w, err)

@@ -40,7 +40,7 @@ func (s *LocalService) LogAddEntry(ctx context.Context, req *pb.LogAddEntryReque
 		return nil, err
 	}
 
-	leafInput, dataToStore, err := e.DataForStorage()
+	leafInput, _, err := e.DataForStorage()
 	if err != nil {
 		return nil, err
 	}
@@ -48,11 +48,7 @@ func (s *LocalService) LogAddEntry(ctx context.Context, req *pb.LogAddEntryReque
 	leafHash := client.LeafMerkleTreeHash(leafInput)
 
 	_, err = s.Mutator.QueueMutation(&pb.Mutation{
-		Account:   req.Log.Account.Id,
-		Name:      req.Log.Name,
-		Operation: pb.MutationType_MUT_LOG_ADD,
-		Mtl:       leafHash,
-		Value:     dataToStore,
+		LogAddEntry: req,
 	})
 	if err != nil {
 		return nil, err
