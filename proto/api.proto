@@ -164,6 +164,7 @@ enum EntryFormat {
     ENTRY_FORMAT_RAW = 0;
     ENTRY_FORMAT_JSON = 1;
     ENTRY_FORMAT_JSON_REDACTED = 2;
+    ENTRY_FORMAT_MUTATION = 4;
 }
 
 message HashableData {
@@ -204,6 +205,7 @@ message MapGetValueRequest {
     MapRef map = 1;
     int64 tree_size = 2;
     bytes key = 3;
+    EntryFormat format = 4;
 }
 
 message MapGetValueResponse {
@@ -216,6 +218,7 @@ message LogFetchEntriesRequest {
     LogRef log = 1;
     int64 first = 2; // inclusive
     int64 last = 3; // exclusive, may be HEAD(0)
+    EntryFormat format = 4;
 }
 
 message LogFetchEntriesResponse {
