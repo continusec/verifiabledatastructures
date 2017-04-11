@@ -59,9 +59,11 @@ func startGRPCServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresSe
 }
 
 func startRESTServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) error {
-	log.Printf("Listening REST on %s...", conf.RestListenBind)
 	if conf.InsecureServerForTesting {
 		log.Println("WARNING: InsecureServerForTesting is set, your connections will not be encrypted")
+	}
+	log.Printf("Listening REST on %s...", conf.RestListenBind)
+	if conf.InsecureServerForTesting {
 		return http.ListenAndServe(conf.RestListenBind, apife.CreateRESTHandler(server))
 	}
 	return http.ListenAndServeTLS(conf.RestListenBind, conf.ServerCertPath, conf.ServerKeyPath, apife.CreateRESTHandler(server))

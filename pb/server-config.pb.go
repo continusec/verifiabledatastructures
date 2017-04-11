@@ -15,9 +15,10 @@ It has these top-level messages:
 	AccessPolicy
 	Account
 	Mutation
-	LogTreeHash
 	LeafNode
 	TreeNode
+	LogTreeHash
+	EntryIndex
 	AccountRef
 	LogRef
 	MapRef
