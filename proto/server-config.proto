@@ -18,9 +18,8 @@ limitations under the License.
 
 syntax = "proto3";
 
-package continusec.vds;
+package continusec.verifiabledatastructures.server;
 option go_package = "pb";
-
 
 message ServerConfig {
     string server_cert_path = 1;
