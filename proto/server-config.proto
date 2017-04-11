@@ -24,10 +24,14 @@ option go_package = "pb";
 message ServerConfig {
     string server_cert_path = 1;
     string server_key_path = 2;
-    string listen_bind = 3; // e.g. ":8080"
-    bool insecure_http_server_for_testing = 4;
+    string rest_listen_bind = 3; // e.g. ":8080"
+    bool insecure_server_for_testing = 4;
     repeated Account accounts = 5;
     string bolt_db_path = 6;
+    string grpc_listen_protocol = 7;
+    string grpc_listen_bind = 8;
+    bool rest_server = 9;
+    bool grpc_server = 10;
 }
 
 enum Permission {

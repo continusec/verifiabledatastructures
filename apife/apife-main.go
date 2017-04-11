@@ -62,8 +62,8 @@ type apiServer struct {
 	service pb.VerifiableDataStructuresServiceServer
 }
 
-// CreateHandler creates handlers for the API
-func CreateHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler {
+// CreateRESTHandler creates handlers for the API
+func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler {
 	as := &apiServer{service: s}
 
 	r := mux.NewRouter()

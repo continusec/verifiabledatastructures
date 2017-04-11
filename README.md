@@ -26,15 +26,21 @@ go install github.com/continusec/verifiabledatastructures/cmd/vdbserver
 # server_cert_path: "vds-cert.pem"
 # server_key_path: "vds-key.pem"
 
-listen_bind: ":8092"
-insecure_http_server_for_testing: true
+rest_server: true
+rest_listen_bind: ":8092"
+
+grpc_server: true
+grpc_listen_bind: ":8090"
+grpc_listen_protocol: "tcp4"
+
+insecure_server_for_testing: true
 
 # Bolt DB path:
 bolt_db_path: "bolt.db"
 
 # Accounts supported by this server
 accounts: <
-    id: 1234
+    id: "1234"
     policy: <
         api_key: "secret"
         name_match: "*"

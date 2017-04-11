@@ -21,14 +21,64 @@ package main
 import (
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/continusec/verifiabledatastructures/apife"
 	"github.com/continusec/verifiabledatastructures/kvstore"
 	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
+
+func startGRPCServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) {
+	lis, err := net.Listen(conf.GrpcListenProtocol, conf.GrpcListenBind)
+	if err != nil {
+		log.Fatalf("Error establishing server listener: %s\n", err)
+	}
+	var creds grpc.ServerOption
+	if conf.InsecureServerForTesting {
+		log.Println("WARNING: InsecureServerForTesting is set, your connections will not be encrypted")
+	} else {
+		tc, err := credentials.NewServerTLSFromFile(conf.ServerCertPath, conf.ServerKeyPath)
+		if err != nil {
+			log.Fatalf("Error reading server keys/certs: %s\n", err)
+		}
+		creds = grpc.Creds(tc)
+	}
+
+	grpcServer := grpc.NewServer(creds)
+	pb.RegisterVerifiableDataStructuresServiceServer(grpcServer, server)
+
+	log.Printf("Listening grpc on %s...", conf.GrpcListenBind)
+
+	grpcServer.Serve(lis)
+}
+
+func startRESTServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) error {
+	log.Printf("Listening REST on %s...", conf.RestListenBind)
+	if conf.InsecureServerForTesting {
+		log.Println("WARNING: InsecureServerForTesting is set, your connections will not be encrypted")
+		return http.ListenAndServe(conf.RestListenBind, apife.CreateRESTHandler(server))
+	}
+	return http.ListenAndServeTLS(conf.RestListenBind, conf.ServerCertPath, conf.ServerKeyPath, apife.CreateRESTHandler(server))
+}
+
+func startServers(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) {
+	if conf.GrpcServer {
+		go startGRPCServer(conf, server)
+	}
+	if conf.RestServer {
+		go startRESTServer(conf, server)
+	}
+}
+
+func waitForever() {
+	select {}
+}
 
 func main() {
 	if len(os.Args) != 2 {
@@ -54,16 +104,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error initializing BoltBackedService: %s\n", err)
 	}
-	apiHandler := apife.CreateHandler(nil)
 
-	log.Printf("Listening on %s...", conf.ListenBind)
-	if conf.InsecureHttpServerForTesting {
-		log.Println("WARNING: InsecureHttpServerForTesting is set, your connections will not be encrypted")
-		err = http.ListenAndServe(conf.ListenBind, apiHandler)
-	} else {
-		err = http.ListenAndServeTLS(conf.ListenBind, conf.ServerCertPath, conf.ServerKeyPath, apiHandler)
-	}
-	if err != nil {
-		log.Fatalf("Errors serving TLS: %s\n", err)
-	}
+	startServers(conf, nil)
+	waitForever()
 }
