@@ -23,9 +23,26 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
 )
+
+func jsonObjectHash(orig interface{}) ([]byte, error) {
+	// First we marshal it to JSON form
+	ob, err := json.Marshal(orig)
+	if err != nil {
+		return ob, err
+	}
+
+	var o interface{}
+	err = json.Unmarshal(ob, &o)
+	if err != nil {
+		return nil, err
+	}
+
+	return objecthash.ObjectHash(o)
+}
 
 func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*client.JSONMapMutationEntry, error) {
 	rv := &client.JSONMapMutationEntry{Key: req.Key}
@@ -34,17 +51,7 @@ func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*client.JSONMapMutationE
 		return rv, nil
 	}
 
-	e, err := entryFormatterForHashableData(req.Value)
-	if err != nil {
-		return nil, err
-	}
-
-	leafInput, _, err := e.DataForStorage()
-	if err != nil {
-		return nil, err
-	}
-
-	rv.Value = client.LeafMerkleTreeHash(leafInput)
+	rv.Value = client.LeafMerkleTreeHash(req.Value.LeafInput)
 
 	switch req.Action {
 	case pb.MapMutationAction_MAP_MUTATION_SET:
@@ -70,16 +77,10 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 		return nil, ErrInvalidRequest
 	}
 
-	mmjb, err := json.Marshal(mm)
+	leafInput, err := jsonObjectHash(mm)
 	if err != nil {
 		return nil, err
 	}
-
-	leafInput, _, err := (&client.JsonEntry{JsonBytes: mmjb}).DataForStorage()
-	if err != nil {
-		return nil, err
-	}
-	leafHash := client.LeafMerkleTreeHash(leafInput)
 
 	_, err = s.Mutator.QueueMutation(&pb.Mutation{
 		MapSetValue: req,
@@ -88,6 +89,6 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 		return nil, err
 	}
 	return &pb.MapSetValueResponse{
-		LeafHash: leafHash,
+		LeafHash: client.LeafMerkleTreeHash(leafInput),
 	}, nil
 }

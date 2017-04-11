@@ -44,7 +44,7 @@ It has these top-level messages:
 	LogInclusionProofResponse
 	LogConsistencyProofRequest
 	LogConsistencyProofResponse
-	HashableData
+	LeafData
 	LogAddEntryRequest
 	LogAddEntryResponse
 	MapSetValueRequest

@@ -35,18 +35,6 @@ func (s *LocalService) LogAddEntry(ctx context.Context, req *pb.LogAddEntryReque
 		return nil, ErrInvalidRequest
 	}
 
-	e, err := entryFormatterForHashableData(req.Data)
-	if err != nil {
-		return nil, err
-	}
-
-	leafInput, _, err := e.DataForStorage()
-	if err != nil {
-		return nil, err
-	}
-
-	leafHash := client.LeafMerkleTreeHash(leafInput)
-
 	_, err = s.Mutator.QueueMutation(&pb.Mutation{
 		LogAddEntry: req,
 	})
@@ -55,6 +43,6 @@ func (s *LocalService) LogAddEntry(ctx context.Context, req *pb.LogAddEntryReque
 	}
 
 	return &pb.LogAddEntryResponse{
-		LeafHash: leafHash,
+		LeafHash: client.LeafMerkleTreeHash(req.Data.LeafInput),
 	}, nil
 }

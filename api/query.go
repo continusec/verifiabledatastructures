@@ -150,14 +150,3 @@ func (l *LocalService) bucket(log *pb.LogRef) ([]byte, error) {
 		"type":    log.LogType,
 	})
 }
-
-func entryFormatterForHashableData(hd *pb.HashableData) (client.UploadableEntry, error) {
-	switch hd.Format {
-	case pb.EntryFormat_ENTRY_FORMAT_RAW:
-		return &client.RawDataEntry{RawBytes: hd.Value}, nil
-	case pb.EntryFormat_ENTRY_FORMAT_JSON:
-		return &client.JsonEntry{JsonBytes: hd.Value}, nil
-	default:
-		return nil, ErrInvalidRequest
-	}
-}

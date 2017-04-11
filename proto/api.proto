@@ -160,20 +160,15 @@ message LogConsistencyProofResponse {
     repeated bytes audit_path = 3;
 }
 
-enum EntryFormat {
-    ENTRY_FORMAT_RAW = 0;
-    ENTRY_FORMAT_JSON = 1;
-    ENTRY_FORMAT_MUTATION = 2;
-}
-
-message HashableData {
-    EntryFormat format = 1;
-    bytes value = 2;
+message LeafData {
+    bytes leaf_input = 1;
+    bytes extra_data = 2; // ignored by the server, returned to the user, who may have business logic to confirm that the leaf_input has been derived from this, e.g. objecthash
+    bytes leaf_hash = 3; // supplied on output, ignored on input
 }
 
 message LogAddEntryRequest {
     LogRef log = 1;
-    HashableData data = 2;
+    LeafData data = 2;
 }
 
 message LogAddEntryResponse {
@@ -192,7 +187,7 @@ message MapSetValueRequest {
     MapMutationAction action = 2;
 
     bytes key = 3;
-    HashableData value = 4; // if MAP_MUTATION_SET or MAP_MUTATION_UPDATE
+    LeafData value = 4; // if MAP_MUTATION_SET or MAP_MUTATION_UPDATE
     bytes prev_leaf_hash = 5; // if MAP_MUTATION_UPDATE
 }
 
@@ -204,22 +199,20 @@ message MapGetValueRequest {
     MapRef map = 1;
     int64 tree_size = 2;
     bytes key = 3;
-    EntryFormat format = 4;
 }
 
 message MapGetValueResponse {
     int64 tree_size = 1;
     repeated bytes audit_path = 2; // up to 256 long. Consumers should substitute empties and missing for known defaults.
-    HashableData value = 3;
+    LeafData value = 3;
 }
 
 message LogFetchEntriesRequest {
     LogRef log = 1;
     int64 first = 2; // inclusive
     int64 last = 3; // exclusive, may be HEAD(0)
-    EntryFormat format = 4;
 }
 
 message LogFetchEntriesResponse {
-    repeated HashableData values = 1;
+    repeated LeafData values = 1;
 }

@@ -44,20 +44,25 @@ const (
 
 	stdFormat = 0
 	hexFormat = 1
+
+	rawEntry      = 0
+	jsonEntry     = 1
+	redactedEntry = 2
+	mutationEntry = 3
 )
 
 type formatMetadata struct {
 	Suffix                              string
-	EntryFormat                         pb.EntryFormat
+	EntryFormat                         int
 	Gettable, Addable, Mutation, Redact bool
 }
 
 var (
 	commonSuffixes = []*formatMetadata{
-		{Suffix: "", EntryFormat: pb.EntryFormat_ENTRY_FORMAT_RAW, Gettable: true, Addable: true},
-		{Suffix: "/xjson", EntryFormat: pb.EntryFormat_ENTRY_FORMAT_JSON, Gettable: true, Addable: true},
-		{Suffix: "/xjson/redactable", EntryFormat: pb.EntryFormat_ENTRY_FORMAT_JSON, Addable: true, Redact: true},
-		{Suffix: "/xjson/mutation", EntryFormat: pb.EntryFormat_ENTRY_FORMAT_MUTATION, Mutation: true},
+		{Suffix: "", EntryFormat: rawEntry, Gettable: true, Addable: true},
+		{Suffix: "/xjson", EntryFormat: jsonEntry, Gettable: true, Addable: true},
+		{Suffix: "/xjson/redactable", EntryFormat: redactedEntry, Addable: true, Redact: true},
+		{Suffix: "/xjson/mutation", EntryFormat: mutationEntry, Mutation: true},
 	}
 )
 
@@ -249,7 +254,7 @@ func wrapMapFunctionWithKey(keyType int, f func(*pb.MapRef, []byte, map[string]s
 	})
 }
 
-func wrapMapFunctionWithKeyAndFormat(keyType int, ef pb.EntryFormat, f func(*pb.MapRef, []byte, pb.EntryFormat, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func wrapMapFunctionWithKeyAndFormat(keyType int, ef int, f func(*pb.MapRef, []byte, int, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return wrapMapFunctionWithKey(keyType, func(vmap *pb.MapRef, k []byte, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		f(vmap, k, ef, vars, w, r)
 	})
@@ -480,20 +485,15 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 		return
 	}
 
-	if ef.Redact {
-		body, err = redactJSON(body)
-		if err != nil {
-			writeResponseHeader(w, api.ErrInvalidRequest)
-			return
-		}
+	ld, err := createLeafData(body, ef.EntryFormat)
+	if err != nil {
+		writeResponseHeader(w, api.ErrInvalidRequest)
+		return
 	}
 
 	resp, err := as.service.LogAddEntry(requestContext(r), &pb.LogAddEntryRequest{
-		Log: log,
-		Data: &pb.HashableData{
-			Format: ef.EntryFormat,
-			Value:  body,
-		},
+		Log:  log,
+		Data: ld,
 	})
 	if err != nil {
 		writeResponseHeader(w, err)
@@ -513,10 +513,9 @@ func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars ma
 	}
 
 	resp, err := as.service.LogFetchEntries(requestContext(r), &pb.LogFetchEntriesRequest{
-		Log:    log,
-		First:  int64(number),
-		Last:   int64(number + 1),
-		Format: ef.EntryFormat,
+		Log:   log,
+		First: int64(number),
+		Last:  int64(number + 1),
 	})
 	if err != nil {
 		writeResponseHeader(w, err)
@@ -529,7 +528,7 @@ func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars ma
 		return
 	}
 
-	writeSuccessContent(w, resp.Values[0].Value)
+	writeResponseData(w, resp.Values[0], ef.EntryFormat)
 }
 
 func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
@@ -546,10 +545,9 @@ func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars 
 	}
 
 	resp, err := as.service.LogFetchEntries(requestContext(r), &pb.LogFetchEntriesRequest{
-		Log:    log,
-		First:  int64(first),
-		Last:   int64(last),
-		Format: ef.EntryFormat,
+		Log:   log,
+		First: int64(first),
+		Last:  int64(last),
 	})
 	if err != nil {
 		writeResponseHeader(w, err)
@@ -558,9 +556,15 @@ func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars 
 
 	rv := make([]*client.JSONGetEntryResponse, len(resp.Values))
 	for i, v := range resp.Values {
+		d, err := getResponseData(v, ef.EntryFormat)
+		if err != nil {
+			writeResponseHeader(w, err)
+			return
+		}
+
 		rv[i] = &client.JSONGetEntryResponse{
 			Number: int64(first + i),
-			Data:   v.Value,
+			Data:   d,
 		}
 	}
 	writeSuccessJSON(w, &client.JSONGetEntriesResponse{
@@ -618,7 +622,7 @@ func (as *apiServer) deleteMapEntryHandler(vmap *pb.MapRef, key []byte, vars map
 	}, w, r)
 }
 
-func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef pb.EntryFormat, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	var treeSize int
 	if vars["treesize"] == headStr {
 		treeSize = 0
@@ -635,7 +639,6 @@ func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef pb.EntryFormat,
 		Map:      vmap,
 		TreeSize: int64(treeSize),
 		Key:      key,
-		Format:   ef,
 	})
 	if err != nil {
 		writeResponseHeader(w, err)
@@ -649,10 +652,65 @@ func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef pb.EntryFormat,
 		}
 	}
 
-	writeSuccessContent(w, resp.Value.Value)
+	writeResponseData(w, resp.Value, ef)
 }
 
-func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef pb.EntryFormat, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func getResponseData(ld *pb.LeafData, ef int) ([]byte, error) {
+	switch ef {
+	case rawEntry:
+		return ld.LeafInput, nil
+	case jsonEntry:
+		return ld.ExtraData, nil
+	default:
+		return nil, api.ErrInvalidRequest
+
+	}
+}
+
+func writeResponseData(w http.ResponseWriter, ld *pb.LeafData, ef int) {
+	data, err := getResponseData(ld, ef)
+	if err != nil {
+		writeResponseHeader(w, api.ErrInvalidRequest)
+		return
+	}
+	writeSuccessContent(w, data)
+}
+
+func createLeafData(body []byte, ef int) (*pb.LeafData, error) {
+	switch ef {
+	case rawEntry:
+		return &pb.LeafData{LeafInput: body}, nil
+	case jsonEntry:
+		oh, err := objecthash.CommonJSONHash(body)
+		if err != nil {
+			return nil, api.ErrInvalidRequest
+		}
+		return &pb.LeafData{LeafInput: oh, ExtraData: body}, nil
+	case redactedEntry:
+		var obj interface{}
+		err := json.Unmarshal(body, &obj)
+		if err != nil {
+			return nil, api.ErrInvalidRequest
+		}
+		redactable, err := objecthash.Redactable(obj)
+		if err != nil {
+			return nil, api.ErrInvalidRequest
+		}
+		oh, err := objecthash.ObjectHash(redactable)
+		if err != nil {
+			return nil, api.ErrInvalidRequest
+		}
+		rb, err := json.Marshal(redactable)
+		if err != nil {
+			return nil, api.ErrInvalidRequest
+		}
+		return &pb.LeafData{LeafInput: oh, ExtraData: rb}, nil
+	default:
+		return nil, api.ErrInvalidRequest
+	}
+}
+
+func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	prevLeafHashString := strings.TrimSpace(r.Header.Get("X-Previous-LeafHash"))
 	var prevLeafHash []byte
 	if len(prevLeafHashString) > 0 {
@@ -671,23 +729,23 @@ func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef pb.EntryFormat,
 		return
 	}
 
+	ld, err := createLeafData(body, ef)
+	if err != nil {
+		writeResponseHeader(w, api.ErrInvalidRequest)
+		return
+	}
+
 	if len(prevLeafHash) == 0 {
 		as.queueMapMutation(vmap, &pb.MapSetValueRequest{
 			Action: pb.MapMutationAction_MAP_MUTATION_SET,
 			Key:    key,
-			Value: &pb.HashableData{
-				Format: ef,
-				Value:  body,
-			},
+			Value:  ld,
 		}, w, r)
 	} else { // must be an update
 		as.queueMapMutation(vmap, &pb.MapSetValueRequest{
-			Action: pb.MapMutationAction_MAP_MUTATION_UPDATE,
-			Key:    key,
-			Value: &pb.HashableData{
-				Format: ef,
-				Value:  body,
-			},
+			Action:       pb.MapMutationAction_MAP_MUTATION_UPDATE,
+			Key:          key,
+			Value:        ld,
 			PrevLeafHash: prevLeafHash,
 		}, w, r)
 	}
