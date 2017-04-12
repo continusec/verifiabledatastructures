@@ -24,6 +24,26 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
+func (s *LocalService) applyMapDelete(db KeyWriter, req *pb.MapDeleteRequest) error {
+	k := []byte(req.Map.Name)
+	_, err := db.Get(mapsBucket, k)
+	if err != nil {
+		return err
+	}
+
+	ns, err := s.mapBucket(req.Map)
+	if err != nil {
+		return err
+	}
+
+	err = db.Set(mapsBucket, k, nil)
+	if err != nil {
+		return err
+	}
+
+	return db.ResetNamespace(ns, false)
+}
+
 func (s *LocalService) MapDelete(ctx context.Context, req *pb.MapDeleteRequest) (*pb.MapDeleteResponse, error) {
 	err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_DELETE)
 	if err != nil {

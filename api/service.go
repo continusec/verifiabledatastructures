@@ -42,19 +42,6 @@ func (s *LocalService) ApplyMutation(db KeyWriter, mut *pb.Mutation) error {
 		return ErrNotImplemented
 	}
 }
-
-func (s *LocalService) applyLogCreate(db KeyWriter, req *pb.LogCreateRequest) error {
-	return ErrNotImplemented
-}
-func (s *LocalService) applyMapCreate(db KeyWriter, req *pb.MapCreateRequest) error {
-	return ErrNotImplemented
-}
-func (s *LocalService) applyLogDelete(db KeyWriter, req *pb.LogDeleteRequest) error {
-	return ErrNotImplemented
-}
-func (s *LocalService) applyMapDelete(db KeyWriter, req *pb.MapDeleteRequest) error {
-	return ErrNotImplemented
-}
 func (s *LocalService) applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
 	return ErrNotImplemented
 }

@@ -24,6 +24,32 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
+func (s *LocalService) applyLogCreate(db KeyWriter, req *pb.LogCreateRequest) error {
+	k := []byte(req.Log.Name)
+	_, err := db.Get(logsBucket, k)
+	switch err {
+	case nil:
+		return ErrLogAlreadyExists
+	case ErrNoSuchKey:
+	// continue
+	default:
+		return err
+	}
+
+	ns, err := s.logBucket(req.Log)
+	if err != nil {
+		return err
+	}
+	err = db.ResetNamespace(ns, true)
+	if err != nil {
+		return err
+	}
+
+	return s.writeProto(db, logsBucket, k, &pb.LogInfo{
+		Name: req.Log.Name,
+	})
+}
+
 func (s *LocalService) LogCreate(ctx context.Context, req *pb.LogCreateRequest) (*pb.LogCreateResponse, error) {
 	err := s.verifyAccessForLog(req.Log, pb.Permission_PERM_LOG_CREATE)
 	if err != nil {

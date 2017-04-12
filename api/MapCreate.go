@@ -24,6 +24,32 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
+func (s *LocalService) applyMapCreate(db KeyWriter, req *pb.MapCreateRequest) error {
+	k := []byte(req.Map.Name)
+	_, err := db.Get(mapsBucket, k)
+	switch err {
+	case nil:
+		return ErrLogAlreadyExists
+	case ErrNoSuchKey:
+	// continue
+	default:
+		return err
+	}
+
+	ns, err := s.mapBucket(req.Map)
+	if err != nil {
+		return err
+	}
+	err = db.ResetNamespace(ns, true)
+	if err != nil {
+		return err
+	}
+
+	return s.writeProto(db, mapsBucket, k, &pb.MapInfo{
+		Name: req.Map.Name,
+	})
+}
+
 func (s *LocalService) MapCreate(ctx context.Context, req *pb.MapCreateRequest) (*pb.MapCreateResponse, error) {
 	err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_CREATE)
 	if err != nil {

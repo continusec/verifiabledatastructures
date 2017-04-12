@@ -79,6 +79,11 @@ type KeyReader interface {
 type KeyWriter interface {
 	KeyGetter
 
-	// Set sets the thing
+	// Set sets the thing. Value of nil means delete
 	Set(bucket, key, value []byte) error
+
+	// ResetNamespace deletes the namespace if it already exists.
+	// It is not an error if it doesn't already exist.
+	// If recreate is set, then create a new namespace
+	ResetNamespace(ns []byte, recreate bool) error
 }

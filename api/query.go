@@ -249,3 +249,11 @@ func (l *LocalService) accountBucket(account *pb.AccountRef) ([]byte, error) {
 		"account": account.Id,
 	})
 }
+
+func (l *LocalService) writeProto(db KeyWriter, bucket, key []byte, m proto.Message) error {
+	b, err := proto.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return db.Set(bucket, key, b)
+}
