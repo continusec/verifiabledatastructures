@@ -18,6 +18,8 @@ limitations under the License.
 
 package api
 
+import "crypto/sha256"
+
 type BPath []byte
 
 func (b BPath) Length() uint {
@@ -110,4 +112,17 @@ func BPathCommonPrefixLength(a, b BPath) uint {
 		count++
 	}
 	return count
+}
+
+func BPathFromKey(key []byte) BPath {
+	h := sha256.Sum256(key)
+	nm := len(h) * 8
+	rv := make([]byte, 1+len(h))
+	if nm == 256 { // yes, it always will be unless we change hash function for testing to something shorter
+		rv[0] = 0
+	} else {
+		rv[0] = byte(nm)
+	}
+	copy(rv[1:], h[:])
+	return BPath(rv)
 }

@@ -18,23 +18,8 @@ limitations under the License.
 
 package api
 
-import (
-	"golang.org/x/net/context"
-
-	"github.com/continusec/verifiabledatastructures/pb"
-)
-
 type LocalService struct {
 	Mutator      MutatorService
 	AccessPolicy AuthorizationOracle
 	Reader       StorageReader
-}
-
-func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
-	err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, ErrNotImplemented
 }
