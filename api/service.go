@@ -30,19 +30,11 @@ type LocalService struct {
 	Reader       StorageReader
 }
 
-func (s *LocalService) LogList(ctx context.Context, req *pb.LogListRequest) (*pb.LogListResponse, error) {
-	return nil, ErrNotImplemented
-}
-
 func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
 	err := s.verifyAccessForLogOperation(req.Log, operationReadEntry)
 	if err != nil {
 		return nil, err
 	}
-	return nil, ErrNotImplemented
-}
-
-func (s *LocalService) MapList(ctx context.Context, req *pb.MapListRequest) (*pb.MapListResponse, error) {
 	return nil, ErrNotImplemented
 }
 

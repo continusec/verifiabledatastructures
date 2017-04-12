@@ -27,6 +27,9 @@ import (
 )
 
 var (
+	logsPrefix = []byte("logs") // pb.LogInfo
+	mapsPrefix = []byte("maps") // pb.MapInfo
+
 	headPrefix = []byte("head") // pb.LogTreeHash
 	leafPrefix = []byte("leaf") // followed by uint64 index -> pb.LeafNode
 	nodePrefix = []byte("node") // followed by uint64 uint64 -> pb.TreeNode
@@ -85,6 +88,48 @@ func (l *LocalService) lookupLogTreeHead(kr KeyReader, log *pb.LogRef) (*pb.LogT
 	}
 }
 
+func (l *LocalService) lookupAccountLogs(kr KeyReader, acc *pb.AccountRef) ([]*pb.LogInfo, error) {
+	bucket, err := l.accountBucket(acc)
+	if err != nil {
+		return nil, err
+	}
+	result, err := kr.Scan(bucket, logsPrefix)
+	if err != nil {
+		return nil, err
+	}
+	rv := make([]*pb.LogInfo, len(result))
+	for i, row := range result {
+		var li pb.LogInfo
+		err = proto.Unmarshal(row[1], &li)
+		if err != nil {
+			return nil, err
+		}
+		rv[i] = &li
+	}
+	return rv, nil
+}
+
+func (l *LocalService) lookupAccountMaps(kr KeyReader, acc *pb.AccountRef) ([]*pb.MapInfo, error) {
+	bucket, err := l.accountBucket(acc)
+	if err != nil {
+		return nil, err
+	}
+	result, err := kr.Scan(bucket, mapsPrefix)
+	if err != nil {
+		return nil, err
+	}
+	rv := make([]*pb.MapInfo, len(result))
+	for i, row := range result {
+		var li pb.MapInfo
+		err = proto.Unmarshal(row[1], &li)
+		if err != nil {
+			return nil, err
+		}
+		rv[i] = &li
+	}
+	return rv, nil
+}
+
 func keyForIdx(prefix []byte, i uint64) []byte {
 	rv := make([]byte, len(prefix)+8)
 	copy(rv, prefix)
@@ -120,5 +165,12 @@ func (l *LocalService) bucket(log *pb.LogRef) ([]byte, error) {
 		"account": log.Account.Id,
 		"name":    log.Name,
 		"type":    log.LogType,
+	})
+}
+
+func (l *LocalService) accountBucket(account *pb.AccountRef) ([]byte, error) {
+	// TODO, cache this
+	return objecthash.ObjectHash(map[string]interface{}{
+		"account": account.Id,
 	})
 }
