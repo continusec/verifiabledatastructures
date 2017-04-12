@@ -20,6 +20,7 @@ package api
 
 import (
 	"encoding/json"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -28,11 +29,11 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-func jsonObjectHash(orig interface{}) ([]byte, error) {
-	// First we marshal it to JSON form
+func jsonObjectHash(orig interface{}) (*pb.LeafData, error) {
+	// First we marshal it to JSON form, so that we convert objects to mapping
 	ob, err := json.Marshal(orig)
 	if err != nil {
-		return ob, err
+		return nil, err
 	}
 
 	var o interface{}
@@ -41,17 +42,29 @@ func jsonObjectHash(orig interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	return objecthash.ObjectHash(o)
+	oh, err := objecthash.ObjectHash(o)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.LeafData{
+		LeafInput: oh,
+		ExtraData: ob,
+	}, nil
 }
 
 func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*client.JSONMapMutationEntry, error) {
-	rv := &client.JSONMapMutationEntry{Key: req.Key}
+	rv := &client.JSONMapMutationEntry{
+		Key:       req.Key,
+		Timestamp: time.Now(),
+	}
 	if req.Action == pb.MapMutationAction_MAP_MUTATION_DELETE {
 		rv.Action = "delete"
 		return rv, nil
 	}
 
-	rv.Value = client.LeafMerkleTreeHash(req.Value.LeafInput)
+	rv.ValueLeafInput = req.Value.LeafInput
+	rv.ValueExtraData = req.Value.ExtraData
 
 	switch req.Action {
 	case pb.MapMutationAction_MAP_MUTATION_SET:
@@ -72,23 +85,32 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 		return nil, err
 	}
 
+	// Since this whacks in timestamp (deliberately, so that mutation log receives unique mutations),
+	// we must keep this rather than regenerate another object.
 	mm, err := makeJSONMutationEntry(req)
 	if err != nil {
 		return nil, ErrInvalidRequest
 	}
 
-	leafInput, err := jsonObjectHash(mm)
+	mutData, err := jsonObjectHash(mm)
 	if err != nil {
 		return nil, err
 	}
 
 	_, err = s.Mutator.QueueMutation(&pb.Mutation{
-		MapSetValue: req,
+		LogAddEntry: &pb.LogAddEntryRequest{
+			Log: &pb.LogRef{
+				Account: req.Map.Account,
+				Name:    req.Map.Name,
+				LogType: pb.LogType_STRUCT_TYPE_MUTATION_LOG,
+			},
+			Data: mutData,
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &pb.MapSetValueResponse{
-		LeafHash: client.LeafMerkleTreeHash(leafInput),
+		LeafHash: client.LeafMerkleTreeHash(mutData.LeafInput),
 	}, nil
 }

@@ -41,7 +41,7 @@ func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsi
 
 	var rv *pb.LogConsistencyProofResponse
 	err = s.Reader.ExecuteReadOnly(func(kr KeyReader) error {
-		head, err := s.getLogTreeHead(kr, req.Log)
+		head, err := s.lookupLogTreeHead(kr, req.Log)
 		if err != nil {
 			return err
 		}

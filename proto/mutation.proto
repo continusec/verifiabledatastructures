@@ -30,7 +30,7 @@ message Mutation {
     continusec.verifiabledatastructures.api.LogDeleteRequest log_delete = 3;
     continusec.verifiabledatastructures.api.MapDeleteRequest map_delete = 4;
     continusec.verifiabledatastructures.api.LogAddEntryRequest log_add_entry = 5;
-    continusec.verifiabledatastructures.api.MapSetValueRequest map_set_value = 6;
+    // we don't have map set value, as that generates a LogAddEntryRequest to the underlying mutation log
 }
 
 message LeafNode {

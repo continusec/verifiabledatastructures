@@ -37,7 +37,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 
 	var rv *pb.LogInclusionProofResponse
 	err = s.Reader.ExecuteReadOnly(func(kr KeyReader) error {
-		head, err := s.getLogTreeHead(kr, req.Log)
+		head, err := s.lookupLogTreeHead(kr, req.Log)
 		if err != nil {
 			return err
 		}
@@ -56,8 +56,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 			leafIndex = req.LeafIndex
 		} else {
 			// Then we must fetch the index
-			var ei pb.EntryIndex
-			err = s.readIntoProto(kr, req.Log, append(hashPrefix, req.MtlHash...), &ei)
+			ei, err := s.lookupIndexByLeafHash(kr, req.Log, req.MtlHash)
 			if err != nil {
 				return err
 			}

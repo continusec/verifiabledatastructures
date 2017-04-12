@@ -36,7 +36,7 @@ func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashReque
 
 	var rv *pb.LogTreeHashResponse
 	err = s.Reader.ExecuteReadOnly(func(kr KeyReader) error {
-		head, err := s.getLogTreeHead(kr, req.Log)
+		head, err := s.lookupLogTreeHead(kr, req.Log)
 		if err != nil {
 			return err
 		}
@@ -52,8 +52,7 @@ func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashReque
 			return ErrInvalidTreeRange
 		}
 
-		var m pb.LogTreeHash
-		err = s.readIntoProto(kr, req.Log, keyForIdx(indexTree, uint64(req.TreeSize)), &m)
+		m, err := s.lookupLogRootHashBySize(kr, req.Log, req.TreeSize)
 		if err != nil {
 			return err
 		}

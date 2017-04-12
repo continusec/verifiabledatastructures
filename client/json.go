@@ -16,6 +16,8 @@
 
 package client
 
+import "time"
+
 type JSONAddEntryResponse struct {
 	Number int64  `json:"leaf_index"`
 	Hash   []byte `json:"leaf_hash"`
@@ -55,12 +57,20 @@ type JSONMapTreeHeadResponse struct {
 
 // JSONMapMutationEntry represents an entry in the Mutation Log for a map
 type JSONMapMutationEntry struct {
+	// Timestamp is needed to ensure that the mutation operation is unique (except in pessimal cases).
+	// Otherise the mutation log will cleverly choose not to add it, and it wil never apply.
+	// time.Time marshals to RFC3339 string.
+	Timestamp time.Time `json:"timestamp,omitempty"`
+
 	// One of "set", "delete", "update"
 	Action string `json:"action,omitempty"`
 	Key    []byte `json:"key,omitempty"`
 
 	// Used for "set" and "update". This is the value that is used to calculate the leaf hash, so for JSON this is the objecthash.
-	Value []byte `json:"value,omitempty"`
+	ValueLeafInput []byte `json:"value_leaf_input,omitempty"`
+
+	// Used for "set" and "update". This is the value that is used support the leaf input, so for JSON this is the original JSON.
+	ValueExtraData []byte `json:"value_extra_data,omitempty"`
 
 	// Used for "update". This is the previous leaf hash (not value).
 	PreviousLeafHash []byte `json:"previous,omitempty"`

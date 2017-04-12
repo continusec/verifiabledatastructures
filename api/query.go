@@ -22,18 +22,68 @@ import (
 	"encoding/binary"
 
 	"github.com/continusec/objecthash"
-	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
 
 var (
-	logHead    = []byte("head") // pb.LogTreeHash
-	indexTree  = []byte("root") // followed by uint64 index -> pb.LogTreeHash
+	headPrefix = []byte("head") // pb.LogTreeHash
 	leafPrefix = []byte("leaf") // followed by uint64 index -> pb.LeafNode
 	nodePrefix = []byte("node") // followed by uint64 uint64 -> pb.TreeNode
-	hashPrefix = []byte("hash") // followed by leaf node hash -> pb.LeafNode
+	rootPrefix = []byte("root") // followed by uint64 index -> pb.LogTreeHash
+	hashPrefix = []byte("hash") // followed by []byte hash -> pb.LogTreeHash
 )
+
+func (l *LocalService) lookupLeafNodeByIndex(kr KeyReader, log *pb.LogRef, idx int64) (*pb.LeafNode, error) {
+	var m pb.LeafNode
+	err := l.readIntoProto(kr, log, keyForIdx(leafPrefix, uint64(idx)), &m)
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (l *LocalService) lookupTreeNodeByRange(kr KeyReader, log *pb.LogRef, a, b int64) (*pb.TreeNode, error) {
+	var m pb.TreeNode
+	err := l.readIntoProto(kr, log, keyForDoubleIdx(nodePrefix, uint64(a), uint64(b)), &m)
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+// size must be > 0
+func (l *LocalService) lookupLogRootHashBySize(kr KeyReader, log *pb.LogRef, size int64) (*pb.LogTreeHash, error) {
+	var m pb.LogTreeHash
+	err := l.readIntoProto(kr, log, keyForIdx(rootPrefix, uint64(size)), &m)
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (l *LocalService) lookupIndexByLeafHash(kr KeyReader, log *pb.LogRef, lh []byte) (*pb.EntryIndex, error) {
+	var m pb.EntryIndex
+	err := l.readIntoProto(kr, log, append(hashPrefix, lh...), &m)
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (l *LocalService) lookupLogTreeHead(kr KeyReader, log *pb.LogRef) (*pb.LogTreeHashResponse, error) {
+	var lth pb.LogTreeHashResponse
+	err := l.readIntoProto(kr, log, headPrefix, &lth)
+	switch err {
+	case nil:
+		return &lth, nil
+	case ErrNoSuchKey:
+		lth.Reset() // 0, nil
+		return &lth, nil
+	default:
+		return nil, err
+	}
+}
 
 func keyForIdx(prefix []byte, i uint64) []byte {
 	rv := make([]byte, len(prefix)+8)
@@ -48,84 +98,6 @@ func keyForDoubleIdx(prefix []byte, i, j uint64) []byte {
 	binary.BigEndian.PutUint64(rv[len(prefix):], i)
 	binary.BigEndian.PutUint64(rv[len(prefix)+8:], j)
 	return rv
-}
-
-/* MUST be pow2. Assumes all args are range checked first */
-/* Actually, the above is a lie. If failOnMissing is set, then we fail if any values are missing.
-   Otherwise we will return nil in those spots and return what we can. */
-func (l *LocalService) fetchSubTreeHashes(kr KeyReader, log *pb.LogRef, ranges [][2]int64, failOnMissing bool) ([][]byte, error) {
-	/*
-		Deliberately do not always error check above, as we wish to allow
-		for some empty nodes, e.g. 4..7. These must be picked up by
-		the caller
-	*/
-	rv := make([][]byte, len(ranges))
-	for i, r := range ranges {
-		if (r[1] - r[0]) == 1 {
-			var m pb.LeafNode
-			err := l.readIntoProto(kr, log, keyForIdx(leafPrefix, uint64(r[0])), &m)
-			if err == nil {
-				rv[i] = m.Mth
-			} else {
-				if failOnMissing {
-					return nil, err
-				}
-			}
-		} else {
-			var m pb.TreeNode
-			err := l.readIntoProto(kr, log, keyForDoubleIdx(nodePrefix, uint64(r[0]), uint64(r[1])), &m)
-			if err == nil {
-				rv[i] = m.Mth
-			} else {
-				if failOnMissing {
-					return nil, err
-				}
-			}
-		}
-	}
-
-	return rv, nil
-}
-
-/* Assumes all args are range checked first */
-func (l *LocalService) calcSubTreeHash(kr KeyReader, log *pb.LogRef, start, end int64) ([]byte, error) {
-	r := make([][2]int64, 0, 8) // magic number bad - why did we do this?
-
-	for start != end {
-		k := client.CalcK((end - start) + 1)
-		r = append(r, [2]int64{start, start + k})
-		start += k
-	}
-
-	hashes, err := l.fetchSubTreeHashes(kr, log, r, true)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(hashes) == 0 {
-		return nil, ErrInvalidTreeRange
-	}
-
-	rv := hashes[len(hashes)-1]
-	for i := len(hashes) - 2; i >= 0; i-- {
-		rv = client.NodeMerkleTreeHash(hashes[i], rv)
-	}
-
-	return rv, nil
-}
-
-func (l *LocalService) getLogTreeHead(kr KeyReader, log *pb.LogRef) (*pb.LogTreeHashResponse, error) {
-	var lth pb.LogTreeHashResponse
-	err := l.readIntoProto(kr, log, logHead, &lth)
-	switch err {
-	case nil:
-		return &lth, nil
-	case ErrNoSuchKey:
-		lth.Reset() // 0, nil
-		return &lth, nil
-	default:
-		return nil, err
-	}
 }
 
 func (l *LocalService) readIntoProto(kr KeyReader, log *pb.LogRef, key []byte, m proto.Message) error {
