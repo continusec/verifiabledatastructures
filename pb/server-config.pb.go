@@ -19,6 +19,7 @@ It has these top-level messages:
 	TreeNode
 	LogTreeHash
 	EntryIndex
+	MapNode
 	AccountRef
 	LogRef
 	MapRef

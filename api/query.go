@@ -35,11 +35,24 @@ var (
 	nodePrefix = []byte("node") // followed by uint64 uint64 -> pb.TreeNode
 	rootPrefix = []byte("root") // followed by uint64 index -> pb.LogTreeHash
 	hashPrefix = []byte("hash") // followed by []byte hash -> pb.LogTreeHash
+
+	dataPrefix = []byte("data") // followed by []hash -> pb.LeafData
+
+	mapNodePrefix = []byte("mnod") // followed by uint64 treesize, BPath -> pb.MapNode
 )
+
+func (l *LocalService) lookupDataByLeafHash(kr KeyReader, log *pb.LogRef, lh []byte) (*pb.LeafData, error) {
+	var m pb.LeafData
+	err := l.readLogIntoProto(kr, log, append(dataPrefix, lh...), &m)
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
 
 func (l *LocalService) lookupLeafNodeByIndex(kr KeyReader, log *pb.LogRef, idx int64) (*pb.LeafNode, error) {
 	var m pb.LeafNode
-	err := l.readIntoProto(kr, log, keyForIdx(leafPrefix, uint64(idx)), &m)
+	err := l.readLogIntoProto(kr, log, keyForIdx(leafPrefix, uint64(idx)), &m)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +61,7 @@ func (l *LocalService) lookupLeafNodeByIndex(kr KeyReader, log *pb.LogRef, idx i
 
 func (l *LocalService) lookupTreeNodeByRange(kr KeyReader, log *pb.LogRef, a, b int64) (*pb.TreeNode, error) {
 	var m pb.TreeNode
-	err := l.readIntoProto(kr, log, keyForDoubleIdx(nodePrefix, uint64(a), uint64(b)), &m)
+	err := l.readLogIntoProto(kr, log, keyForDoubleIdx(nodePrefix, uint64(a), uint64(b)), &m)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +71,7 @@ func (l *LocalService) lookupTreeNodeByRange(kr KeyReader, log *pb.LogRef, a, b 
 // size must be > 0
 func (l *LocalService) lookupLogRootHashBySize(kr KeyReader, log *pb.LogRef, size int64) (*pb.LogTreeHash, error) {
 	var m pb.LogTreeHash
-	err := l.readIntoProto(kr, log, keyForIdx(rootPrefix, uint64(size)), &m)
+	err := l.readLogIntoProto(kr, log, keyForIdx(rootPrefix, uint64(size)), &m)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +80,7 @@ func (l *LocalService) lookupLogRootHashBySize(kr KeyReader, log *pb.LogRef, siz
 
 func (l *LocalService) lookupIndexByLeafHash(kr KeyReader, log *pb.LogRef, lh []byte) (*pb.EntryIndex, error) {
 	var m pb.EntryIndex
-	err := l.readIntoProto(kr, log, append(hashPrefix, lh...), &m)
+	err := l.readLogIntoProto(kr, log, append(hashPrefix, lh...), &m)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +89,7 @@ func (l *LocalService) lookupIndexByLeafHash(kr KeyReader, log *pb.LogRef, lh []
 
 func (l *LocalService) lookupLogTreeHead(kr KeyReader, log *pb.LogRef) (*pb.LogTreeHashResponse, error) {
 	var lth pb.LogTreeHashResponse
-	err := l.readIntoProto(kr, log, headPrefix, &lth)
+	err := l.readLogIntoProto(kr, log, headPrefix, &lth)
 	switch err {
 	case nil:
 		return &lth, nil
@@ -86,6 +99,27 @@ func (l *LocalService) lookupLogTreeHead(kr KeyReader, log *pb.LogRef) (*pb.LogT
 	default:
 		return nil, err
 	}
+}
+
+func (l *LocalService) lookupLogEntryHashes(kr KeyReader, log *pb.LogRef, first, last int64) ([][]byte, error) {
+	bucket, err := l.logBucket(log)
+	if err != nil {
+		return nil, err
+	}
+	result, err := kr.Range(bucket, toIntBinary(uint64(first)), toIntBinary(uint64(last)))
+	if err != nil {
+		return nil, err
+	}
+	rv := make([][]byte, len(result))
+	for i, row := range result {
+		var li pb.LeafNode
+		err = proto.Unmarshal(row[1], &li)
+		if err != nil {
+			return nil, err
+		}
+		rv[i] = li.Mth
+	}
+	return rv, nil
 }
 
 func (l *LocalService) lookupAccountLogs(kr KeyReader, acc *pb.AccountRef) ([]*pb.LogInfo, error) {
@@ -130,10 +164,25 @@ func (l *LocalService) lookupAccountMaps(kr KeyReader, acc *pb.AccountRef) ([]*p
 	return rv, nil
 }
 
+func (l *LocalService) lookupMapHash(kr KeyReader, vmap *pb.MapRef, number int64, path []byte) (*pb.MapNode, error) {
+	var m pb.MapNode
+	err := l.readMapIntoProto(kr, vmap, append(keyForIdx(mapNodePrefix, uint64(number)), path...), &m)
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
 func keyForIdx(prefix []byte, i uint64) []byte {
 	rv := make([]byte, len(prefix)+8)
 	copy(rv, prefix)
 	binary.BigEndian.PutUint64(rv[len(prefix):], i)
+	return rv
+}
+
+func toIntBinary(i uint64) []byte {
+	rv := make([]byte, 8)
+	binary.BigEndian.PutUint64(rv, i)
 	return rv
 }
 
@@ -145,8 +194,8 @@ func keyForDoubleIdx(prefix []byte, i, j uint64) []byte {
 	return rv
 }
 
-func (l *LocalService) readIntoProto(kr KeyReader, log *pb.LogRef, key []byte, m proto.Message) error {
-	bucket, err := l.bucket(log)
+func (l *LocalService) readLogIntoProto(kr KeyReader, log *pb.LogRef, key []byte, m proto.Message) error {
+	bucket, err := l.logBucket(log)
 	if err != nil {
 		return err
 	}
@@ -159,7 +208,21 @@ func (l *LocalService) readIntoProto(kr KeyReader, log *pb.LogRef, key []byte, m
 	return proto.Unmarshal(val, m)
 }
 
-func (l *LocalService) bucket(log *pb.LogRef) ([]byte, error) {
+func (l *LocalService) readMapIntoProto(kr KeyReader, vmap *pb.MapRef, key []byte, m proto.Message) error {
+	bucket, err := l.mapBucket(vmap)
+	if err != nil {
+		return err
+	}
+
+	val, err := kr.Get(bucket, key)
+	if err != nil {
+		return err
+	}
+
+	return proto.Unmarshal(val, m)
+}
+
+func (l *LocalService) logBucket(log *pb.LogRef) ([]byte, error) {
 	// TODO, cache this
 	return objecthash.ObjectHash(map[string]interface{}{
 		"account": log.Account.Id,
@@ -168,9 +231,33 @@ func (l *LocalService) bucket(log *pb.LogRef) ([]byte, error) {
 	})
 }
 
+func (l *LocalService) mapBucket(vmap *pb.MapRef) ([]byte, error) {
+	// TODO, cache this
+	return objecthash.ObjectHash(map[string]interface{}{
+		"account": vmap.Account.Id,
+		"name":    vmap.Name,
+	})
+}
+
 func (l *LocalService) accountBucket(account *pb.AccountRef) ([]byte, error) {
 	// TODO, cache this
 	return objecthash.ObjectHash(map[string]interface{}{
 		"account": account.Id,
 	})
+}
+
+func mutationLogForMap(vmap *pb.MapRef) *pb.LogRef {
+	return &pb.LogRef{
+		Account: vmap.Account,
+		Name:    vmap.Name,
+		LogType: pb.LogType_STRUCT_TYPE_MUTATION_LOG,
+	}
+}
+
+func treeheadLogForMap(vmap *pb.MapRef) *pb.LogRef {
+	return &pb.LogRef{
+		Account: vmap.Account,
+		Name:    vmap.Name,
+		LogType: pb.LogType_STRUCT_TYPE_TREEHEAD_LOG,
+	}
 }

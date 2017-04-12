@@ -84,3 +84,54 @@ func (l *LocalService) calcSubTreeHash(kr KeyReader, log *pb.LogRef, start, end 
 
 	return rv, nil
 }
+
+type vMapNode pb.MapNode
+
+var defaultLeafValues = client.GenerateMapDefaultLeafValues()
+
+func (mn *vMapNode) leftNodeHash() []byte {
+	if len(mn.LeftHash) == 0 {
+		return defaultLeafValues[BPath(mn.Path).Length()+1]
+	}
+	return mn.LeftHash
+}
+
+func (mn *vMapNode) rightNodeHash() []byte {
+	if len(mn.RightHash) == 0 {
+		return defaultLeafValues[BPath(mn.Path).Length()+1]
+	}
+	return mn.RightHash
+}
+
+// if len(mn.Datahash) > 0, then set the appropriate non-default left or right hash based on the full path.
+// Otherwise, leave well alone.
+func (mn *vMapNode) setLeftRightForData() error {
+	if len(mn.DataHash) > 0 { // don't check nil, as datastore round trip sets an empty length bytearray instead
+		rv := mn.DataHash
+		var lastLeft, lastRight []byte
+		var leftDef, rightDef bool
+		for i, j := int(BPath(mn.RemainingPath).Length())-1, 256; i >= 0; i, j = i-1, j-1 {
+			if BPath(mn.RemainingPath).At(uint(i)) {
+				lastLeft, lastRight = defaultLeafValues[j], rv
+				leftDef, rightDef = true, false
+			} else {
+				lastLeft, lastRight = rv, defaultLeafValues[j]
+				leftDef, rightDef = false, true
+			}
+			if i > 0 {
+				rv = client.NodeMerkleTreeHash(lastLeft, lastRight)
+			}
+		}
+		if !leftDef {
+			mn.LeftHash = lastLeft
+		}
+		if !rightDef {
+			mn.RightHash = lastRight
+		}
+	}
+	return nil
+}
+
+func (mn *vMapNode) calcNodeHash() []byte {
+	return client.NodeMerkleTreeHash(mn.leftNodeHash(), mn.rightNodeHash())
+}

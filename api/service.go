@@ -30,24 +30,7 @@ type LocalService struct {
 	Reader       StorageReader
 }
 
-func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
-	err := s.verifyAccessForLogOperation(req.Log, operationReadEntry)
-	if err != nil {
-		return nil, err
-	}
-	return nil, ErrNotImplemented
-}
-
 func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
-	err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, ErrNotImplemented
-}
-
-func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {
 	err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
 	if err != nil {
 		return nil, err

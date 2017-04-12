@@ -48,3 +48,19 @@ message LogTreeHash {
 message EntryIndex {
     int64 index = 1;
 }
+
+message MapNode {
+    int64 number = 1; // what mutation log entry does this correspond to
+
+    // for parent nodes only
+    int64 left_number = 2;  // if zero, default - if either are non-zero, we are a leaf
+    int64 right_number = 3; // if zero, default - if either are non-zero, we are a leaf
+    bytes left_hash = 4;
+    bytes right_hash = 5;
+
+    // for leaf nodes only
+    bytes data_hash = 6;      // if set, both left and right num must be zero
+    bytes remaining_path = 7; // if set, both left and right num must be zero
+
+    bytes path = 8; // is this really needed?
+}
