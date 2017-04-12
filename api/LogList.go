@@ -26,9 +26,13 @@ import (
 
 func (s *LocalService) LogList(ctx context.Context, req *pb.LogListRequest) (*pb.LogListResponse, error) {
 	var rv pb.LogListResponse
-	err := s.Reader.ExecuteReadOnly(func(kr KeyReader) error {
+	ns, err := s.accountBucket(req.Account)
+	if err != nil {
+		return nil, ErrInvalidRequest
+	}
+	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
 		var err error
-		rv.Logs, err = s.lookupAccountLogs(kr, req.Account)
+		rv.Logs, err = s.lookupAccountLogs(kr)
 		if err != nil {
 			return err
 		}

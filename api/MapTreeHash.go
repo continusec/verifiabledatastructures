@@ -37,8 +37,12 @@ func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashReque
 	}
 
 	var rv *pb.MapTreeHashResponse
-	err = s.Reader.ExecuteReadOnly(func(kr KeyReader) error {
-		th, err := s.lookupLogTreeHead(kr, treeheadLogForMap(req.Map))
+	ns, err := s.mapBucket(req.Map)
+	if err != nil {
+		return nil, ErrInvalidRequest
+	}
+	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
+		th, err := s.lookupLogTreeHead(kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
 		if err != nil {
 			return err
 		}
@@ -53,13 +57,13 @@ func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashReque
 		}
 
 		// Need this for response
-		mutHead, err := s.lookupLogRootHashBySize(kr, mutationLogForMap(req.Map), treeSize)
+		mutHead, err := s.lookupLogRootHashBySize(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, treeSize)
 		if err != nil {
 			return err
 		}
 
 		// Get the root node for tree size
-		mapNode, err := s.lookupMapHash(kr, req.Map, treeSize, nil)
+		mapNode, err := s.lookupMapHash(kr, treeSize, nil)
 		if err != nil {
 			return err
 		}

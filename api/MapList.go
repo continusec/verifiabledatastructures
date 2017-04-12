@@ -26,9 +26,13 @@ import (
 
 func (s *LocalService) MapList(ctx context.Context, req *pb.MapListRequest) (*pb.MapListResponse, error) {
 	var rv pb.MapListResponse
-	err := s.Reader.ExecuteReadOnly(func(kr KeyReader) error {
+	ns, err := s.accountBucket(req.Account)
+	if err != nil {
+		return nil, ErrInvalidRequest
+	}
+	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
 		var err error
-		rv.Maps, err = s.lookupAccountMaps(kr, req.Account)
+		rv.Maps, err = s.lookupAccountMaps(kr)
 		if err != nil {
 			return err
 		}

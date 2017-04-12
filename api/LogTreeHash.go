@@ -35,8 +35,12 @@ func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashReque
 	}
 
 	var rv *pb.LogTreeHashResponse
-	err = s.Reader.ExecuteReadOnly(func(kr KeyReader) error {
-		head, err := s.lookupLogTreeHead(kr, req.Log)
+	ns, err := s.logBucket(req.Log)
+	if err != nil {
+		return nil, ErrInvalidRequest
+	}
+	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
+		head, err := s.lookupLogTreeHead(kr, req.Log.LogType)
 		if err != nil {
 			return err
 		}
@@ -52,7 +56,7 @@ func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashReque
 			return ErrInvalidTreeRange
 		}
 
-		m, err := s.lookupLogRootHashBySize(kr, req.Log, req.TreeSize)
+		m, err := s.lookupLogRootHashBySize(kr, req.Log.LogType, req.TreeSize)
 		if err != nil {
 			return err
 		}

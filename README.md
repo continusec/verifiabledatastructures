@@ -36,7 +36,7 @@ grpc_listen_protocol: "tcp4"
 insecure_server_for_testing: true
 
 # Bolt DB path:
-bolt_db_path: "bolt.db"
+bolt_db_path: "."
 
 # Accounts supported by this server
 accounts: <

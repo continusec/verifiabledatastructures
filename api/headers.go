@@ -53,15 +53,12 @@ type AuthorizationOracle interface {
 }
 
 type StorageReader interface {
-	ExecuteReadOnly(f func(db KeyReader) error) error
+	ExecuteReadOnly(namespace []byte, f func(db KeyReader) error) error
 }
 
 type KeyReader interface {
 	// Get returns ErrNoSuchKey if none found
 	Get(bucket, key []byte) ([]byte, error)
-
-	// Scan returns a list of matching <key, value> tuples where the key begins with the prefix
-	Scan(bucket, prefix []byte) ([][2][]byte, error)
 
 	// Range returns a list of matching <key, value> tuples where the first <= key < last
 	Range(bucket, first, last []byte) ([][2][]byte, error)

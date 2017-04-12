@@ -40,8 +40,12 @@ func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsi
 	}
 
 	var rv *pb.LogConsistencyProofResponse
-	err = s.Reader.ExecuteReadOnly(func(kr KeyReader) error {
-		head, err := s.lookupLogTreeHead(kr, req.Log)
+	ns, err := s.logBucket(req.Log)
+	if err != nil {
+		return nil, ErrInvalidRequest
+	}
+	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
+		head, err := s.lookupLogTreeHead(kr, req.Log.LogType)
 		if err != nil {
 			return err
 		}
@@ -59,7 +63,7 @@ func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsi
 
 		// Ranges are good
 		ranges := client.SubProof(req.FromSize, 0, second, true)
-		path, err := s.fetchSubTreeHashes(kr, req.Log, ranges, false)
+		path, err := s.fetchSubTreeHashes(kr, req.Log.LogType, ranges, false)
 		if err != nil {
 			return err
 		}
@@ -69,7 +73,7 @@ func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsi
 					// Would have been nice if GetSubTreeHashes could better handle these
 					return ErrNoSuchKey
 				}
-				path[i], err = s.calcSubTreeHash(kr, req.Log, rr[0], rr[1])
+				path[i], err = s.calcSubTreeHash(kr, req.Log.LogType, rr[0], rr[1])
 				if err != nil {
 					return err
 				}

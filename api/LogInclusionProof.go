@@ -36,8 +36,12 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 	}
 
 	var rv *pb.LogInclusionProofResponse
-	err = s.Reader.ExecuteReadOnly(func(kr KeyReader) error {
-		head, err := s.lookupLogTreeHead(kr, req.Log)
+	ns, err := s.logBucket(req.Log)
+	if err != nil {
+		return nil, ErrInvalidRequest
+	}
+	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
+		head, err := s.lookupLogTreeHead(kr, req.Log.LogType)
 		if err != nil {
 			return err
 		}
@@ -56,7 +60,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 			leafIndex = req.LeafIndex
 		} else {
 			// Then we must fetch the index
-			ei, err := s.lookupIndexByLeafHash(kr, req.Log, req.MtlHash)
+			ei, err := s.lookupIndexByLeafHash(kr, req.Log.LogType, req.MtlHash)
 			if err != nil {
 				return err
 			}
@@ -76,7 +80,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 
 		// Ranges are good
 		ranges := client.Path(leafIndex, 0, treeSize)
-		path, err := s.fetchSubTreeHashes(kr, req.Log, ranges, false)
+		path, err := s.fetchSubTreeHashes(kr, req.Log.LogType, ranges, false)
 		if err != nil {
 			return err
 		}
@@ -86,7 +90,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 					// Would have been nice if GetSubTreeHashes could better handle these
 					return ErrNotFound
 				}
-				path[i], err = s.calcSubTreeHash(kr, req.Log, rr[0], rr[1])
+				path[i], err = s.calcSubTreeHash(kr, req.Log.LogType, rr[0], rr[1])
 				if err != nil {
 					return err
 				}

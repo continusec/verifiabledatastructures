@@ -40,8 +40,12 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 	}
 
 	var rv *pb.MapGetValueResponse
-	err = s.Reader.ExecuteReadOnly(func(kr KeyReader) error {
-		th, err := s.lookupLogTreeHead(kr, treeheadLogForMap(req.Map))
+	ns, err := s.mapBucket(req.Map)
+	if err != nil {
+		return nil, ErrInvalidRequest
+	}
+	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
+		th, err := s.lookupLogTreeHead(kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
 		if err != nil {
 			return err
 		}
@@ -57,7 +61,7 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 
 		prv := [256][]byte{}
 		var dataRv *pb.LeafData
-		cur, err := s.lookupMapHash(kr, req.Map, treeSize, nil)
+		cur, err := s.lookupMapHash(kr, treeSize, nil)
 		if err != nil {
 			return err
 		}
@@ -76,7 +80,7 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			if nnum == 0 {
 				break
 			} else {
-				cur, err = s.lookupMapHash(kr, req.Map, nnum, kp.Slice(0, i+1))
+				cur, err = s.lookupMapHash(kr, nnum, kp.Slice(0, i+1))
 				if err != nil {
 					return err
 				}
@@ -90,7 +94,7 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			if bytes.Equal(cur.DataHash, defaultLeafValues[256]) { //TODO - is this meant to be hardcoded to 256?
 				rv = nil
 			} else {
-				dataRv, err = s.lookupDataByLeafHash(kr, mutationLogForMap(req.Map), cur.DataHash)
+				dataRv, err = s.lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.DataHash)
 				if err != nil {
 					return err
 				}
