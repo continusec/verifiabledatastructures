@@ -18,8 +18,43 @@ limitations under the License.
 
 package api
 
+import "github.com/continusec/verifiabledatastructures/pb"
+
 type LocalService struct {
 	Mutator      MutatorService
 	AccessPolicy AuthorizationOracle
 	Reader       StorageReader
+}
+
+func (s *LocalService) ApplyMutation(db KeyWriter, mut *pb.Mutation) error {
+	switch {
+	case mut.LogAddEntry != nil:
+		return s.applyLogAddEntry(db, mut.LogAddEntry)
+	case mut.LogCreate != nil:
+		return s.applyLogCreate(db, mut.LogCreate)
+	case mut.LogDelete != nil:
+		return s.applyLogDelete(db, mut.LogDelete)
+	case mut.MapCreate != nil:
+		return s.applyMapCreate(db, mut.MapCreate)
+	case mut.MapDelete != nil:
+		return s.applyMapDelete(db, mut.MapDelete)
+	default:
+		return ErrNotImplemented
+	}
+}
+
+func (s *LocalService) applyLogCreate(db KeyWriter, req *pb.LogCreateRequest) error {
+	return ErrNotImplemented
+}
+func (s *LocalService) applyMapCreate(db KeyWriter, req *pb.MapCreateRequest) error {
+	return ErrNotImplemented
+}
+func (s *LocalService) applyLogDelete(db KeyWriter, req *pb.LogDeleteRequest) error {
+	return ErrNotImplemented
+}
+func (s *LocalService) applyMapDelete(db KeyWriter, req *pb.MapDeleteRequest) error {
+	return ErrNotImplemented
+}
+func (s *LocalService) applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
+	return ErrNotImplemented
 }

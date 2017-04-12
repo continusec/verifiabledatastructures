@@ -24,12 +24,14 @@ option go_package = "pb";
 import "api.proto";
 
 message Mutation {
+    bytes namespace = 1;
+
     // one of the following
-    continusec.verifiabledatastructures.api.LogCreateRequest log_create = 1;
-    continusec.verifiabledatastructures.api.MapCreateRequest map_create = 2;
-    continusec.verifiabledatastructures.api.LogDeleteRequest log_delete = 3;
-    continusec.verifiabledatastructures.api.MapDeleteRequest map_delete = 4;
-    continusec.verifiabledatastructures.api.LogAddEntryRequest log_add_entry = 5;
+    continusec.verifiabledatastructures.api.LogCreateRequest log_create = 2;
+    continusec.verifiabledatastructures.api.MapCreateRequest map_create = 3;
+    continusec.verifiabledatastructures.api.LogDeleteRequest log_delete = 4;
+    continusec.verifiabledatastructures.api.MapDeleteRequest map_delete = 5;
+    continusec.verifiabledatastructures.api.LogAddEntryRequest log_add_entry = 6;
     // we don't have map set value, as that generates a LogAddEntryRequest to the underlying mutation log
 }
 

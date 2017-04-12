@@ -32,7 +32,11 @@ func (s *LocalService) MapDelete(ctx context.Context, req *pb.MapDeleteRequest) 
 	if len(req.Map.Name) == 0 {
 		return nil, ErrInvalidRequest
 	}
-	promise, err := s.Mutator.QueueMutation(&pb.Mutation{
+	ns, err := s.accountBucket(req.Map.Account)
+	if err != nil {
+		return nil, ErrInvalidRequest
+	}
+	promise, err := s.Mutator.QueueMutation(ns, &pb.Mutation{
 		MapDelete: req,
 	})
 	if err != nil {

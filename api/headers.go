@@ -40,7 +40,11 @@ var (
 )
 
 type MutatorService interface {
-	QueueMutation(mut *pb.Mutation) (MutatorPromise, error)
+	QueueMutation(namespace []byte, mut *pb.Mutation) (MutatorPromise, error)
+}
+
+type MutatorApplier interface {
+	ApplyMutation(db KeyWriter, mut *pb.Mutation) error
 }
 
 type MutatorPromise interface {
@@ -56,10 +60,25 @@ type StorageReader interface {
 	ExecuteReadOnly(namespace []byte, f func(db KeyReader) error) error
 }
 
-type KeyReader interface {
+type StorageWriter interface {
+	ExecuteUpdate(namespace []byte, f func(db KeyWriter) error) error
+}
+
+type KeyGetter interface {
 	// Get returns ErrNoSuchKey if none found
 	Get(bucket, key []byte) ([]byte, error)
+}
+
+type KeyReader interface {
+	KeyGetter
 
 	// Range returns a list of matching <key, value> tuples where the first <= key < last
 	Range(bucket, first, last []byte) ([][2][]byte, error)
+}
+
+type KeyWriter interface {
+	KeyGetter
+
+	// Set sets the thing
+	Set(bucket, key, value []byte) error
 }
