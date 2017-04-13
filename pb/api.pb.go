@@ -146,198 +146,6 @@ func (m *MapRef) GetName() string {
 	return ""
 }
 
-type LogCreateRequest struct {
-	Log *LogRef `protobuf:"bytes,1,opt,name=log" json:"log,omitempty"`
-}
-
-func (m *LogCreateRequest) Reset()                    { *m = LogCreateRequest{} }
-func (m *LogCreateRequest) String() string            { return proto.CompactTextString(m) }
-func (*LogCreateRequest) ProtoMessage()               {}
-func (*LogCreateRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{3} }
-
-func (m *LogCreateRequest) GetLog() *LogRef {
-	if m != nil {
-		return m.Log
-	}
-	return nil
-}
-
-type LogCreateResponse struct {
-}
-
-func (m *LogCreateResponse) Reset()                    { *m = LogCreateResponse{} }
-func (m *LogCreateResponse) String() string            { return proto.CompactTextString(m) }
-func (*LogCreateResponse) ProtoMessage()               {}
-func (*LogCreateResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{4} }
-
-type LogDeleteRequest struct {
-	Log *LogRef `protobuf:"bytes,1,opt,name=log" json:"log,omitempty"`
-}
-
-func (m *LogDeleteRequest) Reset()                    { *m = LogDeleteRequest{} }
-func (m *LogDeleteRequest) String() string            { return proto.CompactTextString(m) }
-func (*LogDeleteRequest) ProtoMessage()               {}
-func (*LogDeleteRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{5} }
-
-func (m *LogDeleteRequest) GetLog() *LogRef {
-	if m != nil {
-		return m.Log
-	}
-	return nil
-}
-
-type LogDeleteResponse struct {
-}
-
-func (m *LogDeleteResponse) Reset()                    { *m = LogDeleteResponse{} }
-func (m *LogDeleteResponse) String() string            { return proto.CompactTextString(m) }
-func (*LogDeleteResponse) ProtoMessage()               {}
-func (*LogDeleteResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{6} }
-
-type LogListRequest struct {
-	Account *AccountRef `protobuf:"bytes,1,opt,name=account" json:"account,omitempty"`
-}
-
-func (m *LogListRequest) Reset()                    { *m = LogListRequest{} }
-func (m *LogListRequest) String() string            { return proto.CompactTextString(m) }
-func (*LogListRequest) ProtoMessage()               {}
-func (*LogListRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{7} }
-
-func (m *LogListRequest) GetAccount() *AccountRef {
-	if m != nil {
-		return m.Account
-	}
-	return nil
-}
-
-type LogInfo struct {
-	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
-}
-
-func (m *LogInfo) Reset()                    { *m = LogInfo{} }
-func (m *LogInfo) String() string            { return proto.CompactTextString(m) }
-func (*LogInfo) ProtoMessage()               {}
-func (*LogInfo) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{8} }
-
-func (m *LogInfo) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-type LogListResponse struct {
-	Logs []*LogInfo `protobuf:"bytes,1,rep,name=logs" json:"logs,omitempty"`
-}
-
-func (m *LogListResponse) Reset()                    { *m = LogListResponse{} }
-func (m *LogListResponse) String() string            { return proto.CompactTextString(m) }
-func (*LogListResponse) ProtoMessage()               {}
-func (*LogListResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{9} }
-
-func (m *LogListResponse) GetLogs() []*LogInfo {
-	if m != nil {
-		return m.Logs
-	}
-	return nil
-}
-
-type MapCreateRequest struct {
-	Map *MapRef `protobuf:"bytes,1,opt,name=map" json:"map,omitempty"`
-}
-
-func (m *MapCreateRequest) Reset()                    { *m = MapCreateRequest{} }
-func (m *MapCreateRequest) String() string            { return proto.CompactTextString(m) }
-func (*MapCreateRequest) ProtoMessage()               {}
-func (*MapCreateRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{10} }
-
-func (m *MapCreateRequest) GetMap() *MapRef {
-	if m != nil {
-		return m.Map
-	}
-	return nil
-}
-
-type MapCreateResponse struct {
-}
-
-func (m *MapCreateResponse) Reset()                    { *m = MapCreateResponse{} }
-func (m *MapCreateResponse) String() string            { return proto.CompactTextString(m) }
-func (*MapCreateResponse) ProtoMessage()               {}
-func (*MapCreateResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{11} }
-
-type MapDeleteRequest struct {
-	Map *MapRef `protobuf:"bytes,1,opt,name=map" json:"map,omitempty"`
-}
-
-func (m *MapDeleteRequest) Reset()                    { *m = MapDeleteRequest{} }
-func (m *MapDeleteRequest) String() string            { return proto.CompactTextString(m) }
-func (*MapDeleteRequest) ProtoMessage()               {}
-func (*MapDeleteRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{12} }
-
-func (m *MapDeleteRequest) GetMap() *MapRef {
-	if m != nil {
-		return m.Map
-	}
-	return nil
-}
-
-type MapDeleteResponse struct {
-}
-
-func (m *MapDeleteResponse) Reset()                    { *m = MapDeleteResponse{} }
-func (m *MapDeleteResponse) String() string            { return proto.CompactTextString(m) }
-func (*MapDeleteResponse) ProtoMessage()               {}
-func (*MapDeleteResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{13} }
-
-type MapListRequest struct {
-	Account *AccountRef `protobuf:"bytes,1,opt,name=account" json:"account,omitempty"`
-}
-
-func (m *MapListRequest) Reset()                    { *m = MapListRequest{} }
-func (m *MapListRequest) String() string            { return proto.CompactTextString(m) }
-func (*MapListRequest) ProtoMessage()               {}
-func (*MapListRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{14} }
-
-func (m *MapListRequest) GetAccount() *AccountRef {
-	if m != nil {
-		return m.Account
-	}
-	return nil
-}
-
-type MapInfo struct {
-	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
-}
-
-func (m *MapInfo) Reset()                    { *m = MapInfo{} }
-func (m *MapInfo) String() string            { return proto.CompactTextString(m) }
-func (*MapInfo) ProtoMessage()               {}
-func (*MapInfo) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{15} }
-
-func (m *MapInfo) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-type MapListResponse struct {
-	Maps []*MapInfo `protobuf:"bytes,1,rep,name=Maps" json:"Maps,omitempty"`
-}
-
-func (m *MapListResponse) Reset()                    { *m = MapListResponse{} }
-func (m *MapListResponse) String() string            { return proto.CompactTextString(m) }
-func (*MapListResponse) ProtoMessage()               {}
-func (*MapListResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{16} }
-
-func (m *MapListResponse) GetMaps() []*MapInfo {
-	if m != nil {
-		return m.Maps
-	}
-	return nil
-}
-
 type LogTreeHashRequest struct {
 	Log      *LogRef `protobuf:"bytes,1,opt,name=log" json:"log,omitempty"`
 	TreeSize int64   `protobuf:"varint,2,opt,name=tree_size,json=treeSize" json:"tree_size,omitempty"`
@@ -346,7 +154,7 @@ type LogTreeHashRequest struct {
 func (m *LogTreeHashRequest) Reset()                    { *m = LogTreeHashRequest{} }
 func (m *LogTreeHashRequest) String() string            { return proto.CompactTextString(m) }
 func (*LogTreeHashRequest) ProtoMessage()               {}
-func (*LogTreeHashRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{17} }
+func (*LogTreeHashRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{3} }
 
 func (m *LogTreeHashRequest) GetLog() *LogRef {
 	if m != nil {
@@ -370,7 +178,7 @@ type LogTreeHashResponse struct {
 func (m *LogTreeHashResponse) Reset()                    { *m = LogTreeHashResponse{} }
 func (m *LogTreeHashResponse) String() string            { return proto.CompactTextString(m) }
 func (*LogTreeHashResponse) ProtoMessage()               {}
-func (*LogTreeHashResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{18} }
+func (*LogTreeHashResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{4} }
 
 func (m *LogTreeHashResponse) GetTreeSize() int64 {
 	if m != nil {
@@ -394,7 +202,7 @@ type MapTreeHashRequest struct {
 func (m *MapTreeHashRequest) Reset()                    { *m = MapTreeHashRequest{} }
 func (m *MapTreeHashRequest) String() string            { return proto.CompactTextString(m) }
 func (*MapTreeHashRequest) ProtoMessage()               {}
-func (*MapTreeHashRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{19} }
+func (*MapTreeHashRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{5} }
 
 func (m *MapTreeHashRequest) GetMap() *MapRef {
 	if m != nil {
@@ -418,7 +226,7 @@ type MapTreeHashResponse struct {
 func (m *MapTreeHashResponse) Reset()                    { *m = MapTreeHashResponse{} }
 func (m *MapTreeHashResponse) String() string            { return proto.CompactTextString(m) }
 func (*MapTreeHashResponse) ProtoMessage()               {}
-func (*MapTreeHashResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{20} }
+func (*MapTreeHashResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{6} }
 
 func (m *MapTreeHashResponse) GetRootHash() []byte {
 	if m != nil {
@@ -445,7 +253,7 @@ type LogInclusionProofRequest struct {
 func (m *LogInclusionProofRequest) Reset()                    { *m = LogInclusionProofRequest{} }
 func (m *LogInclusionProofRequest) String() string            { return proto.CompactTextString(m) }
 func (*LogInclusionProofRequest) ProtoMessage()               {}
-func (*LogInclusionProofRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{21} }
+func (*LogInclusionProofRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{7} }
 
 func (m *LogInclusionProofRequest) GetLog() *LogRef {
 	if m != nil {
@@ -484,7 +292,7 @@ type LogInclusionProofResponse struct {
 func (m *LogInclusionProofResponse) Reset()                    { *m = LogInclusionProofResponse{} }
 func (m *LogInclusionProofResponse) String() string            { return proto.CompactTextString(m) }
 func (*LogInclusionProofResponse) ProtoMessage()               {}
-func (*LogInclusionProofResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{22} }
+func (*LogInclusionProofResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{8} }
 
 func (m *LogInclusionProofResponse) GetTreeSize() int64 {
 	if m != nil {
@@ -516,7 +324,7 @@ type LogConsistencyProofRequest struct {
 func (m *LogConsistencyProofRequest) Reset()                    { *m = LogConsistencyProofRequest{} }
 func (m *LogConsistencyProofRequest) String() string            { return proto.CompactTextString(m) }
 func (*LogConsistencyProofRequest) ProtoMessage()               {}
-func (*LogConsistencyProofRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{23} }
+func (*LogConsistencyProofRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{9} }
 
 func (m *LogConsistencyProofRequest) GetLog() *LogRef {
 	if m != nil {
@@ -548,7 +356,7 @@ type LogConsistencyProofResponse struct {
 func (m *LogConsistencyProofResponse) Reset()                    { *m = LogConsistencyProofResponse{} }
 func (m *LogConsistencyProofResponse) String() string            { return proto.CompactTextString(m) }
 func (*LogConsistencyProofResponse) ProtoMessage()               {}
-func (*LogConsistencyProofResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{24} }
+func (*LogConsistencyProofResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{10} }
 
 func (m *LogConsistencyProofResponse) GetFromSize() int64 {
 	if m != nil {
@@ -580,7 +388,7 @@ type LeafData struct {
 func (m *LeafData) Reset()                    { *m = LeafData{} }
 func (m *LeafData) String() string            { return proto.CompactTextString(m) }
 func (*LeafData) ProtoMessage()               {}
-func (*LeafData) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{25} }
+func (*LeafData) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{11} }
 
 func (m *LeafData) GetLeafInput() []byte {
 	if m != nil {
@@ -611,7 +419,7 @@ type LogAddEntryRequest struct {
 func (m *LogAddEntryRequest) Reset()                    { *m = LogAddEntryRequest{} }
 func (m *LogAddEntryRequest) String() string            { return proto.CompactTextString(m) }
 func (*LogAddEntryRequest) ProtoMessage()               {}
-func (*LogAddEntryRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{26} }
+func (*LogAddEntryRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{12} }
 
 func (m *LogAddEntryRequest) GetLog() *LogRef {
 	if m != nil {
@@ -634,7 +442,7 @@ type LogAddEntryResponse struct {
 func (m *LogAddEntryResponse) Reset()                    { *m = LogAddEntryResponse{} }
 func (m *LogAddEntryResponse) String() string            { return proto.CompactTextString(m) }
 func (*LogAddEntryResponse) ProtoMessage()               {}
-func (*LogAddEntryResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{27} }
+func (*LogAddEntryResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{13} }
 
 func (m *LogAddEntryResponse) GetLeafHash() []byte {
 	if m != nil {
@@ -654,7 +462,7 @@ type MapSetValueRequest struct {
 func (m *MapSetValueRequest) Reset()                    { *m = MapSetValueRequest{} }
 func (m *MapSetValueRequest) String() string            { return proto.CompactTextString(m) }
 func (*MapSetValueRequest) ProtoMessage()               {}
-func (*MapSetValueRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{28} }
+func (*MapSetValueRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{14} }
 
 func (m *MapSetValueRequest) GetMap() *MapRef {
 	if m != nil {
@@ -698,7 +506,7 @@ type MapSetValueResponse struct {
 func (m *MapSetValueResponse) Reset()                    { *m = MapSetValueResponse{} }
 func (m *MapSetValueResponse) String() string            { return proto.CompactTextString(m) }
 func (*MapSetValueResponse) ProtoMessage()               {}
-func (*MapSetValueResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{29} }
+func (*MapSetValueResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{15} }
 
 func (m *MapSetValueResponse) GetLeafHash() []byte {
 	if m != nil {
@@ -716,7 +524,7 @@ type MapGetValueRequest struct {
 func (m *MapGetValueRequest) Reset()                    { *m = MapGetValueRequest{} }
 func (m *MapGetValueRequest) String() string            { return proto.CompactTextString(m) }
 func (*MapGetValueRequest) ProtoMessage()               {}
-func (*MapGetValueRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{30} }
+func (*MapGetValueRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{16} }
 
 func (m *MapGetValueRequest) GetMap() *MapRef {
 	if m != nil {
@@ -748,7 +556,7 @@ type MapGetValueResponse struct {
 func (m *MapGetValueResponse) Reset()                    { *m = MapGetValueResponse{} }
 func (m *MapGetValueResponse) String() string            { return proto.CompactTextString(m) }
 func (*MapGetValueResponse) ProtoMessage()               {}
-func (*MapGetValueResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{31} }
+func (*MapGetValueResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{17} }
 
 func (m *MapGetValueResponse) GetTreeSize() int64 {
 	if m != nil {
@@ -780,7 +588,7 @@ type LogFetchEntriesRequest struct {
 func (m *LogFetchEntriesRequest) Reset()                    { *m = LogFetchEntriesRequest{} }
 func (m *LogFetchEntriesRequest) String() string            { return proto.CompactTextString(m) }
 func (*LogFetchEntriesRequest) ProtoMessage()               {}
-func (*LogFetchEntriesRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{32} }
+func (*LogFetchEntriesRequest) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{18} }
 
 func (m *LogFetchEntriesRequest) GetLog() *LogRef {
 	if m != nil {
@@ -810,7 +618,7 @@ type LogFetchEntriesResponse struct {
 func (m *LogFetchEntriesResponse) Reset()                    { *m = LogFetchEntriesResponse{} }
 func (m *LogFetchEntriesResponse) String() string            { return proto.CompactTextString(m) }
 func (*LogFetchEntriesResponse) ProtoMessage()               {}
-func (*LogFetchEntriesResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{33} }
+func (*LogFetchEntriesResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{19} }
 
 func (m *LogFetchEntriesResponse) GetValues() []*LeafData {
 	if m != nil {
@@ -823,20 +631,6 @@ func init() {
 	proto.RegisterType((*AccountRef)(nil), "continusec.verifiabledatastructures.api.AccountRef")
 	proto.RegisterType((*LogRef)(nil), "continusec.verifiabledatastructures.api.LogRef")
 	proto.RegisterType((*MapRef)(nil), "continusec.verifiabledatastructures.api.MapRef")
-	proto.RegisterType((*LogCreateRequest)(nil), "continusec.verifiabledatastructures.api.LogCreateRequest")
-	proto.RegisterType((*LogCreateResponse)(nil), "continusec.verifiabledatastructures.api.LogCreateResponse")
-	proto.RegisterType((*LogDeleteRequest)(nil), "continusec.verifiabledatastructures.api.LogDeleteRequest")
-	proto.RegisterType((*LogDeleteResponse)(nil), "continusec.verifiabledatastructures.api.LogDeleteResponse")
-	proto.RegisterType((*LogListRequest)(nil), "continusec.verifiabledatastructures.api.LogListRequest")
-	proto.RegisterType((*LogInfo)(nil), "continusec.verifiabledatastructures.api.LogInfo")
-	proto.RegisterType((*LogListResponse)(nil), "continusec.verifiabledatastructures.api.LogListResponse")
-	proto.RegisterType((*MapCreateRequest)(nil), "continusec.verifiabledatastructures.api.MapCreateRequest")
-	proto.RegisterType((*MapCreateResponse)(nil), "continusec.verifiabledatastructures.api.MapCreateResponse")
-	proto.RegisterType((*MapDeleteRequest)(nil), "continusec.verifiabledatastructures.api.MapDeleteRequest")
-	proto.RegisterType((*MapDeleteResponse)(nil), "continusec.verifiabledatastructures.api.MapDeleteResponse")
-	proto.RegisterType((*MapListRequest)(nil), "continusec.verifiabledatastructures.api.MapListRequest")
-	proto.RegisterType((*MapInfo)(nil), "continusec.verifiabledatastructures.api.MapInfo")
-	proto.RegisterType((*MapListResponse)(nil), "continusec.verifiabledatastructures.api.MapListResponse")
 	proto.RegisterType((*LogTreeHashRequest)(nil), "continusec.verifiabledatastructures.api.LogTreeHashRequest")
 	proto.RegisterType((*LogTreeHashResponse)(nil), "continusec.verifiabledatastructures.api.LogTreeHashResponse")
 	proto.RegisterType((*MapTreeHashRequest)(nil), "continusec.verifiabledatastructures.api.MapTreeHashRequest")
@@ -869,17 +663,11 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for VerifiableDataStructuresService service
 
 type VerifiableDataStructuresServiceClient interface {
-	LogCreate(ctx context.Context, in *LogCreateRequest, opts ...grpc.CallOption) (*LogCreateResponse, error)
-	LogDelete(ctx context.Context, in *LogDeleteRequest, opts ...grpc.CallOption) (*LogDeleteResponse, error)
-	LogList(ctx context.Context, in *LogListRequest, opts ...grpc.CallOption) (*LogListResponse, error)
 	LogAddEntry(ctx context.Context, in *LogAddEntryRequest, opts ...grpc.CallOption) (*LogAddEntryResponse, error)
 	LogFetchEntries(ctx context.Context, in *LogFetchEntriesRequest, opts ...grpc.CallOption) (*LogFetchEntriesResponse, error)
 	LogTreeHash(ctx context.Context, in *LogTreeHashRequest, opts ...grpc.CallOption) (*LogTreeHashResponse, error)
 	LogInclusionProof(ctx context.Context, in *LogInclusionProofRequest, opts ...grpc.CallOption) (*LogInclusionProofResponse, error)
 	LogConsistencyProof(ctx context.Context, in *LogConsistencyProofRequest, opts ...grpc.CallOption) (*LogConsistencyProofResponse, error)
-	MapCreate(ctx context.Context, in *MapCreateRequest, opts ...grpc.CallOption) (*MapCreateResponse, error)
-	MapDelete(ctx context.Context, in *MapDeleteRequest, opts ...grpc.CallOption) (*MapDeleteResponse, error)
-	MapList(ctx context.Context, in *MapListRequest, opts ...grpc.CallOption) (*MapListResponse, error)
 	MapSetValue(ctx context.Context, in *MapSetValueRequest, opts ...grpc.CallOption) (*MapSetValueResponse, error)
 	MapGetValue(ctx context.Context, in *MapGetValueRequest, opts ...grpc.CallOption) (*MapGetValueResponse, error)
 	MapTreeHash(ctx context.Context, in *MapTreeHashRequest, opts ...grpc.CallOption) (*MapTreeHashResponse, error)
@@ -891,33 +679,6 @@ type verifiableDataStructuresServiceClient struct {
 
 func NewVerifiableDataStructuresServiceClient(cc *grpc.ClientConn) VerifiableDataStructuresServiceClient {
 	return &verifiableDataStructuresServiceClient{cc}
-}
-
-func (c *verifiableDataStructuresServiceClient) LogCreate(ctx context.Context, in *LogCreateRequest, opts ...grpc.CallOption) (*LogCreateResponse, error) {
-	out := new(LogCreateResponse)
-	err := grpc.Invoke(ctx, "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/LogCreate", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *verifiableDataStructuresServiceClient) LogDelete(ctx context.Context, in *LogDeleteRequest, opts ...grpc.CallOption) (*LogDeleteResponse, error) {
-	out := new(LogDeleteResponse)
-	err := grpc.Invoke(ctx, "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/LogDelete", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *verifiableDataStructuresServiceClient) LogList(ctx context.Context, in *LogListRequest, opts ...grpc.CallOption) (*LogListResponse, error) {
-	out := new(LogListResponse)
-	err := grpc.Invoke(ctx, "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/LogList", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *verifiableDataStructuresServiceClient) LogAddEntry(ctx context.Context, in *LogAddEntryRequest, opts ...grpc.CallOption) (*LogAddEntryResponse, error) {
@@ -965,33 +726,6 @@ func (c *verifiableDataStructuresServiceClient) LogConsistencyProof(ctx context.
 	return out, nil
 }
 
-func (c *verifiableDataStructuresServiceClient) MapCreate(ctx context.Context, in *MapCreateRequest, opts ...grpc.CallOption) (*MapCreateResponse, error) {
-	out := new(MapCreateResponse)
-	err := grpc.Invoke(ctx, "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/MapCreate", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *verifiableDataStructuresServiceClient) MapDelete(ctx context.Context, in *MapDeleteRequest, opts ...grpc.CallOption) (*MapDeleteResponse, error) {
-	out := new(MapDeleteResponse)
-	err := grpc.Invoke(ctx, "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/MapDelete", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *verifiableDataStructuresServiceClient) MapList(ctx context.Context, in *MapListRequest, opts ...grpc.CallOption) (*MapListResponse, error) {
-	out := new(MapListResponse)
-	err := grpc.Invoke(ctx, "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/MapList", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *verifiableDataStructuresServiceClient) MapSetValue(ctx context.Context, in *MapSetValueRequest, opts ...grpc.CallOption) (*MapSetValueResponse, error) {
 	out := new(MapSetValueResponse)
 	err := grpc.Invoke(ctx, "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/MapSetValue", in, out, c.cc, opts...)
@@ -1022,17 +756,11 @@ func (c *verifiableDataStructuresServiceClient) MapTreeHash(ctx context.Context,
 // Server API for VerifiableDataStructuresService service
 
 type VerifiableDataStructuresServiceServer interface {
-	LogCreate(context.Context, *LogCreateRequest) (*LogCreateResponse, error)
-	LogDelete(context.Context, *LogDeleteRequest) (*LogDeleteResponse, error)
-	LogList(context.Context, *LogListRequest) (*LogListResponse, error)
 	LogAddEntry(context.Context, *LogAddEntryRequest) (*LogAddEntryResponse, error)
 	LogFetchEntries(context.Context, *LogFetchEntriesRequest) (*LogFetchEntriesResponse, error)
 	LogTreeHash(context.Context, *LogTreeHashRequest) (*LogTreeHashResponse, error)
 	LogInclusionProof(context.Context, *LogInclusionProofRequest) (*LogInclusionProofResponse, error)
 	LogConsistencyProof(context.Context, *LogConsistencyProofRequest) (*LogConsistencyProofResponse, error)
-	MapCreate(context.Context, *MapCreateRequest) (*MapCreateResponse, error)
-	MapDelete(context.Context, *MapDeleteRequest) (*MapDeleteResponse, error)
-	MapList(context.Context, *MapListRequest) (*MapListResponse, error)
 	MapSetValue(context.Context, *MapSetValueRequest) (*MapSetValueResponse, error)
 	MapGetValue(context.Context, *MapGetValueRequest) (*MapGetValueResponse, error)
 	MapTreeHash(context.Context, *MapTreeHashRequest) (*MapTreeHashResponse, error)
@@ -1040,60 +768,6 @@ type VerifiableDataStructuresServiceServer interface {
 
 func RegisterVerifiableDataStructuresServiceServer(s *grpc.Server, srv VerifiableDataStructuresServiceServer) {
 	s.RegisterService(&_VerifiableDataStructuresService_serviceDesc, srv)
-}
-
-func _VerifiableDataStructuresService_LogCreate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LogCreateRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifiableDataStructuresServiceServer).LogCreate(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/LogCreate",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifiableDataStructuresServiceServer).LogCreate(ctx, req.(*LogCreateRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VerifiableDataStructuresService_LogDelete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LogDeleteRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifiableDataStructuresServiceServer).LogDelete(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/LogDelete",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifiableDataStructuresServiceServer).LogDelete(ctx, req.(*LogDeleteRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VerifiableDataStructuresService_LogList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LogListRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifiableDataStructuresServiceServer).LogList(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/LogList",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifiableDataStructuresServiceServer).LogList(ctx, req.(*LogListRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _VerifiableDataStructuresService_LogAddEntry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1186,60 +860,6 @@ func _VerifiableDataStructuresService_LogConsistencyProof_Handler(srv interface{
 	return interceptor(ctx, in, info, handler)
 }
 
-func _VerifiableDataStructuresService_MapCreate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MapCreateRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifiableDataStructuresServiceServer).MapCreate(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/MapCreate",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifiableDataStructuresServiceServer).MapCreate(ctx, req.(*MapCreateRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VerifiableDataStructuresService_MapDelete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MapDeleteRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifiableDataStructuresServiceServer).MapDelete(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/MapDelete",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifiableDataStructuresServiceServer).MapDelete(ctx, req.(*MapDeleteRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _VerifiableDataStructuresService_MapList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MapListRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifiableDataStructuresServiceServer).MapList(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/continusec.verifiabledatastructures.api.VerifiableDataStructuresService/MapList",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifiableDataStructuresServiceServer).MapList(ctx, req.(*MapListRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _VerifiableDataStructuresService_MapSetValue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MapSetValueRequest)
 	if err := dec(in); err != nil {
@@ -1299,18 +919,6 @@ var _VerifiableDataStructuresService_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*VerifiableDataStructuresServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "LogCreate",
-			Handler:    _VerifiableDataStructuresService_LogCreate_Handler,
-		},
-		{
-			MethodName: "LogDelete",
-			Handler:    _VerifiableDataStructuresService_LogDelete_Handler,
-		},
-		{
-			MethodName: "LogList",
-			Handler:    _VerifiableDataStructuresService_LogList_Handler,
-		},
-		{
 			MethodName: "LogAddEntry",
 			Handler:    _VerifiableDataStructuresService_LogAddEntry_Handler,
 		},
@@ -1329,18 +937,6 @@ var _VerifiableDataStructuresService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LogConsistencyProof",
 			Handler:    _VerifiableDataStructuresService_LogConsistencyProof_Handler,
-		},
-		{
-			MethodName: "MapCreate",
-			Handler:    _VerifiableDataStructuresService_MapCreate_Handler,
-		},
-		{
-			MethodName: "MapDelete",
-			Handler:    _VerifiableDataStructuresService_MapDelete_Handler,
-		},
-		{
-			MethodName: "MapList",
-			Handler:    _VerifiableDataStructuresService_MapList_Handler,
 		},
 		{
 			MethodName: "MapSetValue",
@@ -1362,84 +958,70 @@ var _VerifiableDataStructuresService_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("api.proto", fileDescriptor2) }
 
 var fileDescriptor2 = []byte{
-	// 1264 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xbc, 0x58, 0xcf, 0x6f, 0x1b, 0xc5,
-	0x17, 0xcf, 0xd8, 0xa9, 0x63, 0xbf, 0x44, 0x89, 0xbf, 0x93, 0xea, 0x1b, 0xd7, 0xa1, 0xa2, 0x5a,
-	0x21, 0x11, 0xf5, 0x10, 0xc0, 0x15, 0x02, 0x42, 0x25, 0x70, 0x63, 0xe3, 0x46, 0x5d, 0x93, 0x68,
-	0xed, 0x14, 0x51, 0x0e, 0xab, 0x89, 0x3d, 0x76, 0x56, 0x5d, 0xef, 0x2c, 0xbb, 0x63, 0xab, 0xee,
-	0x81, 0x13, 0x70, 0xe0, 0x8a, 0x84, 0x04, 0x42, 0x1c, 0x38, 0x73, 0xe4, 0xc0, 0xff, 0xc2, 0x3f,
-	0x83, 0x66, 0xbc, 0xde, 0x5f, 0x36, 0x56, 0xc6, 0x76, 0xb8, 0xad, 0x67, 0xfc, 0x3e, 0xef, 0xf3,
-	0x3e, 0x6f, 0xde, 0xdb, 0x37, 0x0b, 0x05, 0xe2, 0x5a, 0xc7, 0xae, 0xc7, 0x38, 0xc3, 0x6f, 0x77,
-	0x98, 0xc3, 0x2d, 0x67, 0xe8, 0xd3, 0xce, 0xf1, 0x88, 0x7a, 0x56, 0xcf, 0x22, 0x57, 0x36, 0xed,
-	0x12, 0x4e, 0x7c, 0xee, 0x0d, 0x3b, 0x7c, 0xe8, 0x51, 0xff, 0x98, 0xb8, 0x96, 0xf6, 0x3e, 0x40,
-	0xb5, 0xd3, 0x61, 0x43, 0x87, 0x1b, 0xb4, 0x87, 0x77, 0x21, 0x63, 0x75, 0x4b, 0xe8, 0x01, 0x3a,
-	0x2a, 0x18, 0x19, 0xab, 0x8b, 0x0f, 0x60, 0x8b, 0xb8, 0x96, 0xf9, 0x92, 0x8e, 0x4b, 0x19, 0xb9,
-	0x98, 0x23, 0xae, 0xf5, 0x8c, 0x8e, 0xb5, 0xbf, 0x10, 0xe4, 0x74, 0xd6, 0x17, 0x36, 0x4d, 0xd8,
-	0x22, 0x13, 0x04, 0x69, 0xb8, 0x5d, 0x79, 0x74, 0x7c, 0x43, 0xe7, 0xc7, 0x91, 0x67, 0x63, 0x8a,
-	0x81, 0x9f, 0x41, 0xde, 0x66, 0x7d, 0x93, 0x8f, 0x5d, 0x2a, 0x7d, 0xee, 0x56, 0xde, 0xbd, 0x31,
-	0x9e, 0xce, 0xfa, 0xed, 0xb1, 0x4b, 0x8d, 0x2d, 0x7b, 0xf2, 0x80, 0x31, 0x6c, 0x3a, 0x64, 0x40,
-	0x4b, 0x59, 0x49, 0x5e, 0x3e, 0x6b, 0x2f, 0x21, 0xd7, 0x24, 0xee, 0x2d, 0x30, 0x9f, 0xe7, 0xec,
-	0x12, 0x8a, 0x3a, 0xeb, 0x9f, 0x7a, 0x94, 0x70, 0x6a, 0xd0, 0xaf, 0x87, 0xd4, 0xe7, 0xb8, 0x0a,
-	0x59, 0x9b, 0xf5, 0x03, 0x97, 0xef, 0xa8, 0x04, 0x27, 0xdc, 0x09, 0x5b, 0x6d, 0x1f, 0xfe, 0x17,
-	0x83, 0xf5, 0x5d, 0xe6, 0xf8, 0x53, 0x5f, 0x35, 0x6a, 0xd3, 0x5b, 0xf0, 0x35, 0x85, 0x0d, 0x7c,
-	0x99, 0xb0, 0xab, 0xb3, 0xbe, 0x6e, 0xf9, 0x7c, 0xea, 0x69, 0xbd, 0x62, 0x6a, 0xf7, 0x61, 0x4b,
-	0x67, 0xfd, 0x33, 0xa7, 0xc7, 0x42, 0x5d, 0x51, 0x4c, 0xd7, 0x2f, 0x60, 0x2f, 0xf4, 0x3f, 0xa1,
-	0x84, 0x6b, 0xb0, 0x69, 0xb3, 0xbe, 0x5f, 0x42, 0x0f, 0xb2, 0x47, 0xdb, 0x6a, 0x87, 0x46, 0xb8,
-	0x31, 0xa4, 0xb5, 0x10, 0xb1, 0x49, 0xdc, 0x99, 0x84, 0x0d, 0x88, 0xab, 0x2c, 0xe2, 0xe4, 0x94,
-	0x19, 0xc2, 0x56, 0x88, 0x18, 0x83, 0x8d, 0x12, 0xd6, 0x24, 0xee, 0x4c, 0xc2, 0xd6, 0xe3, 0x6b,
-	0x36, 0x61, 0x4d, 0xe2, 0xde, 0x6e, 0xc2, 0x9a, 0xc4, 0x5d, 0x94, 0xb0, 0xd0, 0x7f, 0x94, 0xb0,
-	0x26, 0x71, 0xd5, 0x13, 0x16, 0xb8, 0x31, 0xa4, 0xb5, 0xc6, 0x01, 0x8b, 0xb2, 0xf7, 0x28, 0x7d,
-	0x4a, 0xfc, 0xeb, 0xf5, 0x9d, 0x7b, 0x7c, 0x08, 0x05, 0xee, 0x51, 0x6a, 0xfa, 0xd6, 0xeb, 0x49,
-	0x27, 0xca, 0x1a, 0x79, 0xb1, 0xd0, 0xb2, 0x5e, 0x53, 0xed, 0x1c, 0xf6, 0x13, 0x5e, 0x83, 0x90,
-	0x12, 0x36, 0x28, 0x69, 0x23, 0x36, 0x3d, 0xc6, 0xb8, 0x79, 0x4d, 0xfc, 0x6b, 0x09, 0xb8, 0x63,
-	0xe4, 0xc5, 0x82, 0x40, 0x10, 0x61, 0x34, 0x89, 0x3b, 0x27, 0x8c, 0x15, 0x4f, 0xc3, 0xe2, 0x30,
-	0x7e, 0x44, 0xb0, 0x9f, 0x70, 0x1b, 0xc5, 0x11, 0x51, 0x45, 0x49, 0xaa, 0xd8, 0x84, 0x9d, 0xc1,
-	0x90, 0x13, 0x6e, 0x31, 0xc7, 0x14, 0x22, 0x67, 0x24, 0xbb, 0xc7, 0x4a, 0x5d, 0x3a, 0xe5, 0xd0,
-	0xd8, 0x9e, 0x22, 0xea, 0xac, 0xaf, 0xfd, 0x89, 0xa0, 0x24, 0xab, 0xb2, 0x63, 0x0f, 0x7d, 0x8b,
-	0x39, 0x17, 0x1e, 0x63, 0xbd, 0xff, 0x28, 0xb3, 0xf8, 0x1e, 0xe4, 0x07, 0xdc, 0x9e, 0x44, 0x9e,
-	0x95, 0x91, 0x6f, 0x0d, 0xb8, 0x2d, 0x03, 0xbf, 0x0f, 0x60, 0x53, 0xd2, 0x33, 0x2d, 0xa7, 0x4b,
-	0x5f, 0x95, 0x36, 0xa5, 0x61, 0x41, 0xac, 0x9c, 0x89, 0x05, 0x6d, 0x04, 0xf7, 0xe6, 0xb0, 0xbe,
-	0xc9, 0xc9, 0x48, 0x02, 0x67, 0x52, 0xc0, 0x62, 0x9b, 0x0c, 0xbb, 0x16, 0x37, 0x5d, 0xc2, 0x05,
-	0xa9, 0xec, 0xd1, 0x8e, 0x51, 0x90, 0x2b, 0x17, 0x84, 0x5f, 0x6b, 0x3f, 0x23, 0x28, 0x8b, 0xb7,
-	0x01, 0x73, 0x7c, 0xcb, 0xe7, 0xd4, 0xe9, 0x8c, 0x6f, 0x41, 0xb0, 0x9e, 0xc7, 0x06, 0x09, 0xc1,
-	0xc4, 0xc2, 0xf4, 0x58, 0x47, 0x91, 0x65, 0x53, 0x07, 0x6c, 0x04, 0x87, 0x73, 0xa9, 0x45, 0xaa,
-	0x44, 0xc0, 0x68, 0x11, 0x70, 0x66, 0x56, 0xb2, 0x45, 0x9a, 0x50, 0xc8, 0xeb, 0x94, 0xf4, 0x6a,
-	0x84, 0x93, 0x98, 0xba, 0xee, 0x90, 0x07, 0xa7, 0x39, 0x50, 0xd7, 0x1d, 0x72, 0xb1, 0x4d, 0x5f,
-	0x71, 0x8f, 0x98, 0x42, 0x84, 0xa0, 0x2e, 0x0b, 0x72, 0x45, 0x5a, 0x1f, 0x82, 0xfc, 0x6f, 0xfc,
-	0x40, 0xe4, 0xc5, 0x82, 0xac, 0xda, 0xdf, 0x90, 0xec, 0x3e, 0xd5, 0x6e, 0xb7, 0xee, 0x70, 0x6f,
-	0xbc, 0x46, 0xc9, 0xeb, 0xb0, 0x19, 0xf2, 0xd9, 0xae, 0xbc, 0x77, 0x73, 0x8c, 0x20, 0x6a, 0x43,
-	0x9a, 0x6b, 0x15, 0xd9, 0xa7, 0x22, 0x7e, 0x91, 0xee, 0x51, 0x50, 0x28, 0x15, 0xd4, 0x1f, 0x19,
-	0xd9, 0x8b, 0x5a, 0x94, 0x3f, 0x27, 0xf6, 0x70, 0x8d, 0x6f, 0x26, 0x6c, 0x40, 0x8e, 0x74, 0x44,
-	0x95, 0x07, 0x93, 0xdd, 0x89, 0x0a, 0x4a, 0x33, 0xe8, 0x10, 0x55, 0x89, 0x60, 0x04, 0x48, 0xb8,
-	0x08, 0x59, 0x31, 0x9e, 0x4e, 0x32, 0x23, 0x1e, 0x71, 0x03, 0xee, 0x8c, 0x04, 0x71, 0x59, 0xa1,
-	0x4b, 0x69, 0x37, 0xb1, 0xc7, 0x6f, 0xc1, 0xae, 0xeb, 0xd1, 0x91, 0x19, 0x49, 0x75, 0x47, 0x7a,
-	0xd9, 0x11, 0xab, 0xfa, 0x54, 0xae, 0x8a, 0x6c, 0xa1, 0x91, 0x5a, 0x37, 0x91, 0xf8, 0x7b, 0x24,
-	0x25, 0x6e, 0xac, 0x5f, 0xe2, 0x85, 0x45, 0x33, 0xa3, 0x95, 0xf6, 0xcb, 0xe4, 0x05, 0xd0, 0x98,
-	0xc3, 0x7e, 0x61, 0xbb, 0x8a, 0xd5, 0x5e, 0x26, 0x55, 0x7b, 0x91, 0xfe, 0xd9, 0xd5, 0xf4, 0xd7,
-	0xbe, 0x43, 0xf0, 0x7f, 0x9d, 0xf5, 0x3f, 0xa3, 0xbc, 0x73, 0x2d, 0xce, 0xaf, 0x45, 0xfd, 0x35,
-	0x56, 0xd8, 0x5d, 0xb8, 0xd3, 0xb3, 0x3c, 0x9f, 0x07, 0x2a, 0x4d, 0x7e, 0x88, 0xd9, 0xc5, 0x26,
-	0x3e, 0x0f, 0x1a, 0x99, 0x7c, 0xd6, 0xba, 0x70, 0x30, 0x43, 0x23, 0xd0, 0xe9, 0x0c, 0x72, 0x92,
-	0xeb, 0x74, 0x8a, 0x59, 0x22, 0xd8, 0x00, 0xe0, 0xe1, 0x0b, 0x39, 0xf1, 0xca, 0x6b, 0xcb, 0x3e,
-	0xec, 0xb5, 0xda, 0xc6, 0xe5, 0x69, 0xdb, 0x6c, 0x7f, 0x79, 0x51, 0x37, 0xf5, 0xf3, 0x46, 0x71,
-	0x03, 0xbf, 0x01, 0xa5, 0xf8, 0x62, 0xf3, 0xb2, 0x5d, 0x6d, 0x9f, 0x9d, 0x7f, 0x2e, 0x77, 0x51,
-	0x7a, 0xb7, 0x6d, 0xd4, 0xeb, 0x4f, 0xeb, 0xd5, 0x9a, 0xdc, 0xcd, 0x3c, 0xfc, 0x4a, 0x8e, 0x84,
-	0xc9, 0x0a, 0xc2, 0x77, 0xa1, 0xd8, 0xac, 0x5e, 0x44, 0x40, 0xad, 0x7a, 0xbb, 0xb8, 0x81, 0x0f,
-	0x60, 0x3f, 0xb1, 0x5a, 0xab, 0xeb, 0xf5, 0x76, 0xbd, 0x88, 0x66, 0x36, 0x2e, 0x2f, 0x6a, 0xd5,
-	0x76, 0xbd, 0x98, 0xa9, 0xfc, 0xbd, 0x07, 0x6f, 0x3e, 0x0f, 0x43, 0x15, 0x31, 0xb5, 0xc2, 0x50,
-	0x5b, 0xd4, 0x1b, 0x59, 0x1d, 0x8a, 0xbf, 0x45, 0x50, 0x08, 0x6f, 0x2c, 0xf8, 0x23, 0x95, 0x84,
-	0x25, 0x66, 0xf1, 0xf2, 0xc9, 0x32, 0xa6, 0xc1, 0x0c, 0xbc, 0x31, 0xa5, 0x31, 0x99, 0x8d, 0xd5,
-	0x68, 0x24, 0xc6, 0x74, 0x35, 0x1a, 0xa9, 0x51, 0x7c, 0x03, 0x7f, 0x23, 0x53, 0x2d, 0x86, 0x61,
-	0xfc, 0x81, 0x0a, 0x50, 0x6c, 0x7c, 0x2f, 0x7f, 0xa8, 0x6e, 0x18, 0xfa, 0xff, 0x01, 0xc1, 0x76,
-	0xec, 0xb5, 0x80, 0x3f, 0x56, 0xc1, 0x4a, 0xbd, 0xec, 0xca, 0x8f, 0x97, 0x33, 0x0e, 0xc9, 0xfc,
-	0x84, 0xe4, 0x5d, 0x2e, 0x5e, 0x5e, 0xf8, 0x13, 0x15, 0xcc, 0x39, 0xfd, 0xa1, 0xfc, 0xe9, 0xf2,
-	0x00, 0x69, 0x95, 0xa6, 0xb3, 0xaa, 0x9a, 0x4a, 0xa9, 0x49, 0xbe, 0xbc, 0xd2, 0x78, 0xac, 0x6d,
-	0xe0, 0x5f, 0x91, 0xbc, 0x86, 0x27, 0xa7, 0x4b, 0x5c, 0x55, 0xbb, 0xe5, 0xce, 0x99, 0xa7, 0xcb,
-	0x4f, 0x56, 0x81, 0x08, 0xe9, 0xfd, 0x8e, 0xe4, 0xa0, 0x91, 0x1e, 0xf4, 0xf0, 0xa9, 0x52, 0xb9,
-	0xce, 0x9f, 0x60, 0xcb, 0xb5, 0xd5, 0x40, 0x12, 0xd5, 0x1f, 0xde, 0xc2, 0x15, 0xaa, 0x3f, 0xfd,
-	0x41, 0xa0, 0x7c, 0xb2, 0x8c, 0x69, 0x9a, 0x86, 0x72, 0x13, 0x4a, 0x7f, 0x2b, 0x50, 0xa3, 0x31,
-	0xaf, 0x09, 0x05, 0x37, 0x72, 0x85, 0x26, 0x94, 0xfc, 0x86, 0xa0, 0xd0, 0x84, 0x52, 0x97, 0xff,
-	0xa0, 0xbc, 0x62, 0x83, 0x93, 0x42, 0x79, 0xcd, 0x0e, 0xa7, 0x0a, 0xe5, 0x35, 0x67, 0x56, 0x8b,
-	0xc8, 0x34, 0x96, 0x22, 0xd3, 0x58, 0x85, 0x4c, 0xe3, 0x5f, 0xc9, 0x2c, 0xd1, 0x78, 0x66, 0x3f,
-	0x21, 0xa8, 0x91, 0x99, 0x6d, 0x3c, 0x4f, 0x36, 0x5f, 0x64, 0xdc, 0xab, 0xab, 0x9c, 0xfc, 0xac,
-	0xfc, 0xe8, 0x9f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x85, 0xa1, 0xe0, 0x37, 0x63, 0x16, 0x00, 0x00,
+	// 1035 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xbc, 0x57, 0x41, 0x6f, 0xdb, 0x46,
+	0x13, 0xf5, 0x52, 0xb6, 0x2c, 0x8d, 0x0d, 0x47, 0x59, 0x07, 0x9f, 0x15, 0xf9, 0x2b, 0x1a, 0x10,
+	0x05, 0x1a, 0xe4, 0xe0, 0xb6, 0x0a, 0x7a, 0x69, 0x03, 0xb4, 0x8a, 0xcd, 0x2a, 0x46, 0xa8, 0x5a,
+	0xa0, 0xe8, 0x00, 0x4d, 0x0f, 0xc4, 0x9a, 0x5a, 0x49, 0x44, 0x28, 0x2e, 0x4b, 0x2e, 0x85, 0x28,
+	0xf7, 0xf6, 0xd0, 0x6b, 0x81, 0x02, 0x2d, 0x8a, 0x1e, 0x7a, 0xee, 0xb1, 0x87, 0xde, 0xfa, 0xd7,
+	0x8a, 0x5d, 0x52, 0xa2, 0x44, 0x29, 0x82, 0x28, 0x39, 0xbd, 0xd1, 0xb3, 0x9e, 0x37, 0x6f, 0xde,
+	0xce, 0xcc, 0x8e, 0xa0, 0x4c, 0x7c, 0xe7, 0xcc, 0x0f, 0x18, 0x67, 0xf8, 0x43, 0x9b, 0x79, 0xdc,
+	0xf1, 0xa2, 0x90, 0xda, 0x67, 0x23, 0x1a, 0x38, 0x3d, 0x87, 0xdc, 0xb8, 0xb4, 0x4b, 0x38, 0x09,
+	0x79, 0x10, 0xd9, 0x3c, 0x0a, 0x68, 0x78, 0x46, 0x7c, 0x47, 0xfd, 0x14, 0xa0, 0x61, 0xdb, 0x2c,
+	0xf2, 0xb8, 0x41, 0x7b, 0xf8, 0x08, 0x14, 0xa7, 0x5b, 0x45, 0x0f, 0xd0, 0xc3, 0xb2, 0xa1, 0x38,
+	0x5d, 0x7c, 0x02, 0xfb, 0xc4, 0x77, 0xac, 0x57, 0x74, 0x5c, 0x55, 0xa4, 0xb1, 0x48, 0x7c, 0xe7,
+	0x39, 0x1d, 0xab, 0x7f, 0x23, 0x28, 0xea, 0xac, 0x2f, 0x7c, 0x5a, 0xb0, 0x4f, 0x62, 0x04, 0xe9,
+	0x78, 0x50, 0x7f, 0x7c, 0xb6, 0x66, 0xf0, 0xb3, 0x34, 0xb2, 0x31, 0xc1, 0xc0, 0xcf, 0xa1, 0xe4,
+	0xb2, 0xbe, 0xc5, 0xc7, 0x3e, 0x95, 0x31, 0x8f, 0xea, 0x1f, 0xaf, 0x8d, 0xa7, 0xb3, 0xbe, 0x39,
+	0xf6, 0xa9, 0xb1, 0xef, 0xc6, 0x1f, 0x18, 0xc3, 0xae, 0x47, 0x86, 0xb4, 0x5a, 0x90, 0xe4, 0xe5,
+	0xb7, 0xfa, 0x0a, 0x8a, 0x2d, 0xe2, 0xbf, 0x03, 0xe6, 0xcb, 0x82, 0x71, 0xc0, 0x82, 0x54, 0x40,
+	0xe9, 0x33, 0x12, 0x0e, 0x0c, 0xfa, 0x5d, 0x44, 0x43, 0x8e, 0x1b, 0x50, 0x70, 0x59, 0x3f, 0x09,
+	0xfa, 0x51, 0x9e, 0xf4, 0x44, 0x40, 0xe1, 0x8b, 0x4f, 0xa1, 0xcc, 0x03, 0x4a, 0xad, 0xd0, 0x79,
+	0x13, 0xeb, 0x54, 0x30, 0x4a, 0xc2, 0xd0, 0x71, 0xde, 0x50, 0xf5, 0x0a, 0x8e, 0xe7, 0xa2, 0x86,
+	0x3e, 0xf3, 0x42, 0x3a, 0xef, 0x83, 0xe6, 0x7d, 0xc4, 0x61, 0xc0, 0x18, 0xb7, 0x06, 0x24, 0x1c,
+	0x48, 0xc0, 0x43, 0xa3, 0x24, 0x0c, 0x02, 0x41, 0xa4, 0xd1, 0x22, 0xfe, 0x92, 0x34, 0x86, 0xc4,
+	0xcf, 0x9d, 0x46, 0xac, 0xbe, 0x21, 0x7c, 0x57, 0xa7, 0xf1, 0x13, 0x82, 0xe3, 0xb9, 0xb0, 0x69,
+	0x1e, 0x29, 0x55, 0x34, 0x4f, 0x15, 0x5b, 0x70, 0x38, 0x8c, 0x38, 0xe1, 0x0e, 0xf3, 0x2c, 0x21,
+	0xb2, 0x22, 0xd9, 0x3d, 0xc9, 0x55, 0x43, 0x99, 0x80, 0xc6, 0xc1, 0x04, 0x51, 0x67, 0x7d, 0xf5,
+	0x2f, 0x04, 0x55, 0x9d, 0xf5, 0x2f, 0x3d, 0xdb, 0x8d, 0x42, 0x87, 0x79, 0xed, 0x80, 0xb1, 0xde,
+	0x7f, 0x74, 0xb3, 0xf8, 0x3e, 0x94, 0x86, 0xdc, 0x8d, 0x33, 0x2f, 0xc8, 0xcc, 0xf7, 0x87, 0xdc,
+	0x95, 0x89, 0xbf, 0x07, 0xe0, 0x52, 0xd2, 0xb3, 0x1c, 0xaf, 0x4b, 0x5f, 0x57, 0x77, 0xa5, 0x63,
+	0x59, 0x58, 0x2e, 0x85, 0x41, 0x1d, 0xc1, 0xfd, 0x25, 0xac, 0xd7, 0xa9, 0x8c, 0x79, 0x60, 0x25,
+	0x03, 0x2c, 0x8e, 0x49, 0xd4, 0x75, 0xb8, 0xe5, 0x13, 0x2e, 0x48, 0x15, 0x1e, 0x1e, 0x1a, 0x65,
+	0x69, 0x69, 0x13, 0x3e, 0x50, 0x7f, 0x41, 0x50, 0xd3, 0x59, 0xff, 0x9c, 0x79, 0xa1, 0x13, 0x72,
+	0xea, 0xd9, 0xe3, 0x77, 0x20, 0x58, 0x2f, 0x60, 0xc3, 0x39, 0xc1, 0x84, 0x61, 0x52, 0xd6, 0x69,
+	0x66, 0x85, 0x4c, 0x81, 0x8d, 0xe0, 0x74, 0x29, 0xb5, 0x54, 0x95, 0x14, 0x18, 0xad, 0x02, 0x56,
+	0x16, 0x25, 0x5b, 0xa5, 0x09, 0x85, 0x92, 0x4e, 0x49, 0xef, 0x82, 0x70, 0x32, 0xa3, 0xae, 0x1f,
+	0xf1, 0xa4, 0x9a, 0x13, 0x75, 0xfd, 0x88, 0x8b, 0x63, 0xfa, 0x9a, 0x07, 0xc4, 0x12, 0x22, 0x24,
+	0x7d, 0x59, 0x96, 0x16, 0xe9, 0x7d, 0x0a, 0xf2, 0x7f, 0x67, 0x0b, 0xa2, 0x24, 0x0c, 0xb2, 0x6b,
+	0x7f, 0x47, 0x72, 0xfa, 0x34, 0xba, 0x5d, 0xcd, 0xe3, 0xc1, 0xf8, 0x16, 0x25, 0xd7, 0x60, 0x77,
+	0xca, 0xe7, 0xa0, 0xfe, 0xc9, 0xfa, 0x18, 0x49, 0xd6, 0x86, 0x74, 0x57, 0xeb, 0x72, 0x4e, 0xa5,
+	0xfc, 0x52, 0xdd, 0xd3, 0xa4, 0x50, 0x26, 0xa9, 0x3f, 0x15, 0x39, 0x8b, 0x3a, 0x94, 0xbf, 0x20,
+	0x6e, 0x44, 0x6f, 0x71, 0x16, 0x19, 0x50, 0x24, 0xb6, 0xe8, 0xf2, 0xe4, 0xdd, 0xf9, 0x2c, 0x0f,
+	0x4a, 0x2b, 0x99, 0x10, 0x0d, 0x89, 0x60, 0x24, 0x48, 0xb8, 0x02, 0x05, 0xf1, 0x78, 0xc6, 0x37,
+	0x23, 0x3e, 0x71, 0x13, 0xf6, 0x46, 0x82, 0xb8, 0xec, 0xd0, 0x8d, 0xb4, 0x8b, 0xfd, 0xf1, 0x07,
+	0x70, 0xe4, 0x07, 0x74, 0x64, 0xa5, 0x52, 0xed, 0xc9, 0x28, 0x87, 0xc2, 0xaa, 0x4f, 0xe4, 0xaa,
+	0xcb, 0x11, 0x9a, 0xaa, 0xb5, 0x8e, 0xc4, 0x3f, 0x20, 0x29, 0x71, 0xf3, 0xf6, 0x25, 0x5e, 0xd9,
+	0x34, 0x0b, 0x5a, 0xa9, 0xbf, 0xc6, 0x0f, 0x40, 0x73, 0x09, 0xfb, 0x95, 0xe3, 0x6a, 0xa6, 0xf7,
+	0x94, 0x4c, 0xef, 0xa5, 0xfa, 0x17, 0xb6, 0xd3, 0x5f, 0xfd, 0x1e, 0xc1, 0xff, 0x74, 0xd6, 0xff,
+	0x8a, 0x72, 0x7b, 0x20, 0xea, 0xd7, 0xa1, 0xe1, 0x2d, 0x76, 0xd8, 0x3d, 0xd8, 0xeb, 0x39, 0x41,
+	0xc8, 0x13, 0x95, 0xe2, 0x3f, 0xc4, 0x8a, 0xe1, 0x92, 0x90, 0x27, 0x83, 0x4c, 0x7e, 0xab, 0x5d,
+	0x38, 0x59, 0xa0, 0x91, 0xe8, 0x74, 0x09, 0x45, 0xc9, 0x35, 0xac, 0xa2, 0x07, 0x85, 0xcd, 0x92,
+	0x4d, 0x00, 0x1e, 0xbd, 0x84, 0xfd, 0x64, 0xbb, 0xc2, 0xc7, 0x70, 0xa7, 0x63, 0x1a, 0xd7, 0xe7,
+	0xa6, 0x65, 0x7e, 0xd3, 0xd6, 0x2c, 0xfd, 0xaa, 0x59, 0xd9, 0xc1, 0xff, 0x87, 0xea, 0xac, 0xb1,
+	0x75, 0x6d, 0x36, 0xcc, 0xcb, 0xab, 0xaf, 0xe5, 0x29, 0xca, 0x9e, 0x9a, 0x86, 0xa6, 0x3d, 0xd3,
+	0x1a, 0x17, 0xf2, 0x54, 0x79, 0xf4, 0x2d, 0xdc, 0x5d, 0xe8, 0x20, 0x7c, 0x0f, 0x2a, 0xad, 0x46,
+	0x3b, 0x05, 0xea, 0x68, 0x66, 0x65, 0x07, 0x9f, 0xc0, 0xf1, 0x9c, 0xf5, 0x42, 0xd3, 0x35, 0x53,
+	0xab, 0xa0, 0x85, 0x83, 0xeb, 0xf6, 0x45, 0xc3, 0xd4, 0x2a, 0x4a, 0xfd, 0x9f, 0x32, 0xbc, 0xff,
+	0x62, 0x9a, 0xaa, 0xc8, 0xa9, 0x33, 0x4d, 0xb5, 0x43, 0x83, 0x91, 0x63, 0x53, 0xfc, 0x23, 0x82,
+	0x83, 0x99, 0x41, 0x84, 0x3f, 0xcf, 0x73, 0x65, 0x99, 0xf1, 0x5a, 0x7b, 0xb2, 0x99, 0x73, 0x7c,
+	0x65, 0xea, 0x0e, 0xfe, 0x19, 0xc1, 0x9d, 0xcc, 0x85, 0xe2, 0x2f, 0xf2, 0x60, 0x2e, 0xa9, 0xc8,
+	0xda, 0x97, 0x9b, 0x03, 0x4c, 0x89, 0x25, 0x2a, 0x4d, 0xb6, 0xa3, 0x7c, 0x2a, 0x65, 0x76, 0xc7,
+	0xda, 0x56, 0x0b, 0x99, 0xba, 0x83, 0x7f, 0x43, 0x70, 0x77, 0x61, 0x9f, 0xc1, 0x8d, 0x3c, 0xa8,
+	0x4b, 0x37, 0xb8, 0xda, 0xd3, 0x6d, 0x20, 0xa6, 0xf4, 0xfe, 0x40, 0xf2, 0x69, 0xcb, 0xae, 0x16,
+	0xf8, 0x3c, 0x0f, 0xfa, 0x5b, 0x76, 0xa6, 0xda, 0xc5, 0x76, 0x20, 0x73, 0x17, 0x3a, 0xf3, 0x38,
+	0xe4, 0xb8, 0xd0, 0xc5, 0x07, 0x38, 0xc7, 0x85, 0x2e, 0x79, 0x8f, 0x52, 0x32, 0xcd, 0x8d, 0xc8,
+	0x34, 0xb7, 0x21, 0xd3, 0x7c, 0x2b, 0x99, 0x0d, 0x4a, 0x7d, 0xf1, 0x67, 0x52, 0x3e, 0x32, 0x8b,
+	0xa5, 0xfe, 0x74, 0xf7, 0xa5, 0xe2, 0xdf, 0xdc, 0x14, 0xe5, 0x0f, 0xfb, 0xc7, 0xff, 0x06, 0x00,
+	0x00, 0xff, 0xff, 0xb6, 0x4d, 0x64, 0x76, 0xe5, 0x0f, 0x00, 0x00,
 }

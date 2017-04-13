@@ -103,8 +103,7 @@ func main() {
 		Path: conf.BoltDbPath,
 	}
 	mutator := &api.InstantMutator{
-		Writer:         db,
-		StorageManager: db,
+		Writer: db,
 	}
 	service := &api.LocalService{
 		AccessPolicy: &api.StaticOracle{Config: conf.Accounts},

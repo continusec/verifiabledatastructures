@@ -191,22 +191,21 @@ func (self *proxyAndRecordHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		if self.FailOnMissing {
 			fmt.Println(self.Sequence, "Error loading response:", err)
 			return
-		} else {
-			fmt.Println(self.Sequence, "Fetching", canonReq.URL)
-			sr, err := sendSavedRequest(canonReq, self.InHeaders, self.OutHeaders)
-			if err != nil {
-				fmt.Println(self.Sequence, "Error receiving response:", err)
-				return
-			}
-			xavedPair = &savedPair{
-				Request:  canonReq,
-				Response: sr,
-			}
-			err = xavedPair.Write(self.Dir, self.Sequence)
-			if err != nil {
-				fmt.Println(self.Sequence, "Error saving response:", err)
-				return
-			}
+		}
+		fmt.Println(self.Sequence, "Fetching", canonReq.URL)
+		sr, err := sendSavedRequest(canonReq, self.InHeaders, self.OutHeaders)
+		if err != nil {
+			fmt.Println(self.Sequence, "Error receiving response:", err)
+			return
+		}
+		xavedPair = &savedPair{
+			Request:  canonReq,
+			Response: sr,
+		}
+		err = xavedPair.Write(self.Dir, self.Sequence)
+		if err != nil {
+			fmt.Println(self.Sequence, "Error saving response:", err)
+			return
 		}
 	} else {
 		fmt.Println(self.Sequence, "From cache", canonReq.URL)
@@ -218,6 +217,9 @@ func (self *proxyAndRecordHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	}
 
 	self.writeResponse(xavedPair.Response, w)
+	self.IncrementSequence()
+}
+func (self *proxyAndRecordHandler) IncrementSequence() {
 	self.Sequence++
 }
 

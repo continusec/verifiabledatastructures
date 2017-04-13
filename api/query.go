@@ -206,40 +206,6 @@ func (l *LocalService) lookupLogEntryHashes(kr KeyReader, lt pb.LogType, first, 
 	return rv, nil
 }
 
-func (l *LocalService) lookupAccountLogs(kr KeyReader) ([]*pb.LogInfo, error) {
-	result, err := kr.Range(logsBucket, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	rv := make([]*pb.LogInfo, len(result))
-	for i, row := range result {
-		var li pb.LogInfo
-		err = proto.Unmarshal(row[1], &li)
-		if err != nil {
-			return nil, err
-		}
-		rv[i] = &li
-	}
-	return rv, nil
-}
-
-func (l *LocalService) lookupAccountMaps(kr KeyReader) ([]*pb.MapInfo, error) {
-	result, err := kr.Range(mapsBucket, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	rv := make([]*pb.MapInfo, len(result))
-	for i, row := range result {
-		var li pb.MapInfo
-		err = proto.Unmarshal(row[1], &li)
-		if err != nil {
-			return nil, err
-		}
-		rv[i] = &li
-	}
-	return rv, nil
-}
-
 func keyForIdx(prefix []byte, i uint64) []byte {
 	rv := make([]byte, len(prefix)+8)
 	copy(rv, prefix)
@@ -289,12 +255,6 @@ func (l *LocalService) mapBucket(vmap *pb.MapRef) ([]byte, error) {
 		"account": vmap.Account.Id,
 		"name":    vmap.Name,
 		"type":    "map",
-	})
-}
-
-func (l *LocalService) accountBucket(account *pb.AccountRef) ([]byte, error) {
-	return objecthash.ObjectHash(map[string]interface{}{
-		"account": account.Id,
 	})
 }
 

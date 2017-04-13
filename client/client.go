@@ -82,7 +82,6 @@ package client
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -226,46 +225,4 @@ func (self *accountImpl) VerifiableLog(name string) VerifiableLog {
 		Client:  self.Client.WithChildPath(fmt.Sprintf("/account/%s/log/%s", self.Account, name)),
 		LogName: name,
 	}
-}
-
-// ListLogs returns a list of logs held by the account
-func (self *accountImpl) ListLogs() ([]VerifiableLog, error) {
-	contents, _, err := self.Client.MakeRequest("GET", fmt.Sprintf("/account/%s/logs", self.Account), nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp JSONLogListResponse
-	err = json.Unmarshal(contents, &resp)
-	if err != nil {
-		return nil, err
-	}
-
-	rv := make([]VerifiableLog, len(resp.Items))
-	for i, item := range resp.Items {
-		rv[i] = self.VerifiableLog(item.Name)
-	}
-
-	return rv, nil
-}
-
-// ListMaps returns a list of maps held by the account
-func (self *accountImpl) ListMaps() ([]VerifiableMap, error) {
-	contents, _, err := self.Client.MakeRequest("GET", fmt.Sprintf("/account/%s/maps", self.Account), nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp JSONMapListResponse
-	err = json.Unmarshal(contents, &resp)
-	if err != nil {
-		return nil, err
-	}
-
-	rv := make([]VerifiableMap, len(resp.Items))
-	for i, item := range resp.Items {
-		rv[i] = self.VerifiableMap(item.Name)
-	}
-
-	return rv, nil
 }

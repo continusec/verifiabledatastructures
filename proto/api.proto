@@ -22,20 +22,12 @@ package continusec.verifiabledatastructures.api;
 option go_package = "pb";
 
 service VerifiableDataStructuresService {
-    rpc LogCreate (LogCreateRequest) returns (LogCreateResponse) {}
-    rpc LogDelete (LogDeleteRequest) returns (LogDeleteResponse) {}
-    rpc LogList (LogListRequest) returns (LogListResponse) {}
-
     rpc LogAddEntry (LogAddEntryRequest) returns (LogAddEntryResponse) {}
     rpc LogFetchEntries (LogFetchEntriesRequest) returns (LogFetchEntriesResponse) {}
 
     rpc LogTreeHash (LogTreeHashRequest) returns (LogTreeHashResponse) {}
     rpc LogInclusionProof (LogInclusionProofRequest) returns (LogInclusionProofResponse) {}
     rpc LogConsistencyProof (LogConsistencyProofRequest) returns (LogConsistencyProofResponse) {}
-
-    rpc MapCreate (MapCreateRequest) returns (MapCreateResponse) {}
-    rpc MapDelete (MapDeleteRequest) returns (MapDeleteResponse) {}
-    rpc MapList (MapListRequest) returns (MapListResponse) {}
 
     rpc MapSetValue (MapSetValueRequest) returns (MapSetValueResponse) {}
     rpc MapGetValue (MapGetValueRequest) returns (MapGetValueResponse) {}
@@ -63,54 +55,6 @@ message LogRef {
 message MapRef {
     AccountRef account = 1;
     string name = 3;
-}
-
-message LogCreateRequest {
-    LogRef log = 1;
-}
-
-message LogCreateResponse {}
-
-message LogDeleteRequest {
-    LogRef log = 1;
-}
-
-message LogDeleteResponse {}
-
-message LogListRequest {
-    AccountRef account = 1;
-}
-
-message LogInfo {
-    string name = 1;
-}
-
-message LogListResponse {
-    repeated LogInfo logs = 1;
-}
-
-message MapCreateRequest {
-    MapRef map = 1;
-}
-
-message MapCreateResponse {}
-
-message MapDeleteRequest {
-    MapRef map = 1;
-}
-
-message MapDeleteResponse {}
-
-message MapListRequest {
-    AccountRef account = 1;
-}
-
-message MapInfo {
-    string name = 1;
-}
-
-message MapListResponse {
-    repeated MapInfo Maps = 1;
 }
 
 message LogTreeHashRequest {

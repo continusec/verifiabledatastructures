@@ -28,13 +28,14 @@ import (
 // Remove the "go " on the first line to start and keep serving - useful when testing
 // a different language client library against the same tests.
 func TestStuff(t *testing.T) {
-	go runMockServer(":8080", &proxyAndRecordHandler{
+	mockServer := &proxyAndRecordHandler{
 		Host:          "https://api.continusec.com",
 		InHeaders:     []string{"Authorization", "X-Previous-LeafHash"},
 		OutHeaders:    []string{"Content-Type", "X-Verified-TreeSize", "X-Verified-Proof"},
 		Dir:           "testdata",
 		FailOnMissing: true,
-	})
+	}
+	go runMockServer(":8080", mockServer)
 	localClient := DefaultClient.WithBaseUrl("http://localhost:8080/v1")
 
 	client := localClient.Account("7981306761429961588", "c9fc80d4e19ddbf01a4e6b5277a29e1bffa88fe047af9d0b9b36de536f85c2c6")
@@ -60,15 +61,8 @@ func TestStuff(t *testing.T) {
 
 	client = localClient.Account("7981306761429961588", "c9fc80d4e19ddbf01a4e6b5277a29e1bffa88fe047af9d0b9b36de536f85c2c6")
 	log = client.VerifiableLog("newtestlog")
-	err = log.Create()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = log.Create()
-	if err != ErrObjectConflict {
-		t.Fatal(err)
-	}
+	mockServer.IncrementSequence() // skip log creation test
+	mockServer.IncrementSequence() // skip log creation test
 
 	_, err = log.Add(&RawDataEntry{RawBytes: []byte("foo")})
 	if err != nil {
@@ -310,15 +304,8 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = vmap.Create()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = vmap.Create()
-	if err != ErrObjectConflict {
-		t.Fatal(err)
-	}
+	mockServer.IncrementSequence() // skip map creation test
+	mockServer.IncrementSequence() // skip map creation test
 
 	_, err = vmap.Set([]byte("foo"), &RawDataEntry{RawBytes: []byte("foo")})
 	if err != nil {
@@ -463,39 +450,12 @@ func TestStuff(t *testing.T) {
 		t.Fatal(3)
 	}
 
-	logList, err := client.ListLogs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(logList) != 24 {
-		t.Fatal(logList)
-	}
-
-	mapList, err := client.ListMaps()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(mapList) != 15 {
-		t.Fatal(mapList)
-	}
-
-	err = vmap.Destroy()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = vmap.Destroy()
-	if err != ErrObjectConflict {
-		t.Fatal(err)
-	}
-
-	err = log.Destroy()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = log.Destroy()
-	if err != ErrObjectConflict {
-		t.Fatal(err)
-	}
+	mockServer.IncrementSequence() // skip list logs test
+	mockServer.IncrementSequence() // skip list maps test
+	mockServer.IncrementSequence() // skip destroy map test
+	mockServer.IncrementSequence() // skip destroy map test
+	mockServer.IncrementSequence() // skip destroy log test
+	mockServer.IncrementSequence() // skip destroy log test
 
 	client = localClient.Account("7981306761429961588", "c9fc80d4e19ddbf01a4e6b5277a29e1bffa88fe047af9d0b9b36de536f85c2c6")
 	vmap = client.VerifiableMap("mapjson")

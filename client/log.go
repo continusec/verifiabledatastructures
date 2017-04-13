@@ -35,26 +35,6 @@ func (self *verifiableLogImpl) Name() string {
 	return self.LogName
 }
 
-// Create will send an API call to create a new log with the name specified when the
-// verifiableLogImpl object was instantiated.
-func (self *verifiableLogImpl) Create() error {
-	_, _, err := self.Client.MakeRequest("PUT", "", nil, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Destroy will send an API call to delete this log - this operation removes it permanently,
-// and renders the name unusable again within the same account, so please use with caution.
-func (self *verifiableLogImpl) Destroy() error {
-	_, _, err := self.Client.MakeRequest("DELETE", "", nil, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // Add will send an API call to add the specified entry to the log. If the exact entry
 // already exists in the log, it will not be added a second time.
 // Returns an AddEntryResponse which includes the leaf hash, whether it is a duplicate or not. Note that the

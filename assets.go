@@ -88,7 +88,7 @@ func wwwContinusecJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "www/continusec.js", size: 72498, mode: os.FileMode(420), modTime: time.Unix(1492079686, 0)}
+	info := bindataFileInfo{name: "www/continusec.js", size: 72498, mode: os.FileMode(420), modTime: time.Unix(1492120461, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -108,7 +108,7 @@ func wwwFaviconIco() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "www/favicon.ico", size: 15086, mode: os.FileMode(420), modTime: time.Unix(1492077331, 0)}
+	info := bindataFileInfo{name: "www/favicon.ico", size: 15086, mode: os.FileMode(420), modTime: time.Unix(1492120461, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -128,7 +128,7 @@ func wwwIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "www/index.html", size: 51540, mode: os.FileMode(420), modTime: time.Unix(1492079820, 0)}
+	info := bindataFileInfo{name: "www/index.html", size: 51540, mode: os.FileMode(420), modTime: time.Unix(1492120461, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -148,7 +148,7 @@ func wwwLogJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "www/log.js", size: 16685, mode: os.FileMode(420), modTime: time.Unix(1492077319, 0)}
+	info := bindataFileInfo{name: "www/log.js", size: 16685, mode: os.FileMode(420), modTime: time.Unix(1492120461, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -168,7 +168,7 @@ func wwwLogoPng() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "www/logo.png", size: 4627, mode: os.FileMode(420), modTime: time.Unix(1492077604, 0)}
+	info := bindataFileInfo{name: "www/logo.png", size: 4627, mode: os.FileMode(420), modTime: time.Unix(1492120461, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -188,7 +188,7 @@ func wwwMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "www/main.css", size: 4521, mode: os.FileMode(420), modTime: time.Unix(1492077328, 0)}
+	info := bindataFileInfo{name: "www/main.css", size: 4521, mode: os.FileMode(420), modTime: time.Unix(1492120461, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

@@ -21,14 +21,13 @@ package api
 import "github.com/continusec/verifiabledatastructures/pb"
 
 type InstantMutator struct {
-	Writer         StorageWriter
-	StorageManager NamespaceMutator
-	Service        MutatorApplier
+	Writer  StorageWriter
+	Service MutatorApplier
 }
 
 func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) (MutatorPromise, error) {
 	return &instancePromise{Err: m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
-		return m.Service.ApplyMutation(m.StorageManager, kw, mut)
+		return m.Service.ApplyMutation(kw, mut)
 	})}, nil
 }
 

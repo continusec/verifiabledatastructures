@@ -31,19 +31,11 @@ type LocalService struct {
 	Reader       StorageReader
 }
 
-func (s *LocalService) ApplyMutation(nsMut NamespaceMutator, db KeyWriter, mut *pb.Mutation) error {
+func (s *LocalService) ApplyMutation(db KeyWriter, mut *pb.Mutation) error {
 	log.Printf("Mutation: %s\n", proto.CompactTextString(mut))
 	switch {
 	case mut.LogAddEntry != nil:
 		return s.applyLogAddEntry(db, mut.LogAddEntry)
-	case mut.LogCreate != nil:
-		return s.applyLogCreate(nsMut, db, mut.LogCreate)
-	case mut.LogDelete != nil:
-		return s.applyLogDelete(nsMut, db, mut.LogDelete)
-	case mut.MapCreate != nil:
-		return s.applyMapCreate(nsMut, db, mut.MapCreate)
-	case mut.MapDelete != nil:
-		return s.applyMapDelete(nsMut, db, mut.MapDelete)
 	default:
 		return ErrNotImplemented
 	}

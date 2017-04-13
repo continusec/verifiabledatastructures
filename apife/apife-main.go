@@ -77,15 +77,6 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 
 	r := mux.NewRouter()
 
-	// Create a log
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}", wrapLogFunction(pb.LogType_STRUCT_TYPE_LOG, as.createLogHandler)).Methods("PUT")
-
-	// Delete a log
-	r.HandleFunc("/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}", wrapLogFunction(pb.LogType_STRUCT_TYPE_LOG, as.deleteLogHandler)).Methods("DELETE")
-
-	// List logs
-	r.HandleFunc("/v1/account/{account:[0-9]+}/logs", wrapAccountFunction(as.listLogsHandler)).Methods("GET")
-
 	// Remaining log operations, including those on Mutation and Treehead logs
 	for _, t := range []struct {
 		Prefix            string
@@ -123,15 +114,6 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 		r.HandleFunc(t.Prefix+"/tree/{treesize:[0-9]+}/consistency/{oldsize:[0-9]+}", wrapLogFunction(t.LogType, as.getConsistencyProofHandler)).Methods("GET")
 	}
 	// MAP STUFF
-
-	// Create Map Handler
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}", wrapMapFunction(as.createMapHandler)).Methods("PUT")
-
-	// Delete Map Handler
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}", wrapMapFunction(as.deleteMapHandler)).Methods("DELETE")
-
-	// List maps Handler
-	r.HandleFunc("/v1/account/{account:[0-9]+}/maps", wrapAccountFunction(as.listMapsHandler)).Methods("GET")
 
 	for _, h := range []struct {
 		KeyFormat int
@@ -319,52 +301,6 @@ func writeSuccessContent(w http.ResponseWriter, val []byte) {
 	w.Header().Set("Content-Type", http.DetectContentType(val))
 	w.WriteHeader(http.StatusOK)
 	w.Write(val)
-}
-
-func (as *apiServer) createMapHandler(vmap *pb.MapRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	_, err := as.service.MapCreate(requestContext(r), &pb.MapCreateRequest{Map: vmap})
-	writeResponseHeader(w, err)
-}
-
-func (as *apiServer) deleteMapHandler(vmap *pb.MapRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	_, err := as.service.MapDelete(requestContext(r), &pb.MapDeleteRequest{Map: vmap})
-	writeResponseHeader(w, err)
-}
-
-func (as *apiServer) createLogHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	_, err := as.service.LogCreate(requestContext(r), &pb.LogCreateRequest{Log: log})
-	writeResponseHeader(w, err)
-}
-
-func (as *apiServer) deleteLogHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	_, err := as.service.LogDelete(requestContext(r), &pb.LogDeleteRequest{Log: log})
-	writeResponseHeader(w, err)
-}
-
-func (as *apiServer) listLogsHandler(acc *pb.AccountRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	logs, err := as.service.LogList(requestContext(r), &pb.LogListRequest{Account: acc})
-	if err != nil {
-		writeResponseHeader(w, err)
-		return
-	}
-	rv := make([]*client.JSONLogInfoResponse, len(logs.Logs))
-	for idx, l := range logs.Logs {
-		rv[idx] = &client.JSONLogInfoResponse{Name: l.Name}
-	}
-	writeSuccessJSON(w, &client.JSONLogListResponse{Items: rv})
-}
-
-func (as *apiServer) listMapsHandler(acc *pb.AccountRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	maps, err := as.service.MapList(requestContext(r), &pb.MapListRequest{Account: acc})
-	if err != nil {
-		writeResponseHeader(w, err)
-		return
-	}
-	rv := make([]*client.JSONMapInfoResponse, len(maps.Maps))
-	for idx, m := range maps.Maps {
-		rv[idx] = &client.JSONMapInfoResponse{Name: m.Name}
-	}
-	writeSuccessJSON(w, &client.JSONMapListResponse{Items: rv})
 }
 
 func (as *apiServer) getLogTreeHashHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {

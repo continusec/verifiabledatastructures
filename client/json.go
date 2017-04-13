@@ -75,23 +75,3 @@ type JSONMapMutationEntry struct {
 	// Used for "update". This is the previous leaf hash (not value).
 	PreviousLeafHash []byte `json:"previous,omitempty"`
 }
-
-type JSONLogListResponse struct {
-	Items []*JSONLogInfoResponse `json:"results"`
-}
-
-type JSONMapListResponse struct {
-	Items []*JSONMapInfoResponse `json:"results"`
-}
-
-// JSONMapInfoResponse represents metadata about a map
-type JSONMapInfoResponse struct {
-	// Name is the name of the map
-	Name string `json:"name"`
-}
-
-// JSONLogInfoResponse represents metadata about a log
-type JSONLogInfoResponse struct {
-	// Name is the name of the log
-	Name string `json:"name"`
-}

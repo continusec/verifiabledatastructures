@@ -23,20 +23,6 @@ It has these top-level messages:
 	AccountRef
 	LogRef
 	MapRef
-	LogCreateRequest
-	LogCreateResponse
-	LogDeleteRequest
-	LogDeleteResponse
-	LogListRequest
-	LogInfo
-	LogListResponse
-	MapCreateRequest
-	MapCreateResponse
-	MapDeleteRequest
-	MapDeleteResponse
-	MapListRequest
-	MapInfo
-	MapListResponse
 	LogTreeHashRequest
 	LogTreeHashResponse
 	MapTreeHashRequest
