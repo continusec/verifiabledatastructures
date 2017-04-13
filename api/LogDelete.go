@@ -24,7 +24,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-func (s *LocalService) applyLogDelete(db KeyWriter, req *pb.LogDeleteRequest) error {
+func (s *LocalService) applyLogDelete(nsMut NamespaceMutator, db KeyWriter, req *pb.LogDeleteRequest) error {
 	k := []byte(req.Log.Name)
 	_, err := db.Get(logsBucket, k)
 	if err != nil {
@@ -41,7 +41,7 @@ func (s *LocalService) applyLogDelete(db KeyWriter, req *pb.LogDeleteRequest) er
 		return err
 	}
 
-	return db.ResetNamespace(ns, false)
+	return nsMut.ResetNamespace(ns, false)
 }
 
 func (s *LocalService) LogDelete(ctx context.Context, req *pb.LogDeleteRequest) (*pb.LogDeleteResponse, error) {

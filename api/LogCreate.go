@@ -24,7 +24,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-func (s *LocalService) applyLogCreate(db KeyWriter, req *pb.LogCreateRequest) error {
+func (s *LocalService) applyLogCreate(nsMut NamespaceMutator, db KeyWriter, req *pb.LogCreateRequest) error {
 	k := []byte(req.Log.Name)
 	_, err := db.Get(logsBucket, k)
 	switch err {
@@ -40,7 +40,7 @@ func (s *LocalService) applyLogCreate(db KeyWriter, req *pb.LogCreateRequest) er
 	if err != nil {
 		return err
 	}
-	err = db.ResetNamespace(ns, true)
+	err = nsMut.ResetNamespace(ns, true)
 	if err != nil {
 		return err
 	}

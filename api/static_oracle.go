@@ -20,22 +20,11 @@ package api
 
 import "github.com/continusec/verifiabledatastructures/pb"
 
-type InstantMutator struct {
-	Writer         StorageWriter
-	StorageManager NamespaceMutator
-	Service        MutatorApplier
+type StaticOracle struct {
+	Config []*pb.Account
 }
 
-func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) (MutatorPromise, error) {
-	return &instancePromise{Err: m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
-		return m.Service.ApplyMutation(m.StorageManager, kw, mut)
-	})}, nil
-}
-
-type instancePromise struct {
-	Err error
-}
-
-func (i *instancePromise) WaitUntilDone() error {
-	return i.Err
+// VerifyAllowed returns nil if operation is allowed. Other values means no
+func (o *StaticOracle) VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) error {
+	return nil // TODO
 }

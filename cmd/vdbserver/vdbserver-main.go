@@ -30,6 +30,7 @@ import (
 
 	"github.com/continusec/verifiabledatastructures/api"
 	"github.com/continusec/verifiabledatastructures/apife"
+	"github.com/continusec/verifiabledatastructures/kvstore"
 	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
@@ -98,6 +99,20 @@ func main() {
 		log.Fatalf("Error parsing server configuration: %s\n", err)
 	}
 
-	startServers(conf, &api.LocalService{})
+	db := &kvstore.BoltBackedService{
+		Path: conf.BoltDbPath,
+	}
+	mutator := &api.InstantMutator{
+		Writer:         db,
+		StorageManager: db,
+	}
+	service := &api.LocalService{
+		AccessPolicy: &api.StaticOracle{Config: conf.Accounts},
+		Mutator:      mutator,
+		Reader:       db,
+	}
+	mutator.Service = service
+
+	startServers(conf, service)
 	waitForever()
 }

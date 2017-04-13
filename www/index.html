@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<!-- Copyright (C) 2017 Continusec Pty Ltd - All Rights Reserved -->
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:700,400,300' rel='stylesheet' type='text/css'>
+		<link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+		<link rel="stylesheet" type="text/css" href="main.css">
+
+        <style type="text/css">
+            .accTocMenu {
+                display: flex;
+                flex-flow: row wrap;
+                justify-content: center;
+            }
+            .accTocLink {
+                padding: 0.5em;
+            }
+        </style>
+
+        <script type="text/javascript" src="continusec.js"></script>
+        <script type="text/javascript" src="log.js"></script>
+
+        <style type="text/css">
+            #divShell {
+                min-height: 50vh;
+            }
+            .selectedButton {
+                background: #F0F0F0;
+                font-style: italic;
+            }
+            .ssheader {
+                display: flex;
+                align-items: center;
+                cursor: pointer;
+            }
+            .ssheader * {
+                font-size: 16pt;
+            }
+            .openCloseIcon {
+                font-size: 30pt;
+            }
+            .ssheadtext {
+                position: relative;
+                top: -3px;
+            }
+            .shellselector {
+                border: 1px solid #8C8C8C;
+                margin-bottom: 1em;
+            }
+            .ssinside {
+                padding-left: 0.5em;
+                padding-right: 0.5em;
+            }
+        </style>
+
+        <script type="text/javascript">
+            var currentAccountID = null;
+            var currentAPIKey = null;
+            var currentLogType = null;
+            var currentLogName = null;
+
+            function GetClient() {
+                var url = window.location.href;
+                while (url.endsWith("/")) {
+                    url = url.substring(0, url.length-1);
+                }
+                console.log(url);
+                return new ContinusecClient((currentAccountID == null) ? "" : currentAccountID, (currentAPIKey == null) ? "" : currentAPIKey, url);
+            }
+
+            function createFailer(callType, resultID) {
+                return function (reason) {
+                    $("#" + resultID).addClass("inputError");
+                    if (reason == CONTINUSEC_NOT_FOUND_ERROR) {
+                        if (callType == "logInclusion") {
+                            $("#" + resultID).text("Not found - check log name, or this object may not in the log.");
+                        } else {
+                            $("#" + resultID).text("Not found - check map/log name (must be lowercase, all letters and numbers).");
+                        }
+                    } else if (reason == CONTINUSEC_UNAUTHORIZED_ERROR) {
+                        $("#" + resultID).text("Permissions error - check the permission for the API key used.");
+                    } else if (reason == CONTINUSEC_OBJECT_CONFLICT_ERROR) {
+                        $("#" + resultID).text("Error - conflict - log/map may already exist.");
+                    } else if (reason == CONTINUSEC_INVALID_RANGE_ERROR) {
+                        if (callType == "addEntry" || callType == "addMapEntry") {
+                            $("#" + resultID).text("Bad request - check JSON format.");
+                        } else if (callType == "fetchMapValue") {
+                            $("#" + resultID).text("Bad request - check whether tree size is in range, and, if requesting JSON, whether the object was originally stored as such.");
+                        } else {
+                            $("#" + resultID).text("Bad request - check whether tree size is in range.");
+                        }
+                    } else {
+                        if (currentLogName.length < 1) {
+                            $("#" + resultID).text("Please enter a log name.");
+                        } else {
+                            $("#" + resultID).text("Error adding entry - " + reason);
+                        }
+                    }
+                };
+            }
+
+            function getVerLog() {
+                if (currentLogType == "treehead") {
+                    return getVerMap().getTreeHeadLog();
+                } else if (currentLogType == "mutation") {
+                    return getVerMap().getMutationLog();
+                } else if (currentLogType == "user") {
+                    return GetClient().getVerifiableLog(currentLogName);
+                }
+            }
+
+            function getVerMap() {
+                return GetClient().getVerifiableMap(currentLogName);
+            }
+
+            $(function () {
+                $(".ssheader").click(function () {
+                    if ($(this).hasClass("isOpen")) {
+                        $(this).parent().find(".showOpen").hide();
+                        $(this).parent().find(".showClosed").show();
+                        $(this).removeClass("isOpen");
+                    } else {
+                        $(this).parent().find(".showClosed").hide();
+                        $(this).parent().find(".showOpen").show();
+                        $(this).addClass("isOpen");
+                    }
+                    return false;
+                });
+
+                $("#createNewLog").click(function () {
+                    var title = prompt("Please enter name for the log (lower-case letters and numbers)", "");
+                    if (title != null && title.length > 0) {
+                        $("#objresult").removeClass("inputError");
+                        $("#objresult").text("Creating...");
+                        GetClient().getVerifiableLog(title).create(function () {
+                            $("#objresult").removeClass("inputError");
+                            $("#objresult").text("Log successfully created.");
+
+                            currentLogType = "user";
+                            currentLogName = title;
+                            openLogForOperations();
+                        }, createFailer("createLog", "objresult"));
+                    }
+                    return false;
+                });
+                $("#createNewMap").click(function () {
+                    var title = prompt("Please enter name for the map (lower-case letters and numbers)", "");
+                    if (title != null && title.length > 0) {
+                        $("#objresult").removeClass("inputError");
+                        $("#objresult").text("Creating...");
+                        GetClient().getVerifiableMap(title).create(function () {
+                            $("#objresult").removeClass("inputError");
+                            $("#objresult").text("Map successfully created.");
+
+                            currentLogType = "map";
+                            currentLogName = title;
+                            openLogForOperations();
+                        }, createFailer("createMap", "objresult"));
+                    }
+                    return false;
+                });
+                $("#loadLogByName").click(function () {
+                    var title = prompt("Please enter name of the log to load", "");
+                    if (title != null && title.length > 0) {
+                        currentLogType = "user";
+                        currentLogName = title;
+                        openLogForOperations();
+                    }
+                    return false;
+                });
+                $("#loadMapByName").click(function () {
+                    var title = prompt("Please enter name of the map to load", "");
+                    if (title != null && title.length > 0) {
+                        currentLogType = "map";
+                        currentLogName = title;
+                        openLogForOperations();
+                    }
+                    return false;
+                });
+                $("#listLogs").click(function () {
+                    $("#objresult").removeClass("inputError");
+                    $("#objresult").text("Listing...");
+                    $("#listOfLogs").empty();
+                    GetClient().listLogs(function (logs) {
+                        $("#objresult").removeClass("inputError");
+                        $("#objresult").empty();
+                        if (logs.length == 0) {
+                            $("#objresult").text("No logs found.");
+                        } else {
+                            var ul = $("#listOfLogs");
+                            for (var i = 0; i < logs.length; i++) {
+                                ul.append($('<p class="doc" />').append($('<a href="#" class="callToActionButton" />').text("Select").click(function (name) { return function () {
+                                    currentLogType = "user";
+                                    currentLogName = name;
+                                    openLogForOperations();
+                                    return false;
+                                }; } (logs[i].name))).append($("<span />").text(" " + logs[i].name)));
+                            }
+                        }
+                    }, createFailer("listLogs", "objresult"));
+                    return false;
+                });
+                $("#listMaps").click(function () {
+                    $("#objresult").removeClass("inputError");
+                    $("#objresult").text("Listing...");
+                    $("#listOfMaps").empty();
+                    GetClient().listMaps(function (maps) {
+                        $("#objresult").removeClass("inputError");
+                        $("#objresult").empty();
+                        if (maps.length == 0) {
+                            $("#objresult").text("No maps found.");
+                        } else {
+                            var ul = $("#listOfMaps");
+                            for (var i = 0; i < maps.length; i++) {
+                                ul.append($('<p class="doc" />').append($('<a href="#" class="callToActionButton" />').text("Select").click(function (name) { return function () {
+                                    currentLogType = "map";
+                                    currentLogName = name;
+                                    openLogForOperations();
+                                    return false;
+                                }; } (maps[i].name))).append($("<span />").text(" " + maps[i].name)));
+                            }
+                        }
+                    }, createFailer("listMaps", "objresult"));
+                    return false;
+                });
+                $("#goMutationLog").click(function () {
+                    currentLogType = "mutation";
+                    openLogForOperations();
+                    return false;
+                });
+                $("#goTreeHeadLog").click(function () {
+                    currentLogType = "treehead";
+                    openLogForOperations();
+                    return false;
+                });
+                $("#goBackToMap").click(function () {
+                    currentLogType = "map";
+                    openLogForOperations();
+                    return false;
+                });
+
+                $("#logTreeHead").click(function () {
+                    $("#result").removeClass("inputError");
+                    $("#result").text("Fetching...");
+                    var x = $("#treeHeadLogSize").val();
+                    if (x.toLowerCase() == "head") {
+                        x = 0;
+                    } else {
+                        x = Number(x);
+                    }
+                    if (isNaN(x)) {
+                        $("#result").addClass("inputError");
+                        $("#result").text("Invalid tree size. Please enter a number or 'head' for latest.");
+                    } else {
+                        getVerLog().getTreeHead(x, function (treeHead) {
+                            $("#result").removeClass("inputError");
+                            if (treeHead.treeSize == 0) {
+                                $("#result").text("Log is empty.");
+                            } else {
+                                $("#result").text("Root hash is " + btoa(treeHead.getRootHash()) + " for tree size of " + treeHead.getTreeSize() + ".");
+                            }
+                        }, createFailer("logHead", "result"));
+                    }
+                    return false;
+                });
+
+                $("#addRawLog").click(function () {
+                    addToLog(new RawDataEntry($("#logEntryText").val()));
+                    return false;
+                });
+                $("#addJSONLog").click(function () {
+                    addToLog(new JsonEntry($("#logEntryText").val()));
+                    return false;
+                });
+                $("#addJSONRedactableLog").click(function () {
+                    addToLog(new RedactableJsonEntry($("#logEntryText").val()));
+                    return false;
+                });
+                $("#fetchRaw").click(function () {
+                    fetchEntries(new RawDataEntryFactory());
+                    return false;
+                });
+                $("#fetchJson").click(function () {
+                    fetchEntries(new JsonEntryFactory());
+                    return false;
+                });
+                $("#inclRawLog").click(function () {
+                    getLogInclusion(new RawDataEntry($("#inclEntryText").val()));
+                    return false;
+                });
+                $("#inclJSONLog").click(function () {
+                    getLogInclusion(new RedactedJsonEntry($("#inclEntryText").val()));
+                    return false;
+                });
+
+                $("#addRawMap").click(function () {
+                    addToMap(new RawDataEntry($("#mapEntryText").val()));
+                    return false;
+                });
+                $("#addJSONMap").click(function () {
+                    addToMap(new JsonEntry($("#mapEntryText").val()));
+                    return false;
+                });
+                $("#addJSONRedactableMap").click(function () {
+                    addToMap(new RedactableJsonEntry($("#mapEntryText").val()));
+                    return false;
+                });
+                $("#mapTreeHead").click(function () {
+                    $("#result").removeClass("inputError");
+                    $("#result").text("Fetching...");
+                    var x = $("#treeHeadMapSize").val();
+                    if (x.toLowerCase() == "head") {
+                        x = 0;
+                    } else {
+                        x = Number(x);
+                    }
+                    if (isNaN(x)) {
+                        $("#result").addClass("inputError");
+                        $("#result").text("Invalid tree size. Please enter a number or 'head' for latest.");
+                    } else {
+                        getVerMap().getTreeHead(x, function (treeHead) {
+                            $("#result").removeClass("inputError");
+                            if (treeHead.getTreeSize() == 0) {
+                                $("#result").text("Map is empty - root hash is " + btoa(treeHead.getRootHash()));
+                            } else {
+                                $("#result").text("Root hash of map is " + btoa(treeHead.getRootHash()) + " for mutation log with root hash of " + btoa(treeHead.getMutationLogTreeHead().getRootHash()) + " and tree size of " + treeHead.getTreeSize() + ".");
+                            }
+                        }, createFailer("logHead", "result"));
+                    }
+                    return false;
+                });
+
+                $("#mapValueRaw").click(function () {
+                    getVerifiedValue(new RawDataEntryFactory());
+                    return false;
+                });
+                $("#mapValueJson").click(function () {
+                    getVerifiedValue(new JsonEntryFactory());
+                    return false;
+                });
+
+                $("#logConsistency").click(function () {
+                    $("#result").removeClass("inputError");
+                    $("#result").text("Fetching...");
+                    var x = $("#treeHeadLogSize1").val();
+                    if (x.toLowerCase() == "head") {
+                        x = 0;
+                    } else {
+                        x = Number(x);
+                    }
+                    var y = $("#treeHeadLogSize2").val();
+                    if (y.toLowerCase() == "head") {
+                        y = 0;
+                    } else {
+                        y = Number(y);
+                    }
+                    if (isNaN(x) || isNaN(y)) {
+                        $("#result").addClass("inputError");
+                        $("#result").text("Invalid tree size. Please enter a number or 'head' for latest.");
+                    } else if (x < 1) {
+                        $("#result").addClass("inputError");
+                        $("#result").text("First tree size must be at least 1.");
+                    } else if ((x >= y) && (y != 0)) {
+                        $("#result").addClass("inputError");
+                        $("#result").text("First tree size must be less than second tree size.");
+                    } else {
+                        var log = getVerLog();
+                        log.getTreeHead(x, function (treeHead1) {
+                            $("#result").removeClass("inputError");
+                            if (treeHead1.getTreeSize() == 0) {
+                                $("#result").text("Log is empty.");
+                            } else {
+                                log.getTreeHead(y, function (treeHead2) {
+                                    $("#result").removeClass("inputError");
+                                    if (treeHead2.treeSize == 0) {
+                                        $("#result").text("Log is empty.");
+                                    } else if (treeHead2.getTreeSize() <= treeHead1.getTreeSize()) {
+                                        $("#result").text("Latest tree size (" + treeHead2.treeSize + ") is not greater than the first.");
+                                    } else {
+                                        log.getConsistencyProof(treeHead1.getTreeSize(), treeHead2.getTreeSize(), function (proof) {
+                                            var canv = $("<canvas />");
+                                            $("#result").removeClass("inputError");
+                                            $("#result").empty();
+                                            $("#result").append(canv);
+                                            DrawConsistencyProof(canv, treeHead1.getTreeSize(), treeHead1.getRootHash(), treeHead2.getTreeSize(), treeHead2.getRootHash(), proof.getAuditPath());
+                                        }, createFailer("logConsistency", "result"));
+                                    }
+                                }, createFailer("logHead", "result"));
+                             }
+                        }, createFailer("logHead", "result"));
+                    }
+                    return false;
+                });
+            });
+
+            function getLogInclusion(entry) {
+                $("#result").removeClass("inputError");
+                $("#result").text("Fetching...");
+
+                var x = $("#inclTreeHeadLogSize").val();
+                if (x.toLowerCase() == "head") {
+                    x = 0;
+                } else {
+                    x = Number(x);
+                }
+                if (isNaN(x)) {
+                    $("#result").addClass("inputError");
+                    $("#result").text("Invalid tree size. Please enter a number or 'head' for latest.");
+                } else {
+                    var log = getVerLog();
+                    log.getTreeHead(x, function (treeHead) {
+                        log.getInclusionProof(x, entry, function (ipr) {
+                            var canv = $("<canvas />");
+                            $("#result").removeClass("inputError");
+                            $("#result").empty();
+                            $("#result").append(canv);
+                            DrawInclusionProof(canv, ipr.getLeafIndex(), entry.getLeafHash(), treeHead.getTreeSize(), treeHead.getRootHash(), ipr.getAuditPath());
+                        }, createFailer("logInclusion", "result"));
+                    }, createFailer("logHead", "result"));
+                }
+            }
+
+            function getVerifiedValue(factory) {
+                $("#result").removeClass("inputError");
+                $("#result").text("Fetching...");
+
+                var x = $("#mapValueSize").val();
+                if (x.toLowerCase() == "head") {
+                    x = 0;
+                } else {
+                    x = Number(x);
+                }
+                var key = $("#mapValueKey").val();
+                if (isNaN(x)) {
+                    $("#result").addClass("inputError");
+                    $("#result").text("Invalid tree size. Please enter a number or 'head' for latest.");
+                } else if (x < 0) {
+                    $("#result").addClass("inputError");
+                    $("#result").text("Tree size must be at least 0.");
+                } else {
+                    getVerMap().getTreeHead(x, function (treeHead) {
+                        var results = $("<div />");
+                        var entryArray = [];
+                        var lastIdx = -1;
+                        getVerMap().getValue(key, treeHead.getTreeSize(), factory, function (mer) {
+                            $("#result").removeClass("inputError");
+                            $("#result").empty();
+
+                            $("#result").append($("<div />").text("Value: " + displayStuff(mer.getValue().getData())));
+                            $("#result").append($("<div />").text("Tree size: " + displayStuff(mer.getTreeSize())));
+
+                            var canv = $("<canvas />");
+                            $("#result").append(canv);
+                            DrawMapInclusion(canv, constructKeyPath(key), mer.getValue().getLeafHash(), treeHead.getRootHash(), mer.getAuditPath());
+                        }, createFailer("fetchMapValue", "result"));
+                    }, createFailer("logHead", "result"));
+                }
+            }
+
+            function addToMap(entry) {
+                $("#result").removeClass("inputError");
+                $("#result").text("Adding...");
+                getVerMap().setValue($("#mapEntryKey").val(), entry, function (aer) {
+                    $("#result").removeClass("inputError");
+                    $("#result").text("Entry received by map. Leaf hash of mutation log entry: " + btoa(aer.getLeafHash()));
+                }, createFailer("addMapEntry", "result"));
+            }
+
+            function fetchEntries(factory) {
+                $("#result").removeClass("inputError");
+                $("#result").text("Fetching...");
+
+                var x = $("#fetchTreeHeadLogSize1").val();
+                if (x.toLowerCase() == "head") {
+                    x = 0;
+                } else {
+                    x = Number(x);
+                }
+                var y = $("#fetchTreeHeadLogSize2").val();
+                if (y.toLowerCase() == "head") {
+                    y = 0;
+                } else {
+                    y = Number(y);
+                }
+                if (isNaN(x) || isNaN(y)) {
+                    $("#result").addClass("inputError");
+                    $("#result").text("Invalid tree size. Please enter a number or 'head' for latest.");
+                } else if (x < 0) {
+                    $("#result").addClass("inputError");
+                    $("#result").text("First tree size must be at least 0.");
+                } else if ((x >= y) && (y != 0)) {
+                    $("#result").addClass("inputError");
+                    $("#result").text("First tree size must be less than second tree size.");
+                } else {
+                    var results = $("<div />");
+                    var entryArray = [];
+                    var lastIdx = -1;
+                    getVerLog().getEntries(x, y, factory, function (idx, entry) {
+                        results.append($("<div />").text(idx + " - " + displayStuff(entry.getData())));
+                        entryArray.push(entry);
+                        lastIdx = idx;
+                    }, function () {
+                        $("#result").removeClass("inputError");
+                        $("#result").empty();
+                        $("#result").append(results);
+
+                        /* don't draw if more than 50, since about there hits a 32000 pixel limit for width in Chrome */
+                        if ((lastIdx >= 0) && (lastIdx < 50) && (x == 0)) {
+                            var shouldDraw = false;
+                            /* try to get leaf hash now in order to weed out any bad JSON */
+                            try {
+                                for (var i = 0; i < entryArray.length; i++) {
+                                    entryArray[i].getLeafHash();
+                                    shouldDraw = true;
+                                }
+                            } catch (err) {
+                                $("#result").append($("<div />").text("Tree not drawn - check each entry contains valid JSON."));
+                            }
+
+                            if (shouldDraw) {
+                                var canv = $("<canvas />");
+                                $("#result").append(canv);
+                                DrawTree(canv, 0, lastIdx+1, entryArray);
+                            }
+                        } else {
+                            $("#result").append($("<div />").text("Tree not drawn - only displayed when starting at zero, and less than 50 elements."));
+                        }
+                    }, createFailer("fetchEntries", "result"));
+                }
+            }
+
+            function addToLog(entry) {
+                $("#result").removeClass("inputError");
+                $("#result").text("Adding...");
+                getVerLog().add(entry, function (aer) {
+                    $("#result").removeClass("inputError");
+                    $("#result").text("Entry received by log. Leaf hash: " + btoa(aer.getLeafHash()));
+                }, createFailer("addEntry", "result"));
+            }
+
+            function updateSelectedObjectName() {
+                if (currentLogType == "user") {
+                    $("#selectedobject").text("Verifiable Data Structure: " + currentLogName + " (log)");
+                } else if (currentLogType == "mutation") {
+                    $("#selectedobject").text("Verifiable Data Structure: " + currentLogName + " (mutation log for map)");
+                } else if (currentLogType == "treehead") {
+                    $("#selectedobject").text("Verifiable Data Structure: " + currentLogName + " (tree head log for map)");
+                } else if (currentLogType == "map") {
+                    $("#selectedobject").text("Verifiable Data Structure: " + currentLogName + " (map)");
+                }
+            }
+
+            function openLogForOperations() {
+                $("#actualop").hide();
+
+                if ($("#logmapselheader").hasClass("isOpen")) {
+                    $("#logmapselheader").click();
+                }
+                updateSelectedObjectName();
+
+                $("#logoperations").show();
+                if (!($("#logoperationsheader").hasClass("isOpen"))) {
+                    $("#logoperationsheader").click();
+                }
+
+                $(".logTypeOp").hide();
+                $(".logType" + currentLogType).show();
+            }
+
+            function showEllipse(s, n) {
+                if (s.length > n) {
+                    return s.substring(0, n) + "...";
+                } else {
+                    return s;
+                }
+            }
+
+            function selectTextAccount() {
+                currentAPIKey = $("#apikeyField").val();
+                currentAccountID = $("#accountField").val();
+                $("#selectedrule").text("Access Rule: " + showEllipse(currentAccountID + " / " + currentAPIKey, 40));
+                $("#accessruleselector").click();
+                $("#logmapselector").show();
+            }
+            function selectAccountRule(idx) {
+                if (idx < 0) {
+                    currentAPIKey = null;
+                    $("#selectedrule").text("Access Rule: (public)");
+                } else {
+                    currentAPIKey = allKeyVals[idx];
+                    $("#selectedrule").text("Access Rule: " + showEllipse(allKeyNames[idx], 40));
+                }
+                $("#accessruleselector").click();
+                $("#logmapselector").show();
+            }
+
+            function loadOp(opname) {
+                $("#result").empty();
+
+                if ($("#logoperationsheader").hasClass("isOpen")) {
+                    $("#logoperationsheader").click();
+                }
+                $("#actualop").show();
+                if (!($("#actualopheader").hasClass("isOpen"))) {
+                    $("#actualopheader").click();
+                }
+
+                $(".subOp").hide();
+                $(".subOp" + opname).show().find(".focusMe").focus();
+            }
+        </script>
+    </head>
+    <body>
+        <div id="allcontentwrapper">
+            <div id="topheaderpart" style="background-color: white">
+                <div class="headerbar">
+                    <div class="headercrumbs">
+                        <p>
+                            <a href="https://www.continusec.com/"><img src="logo.png" style="width: 120pt; height:31.875pt;" alt="Continusec" /></a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div id="middlebit">
+                <div class="header">Verifiable Data Structures</div>
+
+
+                <div class="midcol">
+                    <div class="shellselector">
+                        <div class="ssheader isOpen" id="accessruleselector">
+                            <div>
+                                <i class="material-icons openCloseIcon showClosed" style="display:none">keyboard_arrow_up</i>
+                                <i class="material-icons openCloseIcon showOpen">keyboard_arrow_down</i>
+                            </div>
+                            <div class="ssheadtext" id="selectedrule">Select account/API key</div>
+                        </div>
+                        <div class="ssinside showOpen">
+                            <p class="doc">
+                                Please select which account and API key to use when making calls to the API:
+                            </p>
+
+                            <p class="doc">
+                                Account: <input class="focusMe" type="text" id="accountField" value="1234" />
+                                API Key: <input class="focusMe" type="text" id="apikeyField" value="secret" />
+                            </p>
+                            <p class="doc">
+                                <a href="#" class="callToActionButton" onclick="selectTextAccount(); return false">Select</a>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="shellselector" id="logmapselector" style="display: none">
+                        <div class="ssheader isOpen" id="logmapselheader">
+                            <div>
+                                <i class="material-icons openCloseIcon showClosed" style="display:none">keyboard_arrow_up</i>
+                                <i class="material-icons openCloseIcon showOpen">keyboard_arrow_down</i>
+                            </div>
+                            <div class="ssheadtext" id="selectedobject">Select log/map</div>
+                        </div>
+                        <div class="ssinside showOpen">
+                            <div id="objresult"></div>
+                            <p class="doc">
+                                Please select the log or map to use. To get started, create a new log or map.
+                            </p>
+
+                            <h4>Verifiable Logs</h4>
+                            <div id="listOfLogs">
+                            </div>
+                            <p>
+                                <a href="#" class="callToActionButton" id="createNewLog">Create new log</a>
+                                <a href="#" class="callToActionButton" id="listLogs">List existing logs</a>
+                                <a href="#" class="callToActionButton" id="loadLogByName">Load log by name</a>
+                            </p>
+
+                            <h4>Verifiable Maps</h4>
+                            <div id="listOfMaps">
+                            </div>
+                            <p>
+                                <a href="#" class="callToActionButton" id="createNewMap">Create new map</a>
+                                <a href="#" class="callToActionButton" id="listMaps">List existing maps</a>
+                                <a href="#" class="callToActionButton" id="loadMapByName">Load map by name</a>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="shellselector" id="logoperations" style="display: none">
+                        <div class="ssheader isOpen" id="logoperationsheader">
+                            <div>
+                                <i class="material-icons openCloseIcon showClosed" style="display:none">keyboard_arrow_up</i>
+                                <i class="material-icons openCloseIcon showOpen">keyboard_arrow_down</i>
+                            </div>
+                            <div class="ssheadtext">Choose operation</div>
+                        </div>
+                        <div class="ssinside showOpen">
+                            <div class="logTypeOp logTypeuser" style="display:none">
+                                <h4>Log Write Operations</h4>
+                                <p class="doc">
+                                    To populate your log, add entries. Note that while an acknowledgement is returned immediately by the log, sequencing and incorporation into the Merkle Tree occurs asynchronously.
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" onclick="loadOp('LogAddEntry'); return false">Add log entry</a>
+                                </p>
+                            </div>
+
+                            <div class="logTypeOp logTypeuser logTypemutation logTypetreehead" style="display:none">
+                                <h4>Log Read-only Operations</h4>
+                                <p class="doc">
+                                    View the current tree head, show log entries and generate inclusion / consistency proof diagrams.
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" onclick="loadOp('LogGetHead'); return false">Get tree head</a>
+                                    <a href="#" class="callToActionButton" onclick="loadOp('LogFetchEntries'); return false">Fetch entries</a>
+                                    <a href="#" class="callToActionButton" onclick="loadOp('LogProveInclusion'); return false">Prove inclusion</a>
+                                    <a href="#" class="callToActionButton" onclick="loadOp('LogProveConsistency'); return false">Prove consistency</a>
+                                </p>
+                            </div>
+
+                            <div class="logTypeOp logTypemutation logTypetreehead" style="display:none">
+                                <h4>Parent map</h4>
+                                <p class="doc">
+                                    This log is a substructure of a Verifiable Map. Click the button below to switch back to operations on the map.
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" id="goBackToMap">Switch to parent map for this log</a>
+                                </p>
+                            </div>
+
+                            <div class="logTypeOp logTypemap" style="display:none">
+                                <h4>Map Write Operations</h4>
+                                <p class="doc">
+                                    To populate your map, set key/value paids. Note that while an acknowledgement is returned immediately by the map, sequencing and incorporation into the Merkle Tree occurs asynchronously.
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" onclick="loadOp('MapAddEntry'); return false">Set Key/Value</a>
+                                </p>
+
+                                <h4>Map Read-only Operations</h4>
+                                <p class="doc">
+                                    View the current map tree head, fetch values and show inclusion proof diagrams.
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" onclick="loadOp('MapGetHead'); return false">Get tree head</a>
+                                    <a href="#" class="callToActionButton" onclick="loadOp('MapGetValue'); return false">Get verified value</a>
+                                </p>
+
+                                <h4>Map Substructures</h4>
+                                <p class="doc">
+                                    Each Verifiable Map includes a pair of Verifiable Logs. When entries are added they are first added to the mutation log. This mutation log is played in sequence to generate the map tree head which in turn is written to the tree head log.
+                                </p>
+                                <p class="doc">
+                                    Click the buttons below to take you to the read-only log operations view for each of these logs (note, they are read-only since they are appended to indirectly as a side-effect of map mutation).
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" id="goMutationLog">Switch to mutation log for this map...</a>
+                                    <a href="#" class="callToActionButton" id="goTreeHeadLog">Switch to tree head log for this map...</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="shellselector" id="actualop" style="display: none">
+                        <div class="ssheader isOpen" id="actualopheader">
+                            <div>
+                                <i class="material-icons openCloseIcon showClosed" style="display:none">keyboard_arrow_up</i>
+                                <i class="material-icons openCloseIcon showOpen">keyboard_arrow_down</i>
+                            </div>
+                            <div class="ssheadtext subOp subOpLogAddEntry" style="display:none">Add Log Entry</div>
+                            <div class="ssheadtext subOp subOpLogGetHead" style="display:none">Get Log Tree Head</div>
+                            <div class="ssheadtext subOp subOpLogFetchEntries" style="display:none">Fetch Log Entries</div>
+                            <div class="ssheadtext subOp subOpLogProveInclusion" style="display:none">Prove Log Inclusion</div>
+                            <div class="ssheadtext subOp subOpLogProveConsistency" style="display:none">Prove Log Consistency</div>
+                            <div class="ssheadtext subOp subOpMapAddEntry" style="display:none">Set Map Key/Value</div>
+                            <div class="ssheadtext subOp subOpMapGetHead" style="display:none">Get Map Tree Head</div>
+                            <div class="ssheadtext subOp subOpMapGetValue" style="display:none">Get Verified Value from Map</div>
+                        </div>
+                        <div class="ssinside showOpen">
+                            <div class="subOp subOpLogAddEntry" style="display:none">
+                                <p class="doc">
+                                    Enter text to add as entries to the log. The most common format used is "Raw Data", however JSON and Redactable JSON is useful for many applications.
+                                </p>
+                                <p>
+                                    <textarea rows="10" cols="80" id="logEntryText" class="focusMe"></textarea>
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" id="addRawLog">Add as Raw Data</a>
+                                    <a href="#" class="callToActionButton" id="addJSONLog">Add as JSON</a>
+                                    <a href="#" class="callToActionButton" id="addJSONRedactableLog">Add as Redactable JSON</a>
+                                </p>
+                            </div>
+                            <div class="subOp subOpLogGetHead" style="display:none">
+                                <p class="doc">
+                                    Fetch the tree head from a log of a given size. Use special value "head" to mean fetch the latest available tree head - this is the most common operation.
+                                </p>
+                                <p class="doc">
+                                    The result includes the tree size and the Merkle Tree root hash for the tree of that size.
+                                </p>
+                                <p>
+                                    Size: <input class="focusMe" type="text" id="treeHeadLogSize" value="head" />
+                                    <a href="#" class="callToActionButton" id="logTreeHead">Fetch</a>
+                                </p>
+                            </div>
+                            <div class="subOp subOpLogFetchEntries" style="display:none">
+                                <p class="doc">
+                                    Fetch entries from the log. Note that if the entries were stored as JSON or Redactable JSON, they typically should also be retrieved as JSON. If they are retrieved as raw data, then only the Object Hash is returned for each element.
+                                </p>
+                                <p class="doc">
+                                    If less than 50 entries are returned, a diagram is plotted below. The light green boxes contain the Merkle Tree Leaf Hashes for the entries returned, and the dark khaki boxes contain the Merkle Tree Node Hashes, up to the Merkle Tree root.
+                                </p>
+                                <p>
+                                    From (incl): <input type="text" id="fetchTreeHeadLogSize1" value="0" />
+                                    To (excl): <input class="focusMe" type="text" id="fetchTreeHeadLogSize2" value="head" />
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" id="fetchRaw">Fetch as raw data</a>
+                                    <a href="#" class="callToActionButton" id="fetchJson">Fetch as JSON</a>
+                                </p>
+                            </div>
+                            <div class="subOp subOpLogProveInclusion" style="display:none">
+                                <p class="doc">
+                                    Prove inclusion of an entry in a log. If the entry is found, an inclusion proof diagram will be plotted. The light green box contains the Merkle Tree Leaf Hash for the entry being tested, the salmon colored boxes show the audit path elements returned by the server, the dark khaki boxes contain the calculated Merkle Tree Node Hashes, up to the Merkle Tree root which is displayed in violet to signify matching the Merkle Tree root hash retrieved for the tree of the same size.
+                                </p>
+                                <p>
+                                    Tree size: <input type="text" id="inclTreeHeadLogSize" value="head" />
+                                </p>
+                                <p>
+                                    <textarea class="focusMe" rows="10" cols="80" id="inclEntryText"></textarea>
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" id="inclRawLog">Prove inclusion of raw data</a>
+                                    <a href="#" class="callToActionButton" id="inclJSONLog">Prove inclusion of JSON object hash</a>
+                                </p>
+                            </div>
+                            <div class="subOp subOpLogProveConsistency" style="display:none">
+                                <p class="doc">
+                                    Prove consistency of a log from one size to another. A diagram is plotted showing how the audit path returned can be used to construct the Merkle Tree root hash for both the first and second log sizes. The salmon colored boxes show the audit path elements returned by the server and the dark khaki boxes contain the calculated Merkle Tree Node Hashes, up to the Merkle Tree roots (for both the first tree size, which is displayed below the line, and the second tree size which is displayed above the line). The roots themselves are displayed in violet to signify matching the Merkle Tree root hashes passed in for consistency proof checking.
+                                </p>
+                                <p>
+                                    From: <input class="focusMe" type="text" id="treeHeadLogSize1" value="1" />
+                                    To: <input type="text" id="treeHeadLogSize2" value="head" />
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" id="logConsistency">Show proof</a>
+                                </p>
+                            </div>
+                            <div class="subOp subOpMapAddEntry" style="display:none">
+                                <p class="doc">
+                                    Enter key/value pair to set in the map. The most common format used is "Raw Data", however JSON and Redactable JSON is useful for many applications.
+                                </p>
+                                <p>
+                                    Key: <input class="focusMe" type="text" id="mapEntryKey" />
+                                </p>
+                                <p>
+                                    <textarea rows="10" cols="80" id="mapEntryText"></textarea>
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" id="addRawMap">Add as Raw Data</a>
+                                    <a href="#" class="callToActionButton" id="addJSONMap">Add as JSON</a>
+                                    <a href="#" class="callToActionButton" id="addJSONRedactableMap">Add as Redactable JSON</a>
+                                </p>
+                            </div>
+                            <div class="subOp subOpMapGetHead" style="display:none">
+                                <p class="doc">
+                                    Fetch the tree head from a map of a given size. Use special value "head" to mean fetch the latest available tree head - this is the most common operation.
+                                </p>
+                                <p class="doc">
+                                    The result includes the tree size and the Merkle Tree root hash for the map at that size, as well as the Merkle Tree root hash for the mutation log at that size.
+                                </p>
+                                <p>
+                                    Size: <input class="focusMe" type="text" id="treeHeadMapSize" value="head" />
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" id="mapTreeHead">Fetch</a>
+                                </p>
+                            </div>
+                            <div class="subOp subOpMapGetValue" style="display:none">
+                                <p class="doc">
+                                    Fetch the value for the key for a given map size. Note that if the entries were stored as JSON or Redactable JSON, they typically should also be retrieved as JSON. If they are retrieved as raw data, then only the Object Hash is returned.
+                                </p>
+                                <p class="doc">
+                                    In addition an inclusion proof for the key/value pair in the root hash for the map that size is returned, and this is plotted to show how the nodes fit into the <code>2^256</code> node tree. The light green box contains the Merkle Tree Leaf Hash for the value returned, the salmon colored boxes show the audit path elements returned by the server, the dark khaki boxes contain the calculated Merkle Tree Node Hashes (including default leaf nodes), up to the Merkle Tree root which is displayed in violet to signify matching the Merkle Tree root hash retrieved for the tree of the same size. (Note that where many contiguous levels in the tree contain default nodes only, they are collapsed to generate a more meaningful diagram).
+                                </p>
+                                <p>
+                                    Key: <input class="focusMe" type="text" id="mapValueKey" />
+                                    Tree size: <input type="text" id="mapValueSize" value="head" />
+                                </p>
+                                <p>
+                                    <a href="#" class="callToActionButton" id="mapValueRaw">Fetch as raw data</a>
+                                    <a href="#" class="callToActionButton" id="mapValueJson">Fetch as JSON</a>
+                                </p>
+                            </div>
+                            <div id="result" style="padding-bottom: 1em; overflow: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+			</div>
+			<div id="bottomfooterpart">
+				<div id="footer">
+					<div style="position: relative; top: 3px">Copyright 2017 Continusec Pty Ltd - ACN 610 724 859 - All rights reserved</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

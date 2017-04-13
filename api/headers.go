@@ -44,7 +44,7 @@ type MutatorService interface {
 }
 
 type MutatorApplier interface {
-	ApplyMutation(db KeyWriter, mut *pb.Mutation) error
+	ApplyMutation(nsMut NamespaceMutator, db KeyWriter, mut *pb.Mutation) error
 }
 
 type MutatorPromise interface {
@@ -58,6 +58,13 @@ type AuthorizationOracle interface {
 
 type StorageReader interface {
 	ExecuteReadOnly(namespace []byte, f func(db KeyReader) error) error
+}
+
+type NamespaceMutator interface {
+	// ResetNamespace deletes the namespace if it already exists.
+	// It is not an error if it doesn't already exist.
+	// If recreate is set, then create a new namespace
+	ResetNamespace(ns []byte, recreate bool) error
 }
 
 type StorageWriter interface {
@@ -81,9 +88,4 @@ type KeyWriter interface {
 
 	// Set sets the thing. Value of nil means delete
 	Set(bucket, key, value []byte) error
-
-	// ResetNamespace deletes the namespace if it already exists.
-	// It is not an error if it doesn't already exist.
-	// If recreate is set, then create a new namespace
-	ResetNamespace(ns []byte, recreate bool) error
 }

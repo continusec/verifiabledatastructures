@@ -24,7 +24,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-func (s *LocalService) applyMapCreate(db KeyWriter, req *pb.MapCreateRequest) error {
+func (s *LocalService) applyMapCreate(nsMut NamespaceMutator, db KeyWriter, req *pb.MapCreateRequest) error {
 	k := []byte(req.Map.Name)
 	_, err := db.Get(mapsBucket, k)
 	switch err {
@@ -40,7 +40,7 @@ func (s *LocalService) applyMapCreate(db KeyWriter, req *pb.MapCreateRequest) er
 	if err != nil {
 		return err
 	}
-	err = db.ResetNamespace(ns, true)
+	err = nsMut.ResetNamespace(ns, true)
 	if err != nil {
 		return err
 	}

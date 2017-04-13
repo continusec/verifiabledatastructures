@@ -1,0 +1,292 @@
+/* Copyright (C) 2017 Continusec Pty Ltd - All Rights Reserved */
+#allcontentwrapper {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+#middlebit {
+	flex-grow: 1;
+}
+
+.splash {
+	background: #F0F0F0;
+}
+.splash:nth-of-type(even) {
+	background: white;
+}
+body {
+	margin: 0;
+	padding: 0;
+}
+h1, h2, h3 {
+	text-align: center;
+	font-family: 'Source Sans Pro', sans-serif;
+}
+h2 {
+	font-weight: 200;
+	font-size: 200%;
+}
+div, span, p {
+	text-align: center;
+}
+li, div, span, p, td, th {
+	font-family: 'Open Sans', sans-serif;
+	color: #8C8C8C;
+}
+h1 {
+	font-size: 5em;
+	color: #F0F0F0;
+	margin: 0;
+}
+
+.tos, .toshead {
+	text-align: left;
+	padding: 0em;
+	margin: 0;
+}
+.toshead {
+	text-decoration: underline;
+	margin-top: 1em;
+	position: relative;
+	left: -1em;
+}
+.tos {
+	margin-bottom: 1em;
+}
+.tossec {
+	padding-left: 1em;
+}
+.attribution {
+	text-align: left;
+	background: #F0F0F0;
+	padding: 1em;
+	font-style: italic;
+	font-size: 80%;
+}
+.attribution a:link, .attribution a:visited {
+	text-decoration: underline;
+}
+#body {
+	width: 50%;
+	margin: auto;
+}
+p, li {
+	font-weight: lighter;
+	line-height: 150%;
+}
+#footer {
+	background: lightgray;
+	min-height: 2em;
+	padding: 0.5em;
+	text-transform: uppercase;
+	font-size: 80%;
+}
+a:link, a:visited {
+	color: #8C8C8C;
+}
+a:hover, a:active {
+	text-decoration: underline;
+}
+.callToActionButton:link, .callToActionButton:visited {
+	text-transform: uppercase;
+	font-size: 9pt;
+	border-radius: .3em;
+	border: 1px solid #16A8EC;
+	white-space: nowrap;
+	padding-left: 1em;
+	padding-right: 1em;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	/*background: #16A8EC;*/
+	color: #16A8EC;
+	text-decoration: none;
+	font-weight: normal;
+}
+.callToActionButton:hover, .callToActionButton:active {
+	/*color: black;*/
+	background: #F0F0F0;
+	border: 1px solid #1B539C;
+	white-space: nowrap;
+	color: #1B539C;
+	text-decoration: none;
+}
+.clearButton {
+	margin-top: 1em;
+	text-align: left;
+}
+.doc {
+	text-align: left;
+}
+.treediag {
+	width: 100%;
+	overflow: auto;
+}
+
+#tocinnerfooter, .benerow, .headerbar, .midcol {
+	max-width: 700pt;
+	margin: 0 auto;
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
+.headerbar {
+	display: flex;
+	justify-content: space-around;
+	flex-wrap: wrap;
+	align-items: center;
+}
+.headercrumbs {
+
+}
+.headerlogin {
+
+}
+
+.benerow {
+	display: flex;
+	align-items: center;
+	justify-content: space-around;
+	flex-wrap: wrap;
+}
+.splash:nth-of-type(odd) .benerow {
+	flex-direction: row-reverse;
+}
+.benetext {
+	padding: 1em;
+}
+.benetext * {
+	text-align: left;
+}
+.beneimage {
+	padding: 1em;
+}
+.beneimage * {
+	font-size: 120pt;
+}
+.learnmore {
+	text-align: center;
+}
+.splashdiv {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 0;
+	height: 0;
+}
+.consoleheader {
+	background: linear-gradient(to bottom right, #E95815, #9C631A);
+}
+.header, .headernobgorpad {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	color: ghostwhite;
+	font-family: 'Source Sans Pro', sans-serif;
+	margin: 0;
+	min-height: 50pt;
+	font-size: 4em;
+	font-weight: 300;
+}
+
+.header {
+	background: linear-gradient(to bottom right, #16A8EC, #1B539C);
+	padding: 0.5em;
+}
+.splashheader {
+	font-size: 5em;
+	font-weight: 500;
+	min-height: 200pt;
+}
+
+/* For Google Sign-in button */
+span.abcRioButtonContents span {
+	color: ghostwhite;
+}
+.formitem, .wideformitem {
+	font-size: 80%;
+	text-transform: uppercase;
+	text-align: left;
+	/*width: 20em;
+	margin: 0 auto;*/
+	padding-top: 0.5em;
+}
+.wideformitem, .wide {
+	width: 35em;
+	margin-bottom: 1em;
+}
+.wideinternal {
+	width: 24em;
+	margin-right: 0.5em;
+}
+.inputError {
+	padding: 1em;
+	color: red;
+}
+.midcol {
+	text-align: left;
+	padding-top: 0.5em;
+	padding-bottom: 1em;
+}
+.rightButton {
+	margin-left: 1em;
+	float: right;
+	position: relative;
+	top: -0.5em;
+}
+.apikey {
+	width: 24em;
+}
+pre {
+	text-align: left;
+}
+#tocfooter {
+	background-color: black;
+}
+#tocinnerfooter {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-around;
+	align-items: top;
+}
+.toccol {
+	color: #F0F0F0;
+	padding: 1.5em;
+	margin-left: 2em;
+	margin-right: 2em;
+	min-width: 120pt;
+}
+.toccolhead {
+	font-weight: bold;
+	text-align: left;
+	font-size: 120%;
+	color: ghostwhite;
+	padding-bottom: 0.5em;
+}
+.toccolentry {
+	text-align: left;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+}
+.toccolentry a:link, .toccolentry a:visited {
+	color: ghostwhite;
+}
+.toccolentry a:active, .toccolentry a:hover {
+	text-decoration: underline;
+}
+.liCol {
+	padding: 0.5em;
+}
+.liAmt {
+	width: 9em;
+	text-align: right;
+}
+.lineItem {
+	display: flex;
+}
+.liExpl {
+	width: 15em;
+	text-align: left;
+}
+.liSubTotal {
+	font-weight: bold;
+}

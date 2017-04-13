@@ -28,6 +28,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/continusec/objecthash"
+	"github.com/continusec/verifiabledatastructures"
 	"github.com/continusec/verifiabledatastructures/api"
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
@@ -162,6 +163,13 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 		w.WriteHeader(200)
 	}).Methods("OPTIONS")
 
+	r.HandleFunc("/", staticHandler("text/html", "index.html"))
+	r.HandleFunc("/continusec.js", staticHandler("text/javascript", "continusec.js"))
+	r.HandleFunc("/favicon.ico", staticHandler("image/x-icon", "favicon.ico"))
+	r.HandleFunc("/log.js", staticHandler("text/javascript", "log.js"))
+	r.HandleFunc("/logo.png", staticHandler("image/png", "logo.png"))
+	r.HandleFunc("/main.css", staticHandler("text/css", "main.css"))
+
 	// Since we do NO cookie or basic auth, allow CORS
 	return handlers.CORS(
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
@@ -169,6 +177,19 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 		handlers.AllowedHeaders([]string{"Authorization", "Accept", "Content-Type"}),
 		handlers.ExposedHeaders([]string{"X-Verified-Treesize", "X-Verified-Proof"}),
 	)(r)
+}
+
+func staticHandler(mime, name string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := verifiabledatastructures.Asset("www/" + name)
+		if err != nil {
+			writeResponseHeader(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", mime)
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+	}
 }
 
 func apiKeyFromRequest(r *http.Request) string {
