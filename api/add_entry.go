@@ -48,7 +48,7 @@ func mutationLeafHash(mut *client.JSONMapMutationEntry, prevLeafHash []byte) ([]
 }
 
 // returns root followed by list of map nodes, not including head which is returned separately, as far as we can descend and match
-func (s *LocalService) descendToFork(db KeyGetter, path BPath, root *pb.MapNode) (*pb.MapNode, []*pb.MapNode, error) {
+func (s *LocalService) descendToFork(db KeyReader, path BPath, root *pb.MapNode) (*pb.MapNode, []*pb.MapNode, error) {
 	rv := make([]*pb.MapNode, 0)
 	head := root
 	depth := uint(0)

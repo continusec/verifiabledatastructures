@@ -22,6 +22,7 @@ import (
 	"errors"
 
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/golang/protobuf/proto"
 )
 
 var (
@@ -64,21 +65,14 @@ type StorageWriter interface {
 	ExecuteUpdate(namespace []byte, f func(db KeyWriter) error) error
 }
 
-type KeyGetter interface {
-	// Get returns ErrNoSuchKey if none found
-	Get(bucket, key []byte) ([]byte, error)
-}
-
 type KeyReader interface {
-	KeyGetter
-
-	// Range returns a list of matching <key, value> tuples where the first <= key < last
-	Range(bucket, first, last []byte) ([][2][]byte, error)
+	// Get must return nil, ErrNoSuchKey if none found
+	Get(bucket, key []byte, value proto.Message) error
 }
 
 type KeyWriter interface {
-	KeyGetter
+	KeyReader
 
-	// Set sets the thing. Value of nil means delete
-	Set(bucket, key, value []byte) error
+	// Set sets the thing. Value of nil means delete (this is different from a zero-length slice, which will be stored)
+	Set(bucket, key []byte, value proto.Message) error
 }

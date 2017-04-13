@@ -35,7 +35,7 @@ func createNeededStack(start int64) [][2]int64 {
 /* MUST be pow2. Assumes all args are range checked first */
 /* Actually, the above is a lie. If failOnMissing is set, then we fail if any values are missing.
    Otherwise we will return nil in those spots and return what we can. */
-func (l *LocalService) fetchSubTreeHashes(kr KeyGetter, lt pb.LogType, ranges [][2]int64, failOnMissing bool) ([][]byte, error) {
+func (l *LocalService) fetchSubTreeHashes(kr KeyReader, lt pb.LogType, ranges [][2]int64, failOnMissing bool) ([][]byte, error) {
 	/*
 		Deliberately do not always error check above, as we wish to allow
 		for some empty nodes, e.g. 4..7. These must be picked up by
@@ -68,7 +68,7 @@ func (l *LocalService) fetchSubTreeHashes(kr KeyGetter, lt pb.LogType, ranges []
 }
 
 /* Assumes all args are range checked first */
-func (l *LocalService) calcSubTreeHash(kr KeyGetter, lt pb.LogType, start, end int64) ([]byte, error) {
+func (l *LocalService) calcSubTreeHash(kr KeyReader, lt pb.LogType, start, end int64) ([]byte, error) {
 	r := make([][2]int64, 0, 8) // magic number bad - why did we do this?
 
 	for start != end {
