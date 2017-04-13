@@ -42,6 +42,3 @@ func (s *LocalService) ApplyMutation(db KeyWriter, mut *pb.Mutation) error {
 		return ErrNotImplemented
 	}
 }
-func (s *LocalService) applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
-	return ErrNotImplemented
-}
