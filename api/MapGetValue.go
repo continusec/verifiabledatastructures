@@ -89,12 +89,12 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 		}
 
 		hmm := BPathCommonPrefixLength(cur.RemainingPath, kp.Slice(ptr, kp.Length()))
-		if len(cur.DataHash) != 0 && hmm == BPath(cur.RemainingPath).Length() {
+		if len(cur.LeafHash) != 0 && hmm == BPath(cur.RemainingPath).Length() {
 			// winner winner chicken dinner, no more work needed.
-			if bytes.Equal(cur.DataHash, defaultLeafValues[256]) { //TODO - is this meant to be hardcoded to 256?
+			if bytes.Equal(cur.LeafHash, nullLeafHash) {
 				rv = nil
 			} else {
-				dataRv, err = s.lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.DataHash)
+				dataRv, err = s.lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
 				if err != nil {
 					return err
 				}
@@ -102,7 +102,7 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 		} else {
 			if hmm > 0 {
 				ptr += hmm
-				h := cur.DataHash
+				h := cur.LeafHash
 				if len(h) != 0 { // special case, root is empty node
 					for i, j := int(BPath(cur.RemainingPath).Length()-1), int(kp.Length()); j >= int(ptr+2); i, j = i-1, j-1 {
 						if BPath(cur.RemainingPath).At(uint(i)) {

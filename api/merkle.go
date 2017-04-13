@@ -98,25 +98,25 @@ type vMapNode pb.MapNode
 
 var defaultLeafValues = client.GenerateMapDefaultLeafValues()
 
-func (mn *vMapNode) leftNodeHash() []byte {
+func (mn *vMapNode) leftNodeHash(depth uint) []byte {
 	if len(mn.LeftHash) == 0 {
-		return defaultLeafValues[BPath(mn.Path).Length()+1]
+		return defaultLeafValues[depth+1]
 	}
 	return mn.LeftHash
 }
 
-func (mn *vMapNode) rightNodeHash() []byte {
+func (mn *vMapNode) rightNodeHash(depth uint) []byte {
 	if len(mn.RightHash) == 0 {
-		return defaultLeafValues[BPath(mn.Path).Length()+1]
+		return defaultLeafValues[depth+1]
 	}
 	return mn.RightHash
 }
 
 // if len(mn.Datahash) > 0, then set the appropriate non-default left or right hash based on the full path.
 // Otherwise, leave well alone.
-func (mn *vMapNode) setLeftRightForData() error {
-	if len(mn.DataHash) > 0 { // don't check nil, as datastore round trip sets an empty length bytearray instead
-		rv := mn.DataHash
+func (mn *vMapNode) setLeftRightForData() {
+	if len(mn.LeafHash) != 0 { // don't check nil, as datastore round trip sets an empty length bytearray instead
+		rv := mn.LeafHash
 		var lastLeft, lastRight []byte
 		var leftDef, rightDef bool
 		for i, j := int(BPath(mn.RemainingPath).Length())-1, 256; i >= 0; i, j = i-1, j-1 {
@@ -138,9 +138,8 @@ func (mn *vMapNode) setLeftRightForData() error {
 			mn.RightHash = lastRight
 		}
 	}
-	return nil
 }
 
-func (mn *vMapNode) calcNodeHash() []byte {
-	return client.NodeMerkleTreeHash(mn.leftNodeHash(), mn.rightNodeHash())
+func (mn *vMapNode) calcNodeHash(depth uint) []byte {
+	return client.NodeMerkleTreeHash(mn.leftNodeHash(depth), mn.rightNodeHash(depth))
 }

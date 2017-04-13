@@ -69,7 +69,7 @@ func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashReque
 		}
 
 		rv = &pb.MapTreeHashResponse{
-			RootHash: (*vMapNode)(mapNode).calcNodeHash(),
+			RootHash: (*vMapNode)(mapNode).calcNodeHash(0),
 			MutationLog: &pb.LogTreeHashResponse{
 				RootHash: mutHead.Mth,
 				TreeSize: treeSize,
