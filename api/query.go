@@ -72,7 +72,13 @@ var (
 	mapNodeBucket = []byte("map_node")
 )
 
-func (l *LocalService) lookupDataByLeafHash(kr KeyReader, lt pb.LogType, lh []byte) (*pb.LeafData, error) {
+// Start pair
+
+func (l *LocalService) writeDataByLeafHash(kr KeyWriter, lt pb.LogType, lh []byte, data *pb.LeafData) error {
+	return l.writeProto(kr, buckets[dataByLeafHash][lt], lh, data)
+}
+
+func (l *LocalService) lookupDataByLeafHash(kr KeyGetter, lt pb.LogType, lh []byte) (*pb.LeafData, error) {
 	var m pb.LeafData
 	err := l.readIntoProto(kr, buckets[dataByLeafHash][lt], lh, &m)
 	if err != nil {
@@ -81,7 +87,13 @@ func (l *LocalService) lookupDataByLeafHash(kr KeyReader, lt pb.LogType, lh []by
 	return &m, nil
 }
 
-func (l *LocalService) lookupLeafNodeByIndex(kr KeyReader, lt pb.LogType, idx int64) (*pb.LeafNode, error) {
+// Start pair
+
+func (l *LocalService) writeLeafNodeByIndex(kr KeyWriter, lt pb.LogType, idx int64, data *pb.LeafNode) error {
+	return l.writeProto(kr, buckets[leafNodeByIndex][lt], toIntBinary(uint64(idx)), data)
+}
+
+func (l *LocalService) lookupLeafNodeByIndex(kr KeyGetter, lt pb.LogType, idx int64) (*pb.LeafNode, error) {
 	var m pb.LeafNode
 	err := l.readIntoProto(kr, buckets[leafNodeByIndex][lt], toIntBinary(uint64(idx)), &m)
 	if err != nil {
@@ -90,7 +102,13 @@ func (l *LocalService) lookupLeafNodeByIndex(kr KeyReader, lt pb.LogType, idx in
 	return &m, nil
 }
 
-func (l *LocalService) lookupTreeNodeByRange(kr KeyReader, lt pb.LogType, a, b int64) (*pb.TreeNode, error) {
+// Start pair
+
+func (l *LocalService) writeTreeNodeByRange(kr KeyWriter, lt pb.LogType, a, b int64, data *pb.TreeNode) error {
+	return l.writeProto(kr, buckets[treeNodeByRange][lt], toDoubleIntBinary(uint64(a), uint64(b)), data)
+}
+
+func (l *LocalService) lookupTreeNodeByRange(kr KeyGetter, lt pb.LogType, a, b int64) (*pb.TreeNode, error) {
 	var m pb.TreeNode
 	err := l.readIntoProto(kr, buckets[treeNodeByRange][lt], toDoubleIntBinary(uint64(a), uint64(b)), &m)
 	if err != nil {
@@ -99,8 +117,14 @@ func (l *LocalService) lookupTreeNodeByRange(kr KeyReader, lt pb.LogType, a, b i
 	return &m, nil
 }
 
+// Start pair
+
+func (l *LocalService) writeLogRootHashBySize(kr KeyWriter, lt pb.LogType, size int64, data *pb.LogTreeHash) error {
+	return l.writeProto(kr, buckets[rootHashBySize][lt], toIntBinary(uint64(size)), data)
+}
+
 // size must be > 0
-func (l *LocalService) lookupLogRootHashBySize(kr KeyReader, lt pb.LogType, size int64) (*pb.LogTreeHash, error) {
+func (l *LocalService) lookupLogRootHashBySize(kr KeyGetter, lt pb.LogType, size int64) (*pb.LogTreeHash, error) {
 	var m pb.LogTreeHash
 	err := l.readIntoProto(kr, buckets[rootHashBySize][lt], toIntBinary(uint64(size)), &m)
 	if err != nil {
@@ -109,7 +133,13 @@ func (l *LocalService) lookupLogRootHashBySize(kr KeyReader, lt pb.LogType, size
 	return &m, nil
 }
 
-func (l *LocalService) lookupIndexByLeafHash(kr KeyReader, lt pb.LogType, lh []byte) (*pb.EntryIndex, error) {
+// Start pair
+
+func (l *LocalService) writeIndexByLeafHash(kr KeyWriter, lt pb.LogType, lh []byte, data *pb.EntryIndex) error {
+	return l.writeProto(kr, buckets[indexByLeafHash][lt], lh, data)
+}
+
+func (l *LocalService) lookupIndexByLeafHash(kr KeyGetter, lt pb.LogType, lh []byte) (*pb.EntryIndex, error) {
 	var m pb.EntryIndex
 	err := l.readIntoProto(kr, buckets[indexByLeafHash][lt], lh, &m)
 	if err != nil {
@@ -118,7 +148,13 @@ func (l *LocalService) lookupIndexByLeafHash(kr KeyReader, lt pb.LogType, lh []b
 	return &m, nil
 }
 
-func (l *LocalService) lookupLogTreeHead(kr KeyReader, lt pb.LogType) (*pb.LogTreeHashResponse, error) {
+// Start pair
+
+func (l *LocalService) writeLogTreeHead(kr KeyWriter, lt pb.LogType, data *pb.LogTreeHashResponse) error {
+	return l.writeProto(kr, buckets[metadata][lt], headKey, data)
+}
+
+func (l *LocalService) lookupLogTreeHead(kr KeyGetter, lt pb.LogType) (*pb.LogTreeHashResponse, error) {
 	var lth pb.LogTreeHashResponse
 	err := l.readIntoProto(kr, buckets[metadata][lt], headKey, &lth)
 	switch err {
@@ -131,6 +167,23 @@ func (l *LocalService) lookupLogTreeHead(kr KeyReader, lt pb.LogType) (*pb.LogTr
 		return nil, err
 	}
 }
+
+// Start pair
+
+func (l *LocalService) writeMapHash(kr KeyWriter, number int64, path []byte, data *pb.MapNode) error {
+	return l.writeProto(kr, mapNodeBucket, append(toIntBinary(uint64(number)), path...), data)
+}
+
+func (l *LocalService) lookupMapHash(kr KeyGetter, number int64, path []byte) (*pb.MapNode, error) {
+	var m pb.MapNode
+	err := l.readIntoProto(kr, mapNodeBucket, append(toIntBinary(uint64(number)), path...), &m)
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+// End pairs
 
 func (l *LocalService) lookupLogEntryHashes(kr KeyReader, lt pb.LogType, first, last int64) ([][]byte, error) {
 	result, err := kr.Range(buckets[leafNodeByIndex][lt], toIntBinary(uint64(first)), toIntBinary(uint64(last)))
@@ -183,15 +236,6 @@ func (l *LocalService) lookupAccountMaps(kr KeyReader) ([]*pb.MapInfo, error) {
 	return rv, nil
 }
 
-func (l *LocalService) lookupMapHash(kr KeyReader, number int64, path []byte) (*pb.MapNode, error) {
-	var m pb.MapNode
-	err := l.readIntoProto(kr, mapNodeBucket, append(toIntBinary(uint64(number)), path...), &m)
-	if err != nil {
-		return nil, err
-	}
-	return &m, nil
-}
-
 func keyForIdx(prefix []byte, i uint64) []byte {
 	rv := make([]byte, len(prefix)+8)
 	copy(rv, prefix)
@@ -212,7 +256,7 @@ func toDoubleIntBinary(i, j uint64) []byte {
 	return rv
 }
 
-func (l *LocalService) readIntoProto(kr KeyReader, bucket, key []byte, m proto.Message) error {
+func (l *LocalService) readIntoProto(kr KeyGetter, bucket, key []byte, m proto.Message) error {
 	val, err := kr.Get(bucket, key)
 	if err != nil {
 		return err

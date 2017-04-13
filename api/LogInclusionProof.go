@@ -70,7 +70,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 		// We technically shouldn't have found it (it may not be completely written yet)
 		if leafIndex < 0 || leafIndex >= head.TreeSize {
 			// we use the NotFound error code so that normal usage of GetInclusionProof, that calls this, returns a uniform error.
-			return ErrNotFound
+			return ErrNoSuchKey
 		}
 
 		// Client needs a new STH
@@ -88,7 +88,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 			if len(path[i]) == 0 {
 				if client.IsPow2(rr[1] - rr[0]) {
 					// Would have been nice if GetSubTreeHashes could better handle these
-					return ErrNotFound
+					return ErrNoSuchKey
 				}
 				path[i], err = s.calcSubTreeHash(kr, req.Log.LogType, rr[0], rr[1])
 				if err != nil {
