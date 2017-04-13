@@ -175,6 +175,10 @@ func (l *LocalService) writeMapHash(kr KeyWriter, number int64, path []byte, dat
 }
 
 func (l *LocalService) lookupMapHash(kr KeyGetter, number int64, path []byte) (*pb.MapNode, error) {
+	// Special case 0
+	if number == 0 && len(path) == 0 {
+		return &pb.MapNode{}, nil
+	}
 	var m pb.MapNode
 	err := l.readIntoProto(kr, mapNodeBucket, append(toIntBinary(uint64(number)), path...), &m)
 	if err != nil {
