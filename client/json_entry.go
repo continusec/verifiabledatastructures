@@ -30,6 +30,13 @@ type JsonEntry struct {
 	leafHash  []byte
 }
 
+func (self *JsonEntry) GetLeafInput() []byte {
+	return self.JsonBytes // TODO - wrong here to compile
+}
+func (self *JsonEntry) GetExtraData() []byte {
+	return nil // TODO - wrong here to compile
+}
+
 // Data() returns data suitable for downstream processing of this entry by your application.
 func (self *JsonEntry) Data() ([]byte, error) {
 	return self.JsonBytes, nil

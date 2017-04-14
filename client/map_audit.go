@@ -316,7 +316,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 		mutLog := a.Map.MutationLog()
 
 		// Get the lastest tree head for the mutation log
-		mutLogHead, err := LogVerifiedLatestTreeHead(mutLog, a.MutLogHead)
+		mutLogHead, err := mutLog.VerifiedLatestTreeHead(a.MutLogHead)
 		if err != nil {
 			return err
 		}
@@ -326,12 +326,9 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 
 		// Perform audit of the mutation log, providing a special function to apply mutations
 		// to our copy of the map
-		err = LogVerifyEntries(ctx, mutLog, a.MutLogHead, mutLogHead, &mutationEntryFactory{ValueFactory: a.EntryValueFactory}, func(ctx context.Context, idx int64, entry VerifiableEntry) error {
+		err = mutLog.VerifyEntries(ctx, a.MutLogHead, mutLogHead, func(ctx context.Context, idx int64, entry VerifiableData) error {
 			// Get the mutation
-			mutationJson, err := entry.Data()
-			if err != nil {
-				return err
-			}
+			mutationJson := entry.GetExtraData() // TODO, this probably needs fixing
 
 			// Decode it into standard structure
 			var mutation JSONMapMutationEntry
@@ -348,10 +345,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 
 			// Keep our own copy of the mutation log hash stack so that we can
 			// verify the mutation log heads as well.
-			lh, err := entry.LeafHash()
-			if err != nil {
-				return err
-			}
+			lh := LeafMerkleTreeHash(entry.GetLeafInput())
 
 			// Apply to stack
 			a.MutLogHashStack = append(a.MutLogHashStack, lh)
@@ -372,7 +366,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 			// Finally, if we actually made a change (ie the mutation did something)
 			// then call the underlying audit function provided by the client.
 			if a.MapAuditFunction != nil && !bytes.Equal(lastRootHash, rh) {
-				me, ok := entry.(*mutationEntry)
+				/*me, ok := entry.(*mutationEntry)
 				if !ok {
 					return ErrVerificationFailed
 				}
@@ -380,7 +374,8 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 				err = a.MapAuditFunction(ctx, idx, mutation.Key, me.Value)
 				if err != nil {
 					return err
-				}
+				}*/
+				return ErrVerificationFailed // TODO
 			}
 
 			// Save for next time
@@ -405,16 +400,13 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 }
 
 // CheckTreeHeadEntry is the audit function that checks the actual tree head is correct
-func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry VerifiableEntry) error {
+func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry VerifiableData) error {
 	// Get the tree head data
-	treeHeadJson, err := entry.Data()
-	if err != nil {
-		return err
-	}
+	treeHeadJson := entry.GetLeafInput() // TODO WRONG
 
 	// Decode it into standard structure
 	var mth JSONMapTreeHeadResponse
-	err = json.NewDecoder(bytes.NewReader(treeHeadJson)).Decode(&mth)
+	err := json.NewDecoder(bytes.NewReader(treeHeadJson)).Decode(&mth)
 	if err != nil {
 		return err
 	}

@@ -36,7 +36,9 @@ func TestStuff(t *testing.T) {
 		FailOnMissing: true,
 	}
 	go runMockServer(":8080", mockServer)
-	localClient := DefaultClient.WithBaseUrl("http://localhost:8080/v1")
+	localClient := &VerifiableDataStructuresClient{
+		Service: &HTTPRESTClient{BaseUrl: "http://localhost:8080/v1"},
+	}
 
 	client := localClient.Account("7981306761429961588", "c9fc80d4e19ddbf01a4e6b5277a29e1bffa88fe047af9d0b9b36de536f85c2c6")
 	log := client.VerifiableLog("newtestlog")
@@ -84,7 +86,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = LogBlockUntilPresent(log, addResp)
+	_, err = log.BlockUntilPresent(addResp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +106,7 @@ func TestStuff(t *testing.T) {
 		}
 	}
 
-	head103, err := LogVerifiedTreeHead(log, head, Head)
+	head103, err := log.VerifiedTreeHead(head, Head)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +115,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = LogVerifyInclusion(log, head103, &RawDataEntry{RawBytes: []byte("foo27")})
+	err = log.VerifyInclusion(head103, &RawDataEntry{RawBytes: []byte("foo27")})
 	if err != ErrNotFound {
 		t.Fatal(err)
 	}
@@ -158,7 +160,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h10, err := LogVerifySuppliedInclusionProof(log, head103, inclProof)
+	h10, err := log.VerifySuppliedInclusionProof(head103, inclProof)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,11 +172,9 @@ func TestStuff(t *testing.T) {
 	ctx := context.TODO()
 
 	count := 0
-	err = LogVerifyEntries(ctx, log, nil, head103, RawDataEntryFactory, func(ctx context.Context, idx int64, entry VerifiableEntry) error {
-		_, err := entry.Data()
-		if err != nil {
-			return err
-		}
+	err = log.VerifyEntries(ctx, nil, head103, func(ctx context.Context, idx int64, entry VerifiableData) error {
+		entry.GetLeafInput() // TODO
+
 		count++
 		return nil
 	})
@@ -192,11 +192,9 @@ func TestStuff(t *testing.T) {
 	}
 
 	count = 0
-	err = LogVerifyEntries(ctx, log, head1, head103, JsonEntryFactory, func(ctx context.Context, idx int64, entry VerifiableEntry) error {
-		_, err := entry.Data()
-		if err != nil {
-			return err
-		}
+	err = log.VerifyEntries(ctx, head1, head103, func(ctx context.Context, idx int64, entry VerifiableData) error {
+		entry.GetLeafInput() // TODO
+
 		count++
 		return nil
 	})
@@ -213,11 +211,8 @@ func TestStuff(t *testing.T) {
 	}
 
 	count = 0
-	err = LogVerifyEntries(ctx, log, head1, head3, JsonEntryFactory, func(ctx context.Context, idx int64, entry VerifiableEntry) error {
-		_, err := entry.Data()
-		if err != nil {
-			return err
-		}
+	err = log.VerifyEntries(ctx, head1, head3, func(ctx context.Context, idx int64, entry VerifiableData) error {
+		entry.GetLeafInput() // TODO
 		count++
 		return nil
 	})
@@ -229,11 +224,8 @@ func TestStuff(t *testing.T) {
 	}
 
 	count = 0
-	err = LogVerifyEntries(ctx, log, head50, head103, RawDataEntryFactory, func(ctx context.Context, idx int64, entry VerifiableEntry) error {
-		_, err := entry.Data()
-		if err != nil {
-			return err
-		}
+	err = log.VerifyEntries(ctx, head50, head103, func(ctx context.Context, idx int64, entry VerifiableData) error {
+		entry.GetLeafInput() // TODO
 		count++
 		return nil
 	})
@@ -244,17 +236,17 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = LogVerifyInclusion(log, head103, &JsonEntry{JsonBytes: []byte("{    \"ssn\":  123.4500 ,   \"name\" :  \"adam\"}")})
+	err = log.VerifyInclusion(head103, &JsonEntry{JsonBytes: []byte("{    \"ssn\":  123.4500 ,   \"name\" :  \"adam\"}")})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	redEnt, err := log.Entry(2, RedactedJsonEntryFactory)
+	redEnt, err := log.Entry(2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dd, err := redEnt.Data()
+	dd := redEnt.GetLeafInput() //TODO
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +259,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(-1)
 	}
 
-	err = LogVerifyInclusion(log, head103, redEnt)
+	err = log.VerifyInclusion(head103, MTLHash(redEnt.GetLeafInput()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,15 +267,12 @@ func TestStuff(t *testing.T) {
 	client = localClient.Account("7981306761429961588", "allseeing")
 	log = client.VerifiableLog("newtestlog")
 
-	redEnt, err = log.Entry(2, RedactedJsonEntryFactory)
+	redEnt, err = log.Entry(2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dd, err = redEnt.Data()
-	if err != nil {
-		t.Fatal(err)
-	}
+	dd = redEnt.GetLeafInput() // todo
 
 	if strings.Index(string(dd), "123.45") < 0 {
 		t.Fatal(-1)
@@ -293,7 +282,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(-1)
 	}
 
-	err = LogVerifyInclusion(log, head103, redEnt)
+	err = log.VerifyInclusion(head103, MTLHash(redEnt.GetLeafInput()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,7 +333,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mlHead, err := LogBlockUntilPresent(vmap.MutationLog(), waitResp)
+	mlHead, err := vmap.MutationLog().BlockUntilPresent(waitResp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -353,7 +342,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(-2)
 	}
 
-	mrHead, err := MapBlockUntilSize(vmap, mlHead.TreeSize)
+	mrHead, err := vmap.BlockUntilSize(mlHead.TreeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -362,7 +351,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	entryResp, err := vmap.Get([]byte("foo"), mrHead.MutationLogTreeHead.TreeSize, RawDataEntryFactory)
+	entryResp, err := vmap.Get([]byte("foo"), mrHead.MutationLogTreeHead.TreeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -372,16 +361,12 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dd, err = entryResp.Value.Data()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	dd = entryResp.Value.GetLeafInput() // TODO
 	if len(dd) > 0 {
 		t.Fatal(-10)
 	}
 
-	entryResp, err = vmap.Get([]byte("foo-29"), mrHead.MutationLogTreeHead.TreeSize, RawDataEntryFactory)
+	entryResp, err = vmap.Get([]byte("foo-29"), mrHead.MutationLogTreeHead.TreeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -391,16 +376,12 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dd, err = entryResp.Value.Data()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	dd = entryResp.Value.GetLeafInput() // TODO
 	if len(dd) > 0 {
 		t.Fatal(-10)
 	}
 
-	entryResp, err = vmap.Get([]byte("foo29"), mrHead.MutationLogTreeHead.TreeSize, RawDataEntryFactory)
+	entryResp, err = vmap.Get([]byte("foo29"), mrHead.MutationLogTreeHead.TreeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -410,26 +391,23 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dd, err = entryResp.Value.Data()
-	if err != nil {
-		t.Fatal(err)
-	}
+	dd = entryResp.Value.GetLeafInput() // TODO
 
 	if string(dd) != "fooval29" {
 		t.Fatal(-10)
 	}
 
-	mapState106, err := MapVerifiedLatestMapState(vmap, nil)
+	mapState106, err := vmap.VerifiedLatestMapState(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = MapVerifiedMapState(vmap, mapState106, 0)
+	_, err = vmap.VerifiedMapState(mapState106, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	mapState2, err := MapVerifiedMapState(vmap, mapState106, 2)
+	mapState2, err := vmap.VerifiedMapState(mapState106, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -438,14 +416,12 @@ func TestStuff(t *testing.T) {
 		t.Fatal(2)
 	}
 
-	val, err := MapVerifiedGet(vmap, []byte("foo"), mapState2, RawDataEntryFactory)
+	val, err := vmap.VerifiedGet([]byte("foo"), mapState2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dd, err = val.Data()
-	if err != nil {
-		t.Fatal(err)
-	}
+	dd = val.GetLeafInput() // TODO
+
 	if string(dd) != "foo" {
 		t.Fatal(3)
 	}
@@ -459,46 +435,46 @@ func TestStuff(t *testing.T) {
 
 	client = localClient.Account("7981306761429961588", "c9fc80d4e19ddbf01a4e6b5277a29e1bffa88fe047af9d0b9b36de536f85c2c6")
 	vmap = client.VerifiableMap("mapjson")
-	ms3, err := MapVerifiedLatestMapState(vmap, nil)
+	ms3, err := vmap.VerifiedLatestMapState(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = MapVerifiedGet(vmap, []byte("stdjson"), ms3, JsonEntryFactory)
+	_, err = vmap.VerifiedGet([]byte("stdjson"), ms3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = MapVerifiedGet(vmap, []byte("redjson"), ms3, RedactedJsonEntryFactory)
+	_, err = vmap.VerifiedGet([]byte("redjson"), ms3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = MapVerifiedGet(vmap, []byte("xstdjson"), ms3, JsonEntryFactory)
+	_, err = vmap.VerifiedGet([]byte("xstdjson"), ms3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = MapVerifiedGet(vmap, []byte("xredjson"), ms3, RedactedJsonEntryFactory)
+	_, err = vmap.VerifiedGet([]byte("xredjson"), ms3)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	client = localClient.Account("7981306761429961588", "redacted")
 	vmap = client.VerifiableMap("mapjson")
-	ms3, err = MapVerifiedLatestMapState(vmap, nil)
+	ms3, err = vmap.VerifiedLatestMapState(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = MapVerifiedGet(vmap, []byte("stdjson"), ms3, JsonEntryFactory)
+	_, err = vmap.VerifiedGet([]byte("stdjson"), ms3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = MapVerifiedGet(vmap, []byte("redjson"), ms3, RedactedJsonEntryFactory)
+	_, err = vmap.VerifiedGet([]byte("redjson"), ms3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = MapVerifiedGet(vmap, []byte("xstdjson"), ms3, JsonEntryFactory)
+	_, err = vmap.VerifiedGet([]byte("xstdjson"), ms3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = MapVerifiedGet(vmap, []byte("xredjson"), ms3, RedactedJsonEntryFactory)
+	_, err = vmap.VerifiedGet([]byte("xredjson"), ms3)
 	if err != nil {
 		t.Fatal(err)
 	}

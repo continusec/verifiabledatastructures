@@ -25,7 +25,7 @@ import (
 
 // LogVerifyInclusion will fetch a proof the the specified MerkleTreeHash is included in the
 // log and verify that it can produce the root hash in the specified LogTreeHead.
-func LogVerifyInclusion(log VerifiableLog, head *LogTreeHead, leaf MerkleTreeLeaf) error {
+func (log *gRpcVerifiableLogImpl) VerifyInclusion(head *LogTreeHead, leaf MerkleTreeLeaf) error {
 	proof, err := log.InclusionProof(head.TreeSize, leaf)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func LogVerifyInclusion(log VerifiableLog, head *LogTreeHead, leaf MerkleTreeLea
 
 // LogVerifyConsistency takes two tree heads, retrieves a consistency proof, verifies it,
 // and returns the result. The two tree heads may be in either order (even equal), but both must be greater than zero and non-nil.
-func LogVerifyConsistency(log VerifiableLog, a, b *LogTreeHead) error {
+func (log *gRpcVerifiableLogImpl) VerifyConsistency(a, b *LogTreeHead) error {
 	if a == nil || b == nil || a.TreeSize <= 0 || b.TreeSize <= 0 {
 		return ErrVerificationFailed
 	}
@@ -80,7 +80,7 @@ func LogVerifyConsistency(log VerifiableLog, a, b *LogTreeHead) error {
 // when no new tree hash is available.
 //
 // This is intended for test use.
-func LogBlockUntilPresent(log VerifiableLog, leaf MerkleTreeLeaf) (*LogTreeHead, error) {
+func (log *gRpcVerifiableLogImpl) BlockUntilPresent(leaf MerkleTreeLeaf) (*LogTreeHead, error) {
 	lastHead := int64(-1)
 	timeToSleep := time.Second
 	for {
@@ -90,7 +90,7 @@ func LogBlockUntilPresent(log VerifiableLog, leaf MerkleTreeLeaf) (*LogTreeHead,
 		}
 		if lth.TreeSize > lastHead {
 			lastHead = lth.TreeSize
-			err = LogVerifyInclusion(log, lth, leaf)
+			err = log.VerifyInclusion(lth, leaf)
 			switch err {
 			case nil: // we found it
 				return lth, nil
@@ -112,8 +112,8 @@ func LogBlockUntilPresent(log VerifiableLog, leaf MerkleTreeLeaf) (*LogTreeHead,
 // LogVerifiedLatestTreeHead calls VerifiedTreeHead() with Head to fetch the latest tree head,
 // and additionally verifies that it is newer than the previously passed tree head.
 // For first use, pass nil to skip consistency checking.
-func LogVerifiedLatestTreeHead(log VerifiableLog, prev *LogTreeHead) (*LogTreeHead, error) {
-	head, err := LogVerifiedTreeHead(log, prev, Head)
+func (log *gRpcVerifiableLogImpl) VerifiedLatestTreeHead(prev *LogTreeHead) (*LogTreeHead, error) {
+	head, err := log.VerifiedTreeHead(prev, Head)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func LogVerifiedLatestTreeHead(log VerifiableLog, prev *LogTreeHead) (*LogTreeHe
 // bypass consistency proof checking. Tree size may be older or newer than the previous head value.
 //
 // Clients typically use VerifyLatestTreeHead().
-func LogVerifiedTreeHead(log VerifiableLog, prev *LogTreeHead, treeSize int64) (*LogTreeHead, error) {
+func (log *gRpcVerifiableLogImpl) VerifiedTreeHead(prev *LogTreeHead, treeSize int64) (*LogTreeHead, error) {
 	// special case returning the value we already have
 	if treeSize != 0 && prev != nil && prev.TreeSize == treeSize {
 		return prev, nil
@@ -147,7 +147,7 @@ func LogVerifiedTreeHead(log VerifiableLog, prev *LogTreeHead, treeSize int64) (
 	}
 
 	if prev != nil {
-		err = LogVerifyConsistency(log, prev, head)
+		err = log.VerifyConsistency(prev, head)
 		if err != nil {
 			return nil, err
 		}
@@ -162,8 +162,8 @@ func LogVerifiedTreeHead(log VerifiableLog, prev *LogTreeHead, treeSize int64) (
 //
 // Upon success, the LogTreeHead returned is the one used to verify the inclusion proof - it may be newer or older than the one passed in.
 // In either case, it will have been verified as consistent.
-func LogVerifySuppliedInclusionProof(log VerifiableLog, prev *LogTreeHead, proof *LogInclusionProof) (*LogTreeHead, error) {
-	headForInclProof, err := LogVerifiedTreeHead(log, prev, proof.TreeSize)
+func (log *gRpcVerifiableLogImpl) VerifySuppliedInclusionProof(prev *LogTreeHead, proof *LogInclusionProof) (*LogTreeHead, error) {
+	headForInclProof, err := log.VerifiedTreeHead(prev, proof.TreeSize)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func LogVerifySuppliedInclusionProof(log VerifiableLog, prev *LogTreeHead, proof
 // a log, as well as the log operation. This method will retrieve all entries in batch from
 // the log between the passed in prev and head LogTreeHeads, and ensure that the root hash in head can be confirmed to accurately represent
 // the contents of all of the log entries retrieved. To start at entry zero, pass nil for prev, which will also bypass consistency proof checking. Head must not be nil.
-func LogVerifyEntries(ctx context.Context, log VerifiableLog, prev *LogTreeHead, head *LogTreeHead, factory VerifiableEntryFactory, auditFunc LogAuditFunction) error {
+func (log *gRpcVerifiableLogImpl) VerifyEntries(ctx context.Context, prev *LogTreeHead, head *LogTreeHead, auditFunc LogAuditFunction) error {
 	if head == nil {
 		return ErrNilTreeHead
 	}
@@ -223,7 +223,7 @@ func LogVerifyEntries(ctx context.Context, log VerifiableLog, prev *LogTreeHead,
 
 	ourCtx, canc := context.WithCancel(ctx)
 	defer canc()
-	for entry := range log.Entries(ourCtx, idx, head.TreeSize, factory) {
+	for entry := range log.Entries(ourCtx, idx, head.TreeSize) {
 		// audit
 		if auditFunc != nil {
 			err := auditFunc(ctx, idx, entry)
@@ -232,10 +232,7 @@ func LogVerifyEntries(ctx context.Context, log VerifiableLog, prev *LogTreeHead,
 			}
 		}
 
-		mtlHash, err := entry.LeafHash()
-		if err != nil {
-			return err
-		}
+		mtlHash := LeafMerkleTreeHash(entry.GetLeafInput())
 
 		merkleTreeStack = append(merkleTreeStack, mtlHash)
 		for z := idx; (z & 1) == 1; z >>= 1 {

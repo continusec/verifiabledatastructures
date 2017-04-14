@@ -31,10 +31,7 @@ var (
 	// ErrNotAuthorized is returned when the request is understood, but there are no API access
 	// rules specified that allow such access. Check the API Key and account number passed are correct,
 	// and that you are trying to access the log/map with the appropriate name.
-	//
-	// Also have an administrator check the "Billing" page to ensure the billing settings are up to date, as this
-	// error can also be indicative of an expired free trial, or an expired credit card.
-	ErrNotAuthorized = errors.New("Unauthorized request. Check API key, account, log name and also billing settings.")
+	ErrNotAuthorized = errors.New("Unauthorized request. Check API key, account and log/map name")
 
 	// ErrInternalError is an unspecified error. Contact info@continusec.com if these persist.
 	ErrInternalError = errors.New("Unspecified error.")
@@ -67,7 +64,7 @@ var (
 
 // LogAuditFunction is a function that is called for all matching log entries.
 // Return non-nil to stop the audit.
-type LogAuditFunction func(ctx context.Context, idx int64, entry VerifiableEntry) error
+type LogAuditFunction func(ctx context.Context, idx int64, entry VerifiableData) error
 
 // MerkleTreeLeaf is an interface to represent any object that a Merkle Tree Leaf can be calculated for.
 // This includes RawDataEntry, JsonEntry, RedactedJsonEntry, AddEntryResponse and MapHead.
@@ -76,15 +73,16 @@ type MerkleTreeLeaf interface {
 	LeafHash() ([]byte, error)
 }
 
+type MTLHash []byte
+
+func (m MTLHash) LeafHash() ([]byte, error) { return LeafMerkleTreeHash(m), nil }
+
 // UploadableEntry is an interface to represent an entry type that can be uploaded as a log entry or map value.
 // This includes RawDataEntry, JsonEntry, RedactableJsonEntry.
 type UploadableEntry interface {
-	// DataForStorage is intended for execution server-side. It returns:
-	// MTLHash Input, Storage data, error
-	DataForStorage() ([]byte, []byte, error)
-
 	// DataForUpload returns the data that should be uploaded
 	DataForUpload() ([]byte, error)
+
 	// Format returns the format suffix that should be be appended to the PUT/POST API call
 	Format() string
 }
@@ -107,6 +105,7 @@ type VerifiableEntryFactory interface {
 
 // Service can either be a client, or server directly
 type Service interface {
+	// Account returns an object that can be used to access objects within that account
 	Account(id string, apiKey string) Account
 }
 
@@ -132,7 +131,7 @@ type VerifiableLog interface {
 	// entry is sequenced in the underlying log in an asynchronous fashion, so the tree size
 	// will not immediately increase, and inclusion proof checks will not reflect the new entry
 	// until it is sequenced.
-	Add(e UploadableEntry) (*AddEntryResponse, error)
+	Add(e VerifiableData) (LogUpdatePromise, error)
 
 	// TreeHead returns tree root hash for the log at the given tree size. Specify continusec.Head
 	// to receive a root hash for the latest tree size.
@@ -163,17 +162,71 @@ type VerifiableLog interface {
 	// This is normally one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
 	// If the entry was stored using one of the ObjectHash formats, then the data returned by a RawDataEntryFactory,
 	// then the object hash itself is returned as the contents. To get the data itself, use JsonEntryFactory.
-	Entry(idx int64, factory VerifiableEntryFactory) (VerifiableEntry, error)
+	Entry(idx int64) (VerifiableData, error)
 
 	// Entries batches requests to fetch entries from the server and returns a channel with the data
 	// for each entry. Close the context passed to terminate early if desired. If an error is
 	// encountered, the channel will be closed early before all items are returned.
 	//
 	// factory is normally one of one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
-	Entries(ctx context.Context, start, end int64, factory VerifiableEntryFactory) <-chan VerifiableEntry
+	Entries(ctx context.Context, start, end int64) <-chan VerifiableData
 
-	// Name returns the name of the log
-	Name() string
+	// LogVerifyInclusion will fetch a proof the the specified MerkleTreeHash is included in the
+	// log and verify that it can produce the root hash in the specified LogTreeHead.
+	VerifyInclusion(head *LogTreeHead, leaf MerkleTreeLeaf) error
+
+	// LogVerifyConsistency takes two tree heads, retrieves a consistency proof, verifies it,
+	// and returns the result. The two tree heads may be in either order (even equal), but both must be greater than zero and non-nil.
+	VerifyConsistency(a, b *LogTreeHead) error
+
+	// LogBlockUntilPresent blocks until the log is able to produce a LogTreeHead that includes the
+	// specified MerkleTreeLeaf. This polls TreeHead() and InclusionProof() until such time as a new
+	// tree hash is produced that includes the given MerkleTreeLeaf. Exponential back-off is used
+	// when no new tree hash is available.
+	//
+	// This is intended for test use.
+	BlockUntilPresent(leaf MerkleTreeLeaf) (*LogTreeHead, error)
+
+	// LogVerifiedLatestTreeHead calls VerifiedTreeHead() with Head to fetch the latest tree head,
+	// and additionally verifies that it is newer than the previously passed tree head.
+	// For first use, pass nil to skip consistency checking.
+	VerifiedLatestTreeHead(prev *LogTreeHead) (*LogTreeHead, error)
+
+	// LogVerifiedTreeHead is a utility method to fetch a LogTreeHead and verifies that it is consistent with
+	// a tree head earlier fetched and persisted. For first use, pass nil for prev, which will
+	// bypass consistency proof checking. Tree size may be older or newer than the previous head value.
+	//
+	// Clients typically use VerifyLatestTreeHead().
+	VerifiedTreeHead(prev *LogTreeHead, treeSize int64) (*LogTreeHead, error)
+
+	// LogVerifySuppliedInclusionProof is a utility method that fetches any required tree heads that are needed
+	// to verify a supplied log inclusion proof. Additionally it will ensure that any fetched tree heads are consistent
+	// with any prior supplied LogTreeHead (which may be nil, to skip consistency checks).
+	//
+	// Upon success, the LogTreeHead returned is the one used to verify the inclusion proof - it may be newer or older than the one passed in.
+	// In either case, it will have been verified as consistent.
+	VerifySuppliedInclusionProof(prev *LogTreeHead, proof *LogInclusionProof) (*LogTreeHead, error)
+
+	// LogVerifyEntries is a utility method for auditors that wish to audit the full content of
+	// a log, as well as the log operation. This method will retrieve all entries in batch from
+	// the log between the passed in prev and head LogTreeHeads, and ensure that the root hash in head can be confirmed to accurately represent
+	// the contents of all of the log entries retrieved. To start at entry zero, pass nil for prev, which will also bypass consistency proof checking. Head must not be nil.
+	VerifyEntries(ctx context.Context, prev *LogTreeHead, head *LogTreeHead, auditFunc LogAuditFunction) error
+}
+
+type VerifiableData interface {
+	GetLeafInput() []byte
+	GetExtraData() []byte
+}
+
+type MapUpdatePromise interface {
+	MerkleTreeLeaf
+	Wait() (*MapTreeHead, error)
+}
+
+type LogUpdatePromise interface {
+	MerkleTreeLeaf
+	Wait() (*LogTreeHead, error)
 }
 
 type VerifiableMap interface {
@@ -192,29 +245,86 @@ type VerifiableMap interface {
 	// to always get the latest value. factory is normally one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
 	//
 	// Clients normally instead call VerifiedGet() with a MapTreeHead returned by VerifiedLatestMapState as this will also perform verification of inclusion.
-	Get(key []byte, treeSize int64, factory VerifiableEntryFactory) (*MapInclusionProof, error)
+	Get(key []byte, treeSize int64) (*MapInclusionProof, error)
 
 	// Set will generate a map mutation to set the given value for the given key.
 	// While this will return quickly, the change will be reflected asynchronously in the map.
 	// Returns an AddEntryResponse which contains the leaf hash for the mutation log entry.
-	Set(key []byte, value UploadableEntry) (*AddEntryResponse, error)
+	Set(key []byte, value VerifiableData) (MapUpdatePromise, error)
 
 	// Update will generate a map mutation to set the given value for the given key, conditional on the
 	// previous leaf hash being that specified by previousLeaf.
 	// While this will return quickly, the change will be reflected asynchronously in the map.
 	// Returns an AddEntryResponse which contains the leaf hash for the mutation log entry.
-	Update(key []byte, value UploadableEntry, previousLeaf MerkleTreeLeaf) (*AddEntryResponse, error)
+	Update(key []byte, value VerifiableData, previousLeaf MerkleTreeLeaf) (MapUpdatePromise, error)
 
 	// Delete will set generate a map mutation to delete the value for the given key. Calling Delete
 	// is equivalent to calling Set with an empty value.
 	// While this will return quickly, the change will be reflected asynchronously in the map.
 	// Returns an AddEntryResponse which contains the leaf hash for the mutation log entry.
-	Delete(key []byte) (*AddEntryResponse, error)
+	Delete(key []byte) (MapUpdatePromise, error)
 
 	// TreeHead returns map root hash for the map at the given tree size. Specify continusec.Head
 	// to receive a root hash for the latest tree size.
 	TreeHead(treeSize int64) (*MapTreeHead, error)
 
-	// Name returns the name of the map
-	Name() string
+	// MapVerifiedGet gets the value for the given key in the specified MapTreeState, and verifies that it is
+	// included in the MapTreeHead (wrapped by the MapTreeState) before returning.
+	// factory is normally one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
+	VerifiedGet(key []byte, mapHead *MapTreeState) (VerifiableData, error)
+
+	// MapBlockUntilSize blocks until the map has caught up to a certain size. This polls
+	// TreeHead() until such time as a new tree hash is produced that is of at least this
+	// size.
+	//
+	// This is intended for test use.
+	BlockUntilSize(treeSize int64) (*MapTreeHead, error)
+
+	// MapVerifiedLatestMapState fetches the latest MapTreeState, verifies it is consistent with,
+	// and newer than, any previously passed state.
+	VerifiedLatestMapState(prev *MapTreeState) (*MapTreeState, error)
+
+	// MapVerifiedMapState returns a wrapper for the MapTreeHead for a given tree size, along with
+	// a LogTreeHead for the TreeHeadLog that has been verified to contain this map tree head.
+	// The value returned by this will have been proven to be consistent with any passed prev value.
+	// Note that the TreeHeadLogTreeHead returned may differ between calls, even for the same treeSize,
+	// as all future LogTreeHeads can also be proven to contain the MapTreeHead.
+	//
+	// Typical clients that only need to access current data will instead use VerifiedLatestMapState()
+	// Can return nil, nil if the map is empty (and prev was nil)
+	VerifiedMapState(prev *MapTreeState, treeSize int64) (*MapTreeState, error)
+
+	// MapVerifyMap (Experimental API surface, likely to change) is a utility method for auditors
+	// that wish to audit the full content of a map, as well as the map operation. This method
+	// will verify every entry in the TreeHeadLogTreeHead between prev and head - and to do so
+	// will retrieve *all* mutation entries from the underlying mutation log, and play them
+	// forward in an in-memory map copy.
+	//
+	// In addition to verifying the correct operation of the map itself, a client also specifies
+	// an auditFunc that is called for each set value operation that results in a change to the
+	// map itself. As such a client can also verify any property desired around the actual
+	// key/values themselves that are being manipulated. Note that not every mutation will result
+	// in a call to auditFunc - operations that result in no change to the map will not call
+	// the audit function.
+	//
+	// To verify all every log tree head entry, pass nil for prev, which will also bypass consistency proof checking. Head must not be nil.
+	//
+	// Example usage:
+	//
+	//	latestMapState, err := vmap.VerifiedLatestMapState(nil)
+	//	if err != nil {
+	//		...
+	//	}
+	//
+	//	err = vmap.VerifyMap(ctx, nil, latestMapState, continusec.RedactedJsonEntryFactory, func(ctx context.Context, idx int64, key []byte, value continusec.VerifiableEntry) error {
+	//		... // verify anything you like about the content
+	//		return nil
+	//	})
+	//	if err != nil {
+	//		...
+	//	}
+	//
+	// While suitable for small to medium maps, this requires the entire map be built in-memory
+	// which may not be suitable for larger systems that will have more complex requirements.
+	VerifyMap(ctx context.Context, prev *MapTreeState, head *MapTreeState, factory VerifiableEntryFactory, auditFunc MapAuditFunction) error
 }

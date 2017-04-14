@@ -29,6 +29,13 @@ func (self *RawDataEntry) Data() ([]byte, error) {
 	return self.RawBytes, nil
 }
 
+func (self *RawDataEntry) GetLeafInput() []byte {
+	return self.RawBytes
+}
+func (self *RawDataEntry) GetExtraData() []byte {
+	return nil
+}
+
 // DataForUpload returns the data that should be uploaded
 func (self *RawDataEntry) DataForUpload() ([]byte, error) {
 	return self.RawBytes, nil

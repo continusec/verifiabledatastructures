@@ -25,7 +25,7 @@ type MapInclusionProof struct {
 	Key []byte
 
 	// Value represents the entry for which this proof is valid
-	Value VerifiableEntry
+	Value VerifiableData
 
 	// AuditPath is the set of Merkle Tree Hashes needed to prove consistency
 	AuditPath [][]byte
@@ -41,10 +41,7 @@ func (self *MapInclusionProof) Verify(head *MapTreeHead) error {
 	}
 
 	kp := ConstructMapKeyPath(self.Key)
-	t, err := self.Value.LeafHash()
-	if err != nil {
-		return err
-	}
+	t := LeafMerkleTreeHash(self.Value.GetLeafInput())
 	for i := len(kp) - 1; i >= 0; i-- {
 		p := self.AuditPath[i]
 		if p == nil {

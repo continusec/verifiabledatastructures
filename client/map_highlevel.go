@@ -25,8 +25,8 @@ import (
 // MapVerifiedGet gets the value for the given key in the specified MapTreeState, and verifies that it is
 // included in the MapTreeHead (wrapped by the MapTreeState) before returning.
 // factory is normally one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
-func MapVerifiedGet(vmap VerifiableMap, key []byte, mapHead *MapTreeState, factory VerifiableEntryFactory) (VerifiableEntry, error) {
-	proof, err := vmap.Get(key, mapHead.TreeSize(), factory)
+func (vmap *gRpcVerifiableMapImpl) VerifiedGet(key []byte, mapHead *MapTreeState) (VerifiableData, error) {
+	proof, err := vmap.Get(key, mapHead.TreeSize())
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func MapVerifiedGet(vmap VerifiableMap, key []byte, mapHead *MapTreeState, facto
 // size.
 //
 // This is intended for test use.
-func MapBlockUntilSize(vmap VerifiableMap, treeSize int64) (*MapTreeHead, error) {
+func (vmap *gRpcVerifiableMapImpl) BlockUntilSize(treeSize int64) (*MapTreeHead, error) {
 	lastHead := int64(-1)
 	timeToSleep := time.Second
 	for {
@@ -67,8 +67,8 @@ func MapBlockUntilSize(vmap VerifiableMap, treeSize int64) (*MapTreeHead, error)
 
 // MapVerifiedLatestMapState fetches the latest MapTreeState, verifies it is consistent with,
 // and newer than, any previously passed state.
-func MapVerifiedLatestMapState(vmap VerifiableMap, prev *MapTreeState) (*MapTreeState, error) {
-	head, err := MapVerifiedMapState(vmap, prev, Head)
+func (vmap *gRpcVerifiableMapImpl) VerifiedLatestMapState(prev *MapTreeState) (*MapTreeState, error) {
+	head, err := vmap.VerifiedMapState(prev, Head)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func MapVerifiedLatestMapState(vmap VerifiableMap, prev *MapTreeState) (*MapTree
 //
 // Typical clients that only need to access current data will instead use VerifiedLatestMapState()
 // Can return nil, nil if the map is empty (and prev was nil)
-func MapVerifiedMapState(vmap VerifiableMap, prev *MapTreeState, treeSize int64) (*MapTreeState, error) {
+func (vmap *gRpcVerifiableMapImpl) VerifiedMapState(prev *MapTreeState, treeSize int64) (*MapTreeState, error) {
 	if treeSize != 0 && prev != nil && prev.TreeSize() == treeSize {
 		return prev, nil
 	}
@@ -113,7 +113,7 @@ func MapVerifiedMapState(vmap VerifiableMap, prev *MapTreeState, treeSize int64)
 	// If we have a previous state, then make sure both logs are consistent with it
 	if prev != nil {
 		// Make sure that the mutation log is consistent with what we had
-		err = LogVerifyConsistency(vmap.MutationLog(), &prev.MapTreeHead.MutationLogTreeHead,
+		err = vmap.MutationLog().VerifyConsistency(&prev.MapTreeHead.MutationLogTreeHead,
 			&mapHead.MutationLogTreeHead)
 		if err != nil {
 			return nil, err
@@ -132,7 +132,7 @@ func MapVerifiedMapState(vmap VerifiableMap, prev *MapTreeState, treeSize int64)
 	// If we already have a tree head that is the size of our map, then we
 	// probably don't need a new one, so try that first.
 	if prevThlth != nil && prevThlth.TreeSize >= mapHead.TreeSize() {
-		err = LogVerifyInclusion(vmap.TreeHeadLog(), prevThlth, mapHead)
+		err = vmap.TreeHeadLog().VerifyInclusion(prevThlth, mapHead)
 		if err == nil {
 			verifiedInTreeHeadLog = true
 			thlth = prevThlth
@@ -142,13 +142,13 @@ func MapVerifiedMapState(vmap VerifiableMap, prev *MapTreeState, treeSize int64)
 	// If we weren't able to take a short-cut above, go back to normal processing:
 	if !verifiedInTreeHeadLog {
 		// Get new tree head
-		thlth, err = LogVerifiedLatestTreeHead(vmap.TreeHeadLog(), prevThlth)
+		thlth, err = vmap.TreeHeadLog().VerifiedLatestTreeHead(prevThlth)
 		if err != nil {
 			return nil, err
 		}
 
 		// And make sure we are in it
-		err = LogVerifyInclusion(vmap.TreeHeadLog(), thlth, mapHead)
+		err = vmap.TreeHeadLog().VerifyInclusion(thlth, mapHead)
 		if err != nil {
 			return nil, err
 		}
@@ -208,7 +208,7 @@ type MapAuditFunction func(ctx context.Context, idx int64, key []byte, value Ver
 //
 // While suitable for small to medium maps, this requires the entire map be built in-memory
 // which may not be suitable for larger systems that will have more complex requirements.
-func MapVerifyMap(ctx context.Context, vmap VerifiableMap, prev *MapTreeState, head *MapTreeState, factory VerifiableEntryFactory, auditFunc MapAuditFunction) error {
+func (vmap *gRpcVerifiableMapImpl) VerifyMap(ctx context.Context, prev *MapTreeState, head *MapTreeState, factory VerifiableEntryFactory, auditFunc MapAuditFunction) error {
 	var prevLth *LogTreeHead
 	if prev != nil {
 		prevLth = &prev.TreeHeadLogTreeHead
@@ -218,7 +218,7 @@ func MapVerifyMap(ctx context.Context, vmap VerifiableMap, prev *MapTreeState, h
 		return ErrNilTreeHead
 	}
 
-	return LogVerifyEntries(ctx, vmap.TreeHeadLog(), prevLth, &head.TreeHeadLogTreeHead, JsonEntryFactory, (&auditState{
+	return vmap.TreeHeadLog().VerifyEntries(ctx, prevLth, &head.TreeHeadLogTreeHead, (&auditState{
 		Map:               vmap,
 		MapAuditFunction:  auditFunc,
 		EntryValueFactory: factory,

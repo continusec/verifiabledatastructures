@@ -31,6 +31,13 @@ type RedactableJsonEntry struct {
 	leafHash  []byte
 }
 
+func (self *RedactableJsonEntry) GetLeafInput() []byte {
+	return self.JsonBytes // TODO - wrong here to compile
+}
+func (self *RedactableJsonEntry) GetExtraData() []byte {
+	return nil // TODO - wrong here to compile
+}
+
 // DataForUpload returns the data that should be uploaded
 func (self *RedactableJsonEntry) DataForUpload() ([]byte, error) {
 	return self.JsonBytes, nil

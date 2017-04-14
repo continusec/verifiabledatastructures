@@ -23,13 +23,11 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/continusec/verifiabledatastructures/api"
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/kvstore"
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/continusec/verifiabledatastructures/server"
 	"golang.org/x/net/context"
 )
 
@@ -48,68 +46,62 @@ func (f *DummyTester) Error(args ...interface{}) {
 	panic("aaeerrgghh!!")
 }
 
-func testMap(t *testing.T, baseURL string) {
-	account := client.DefaultClient.WithBaseUrl(baseURL+"/v1").Account("999", "secret")
+func testMap(t *testing.T, cli *client.VerifiableDataStructuresClient) {
+	account := cli.Account("999", "secret")
 	vmap := account.VerifiableMap("testmap")
 	numToDo := 1000
 
 	for i := 0; i < numToDo; i++ {
-		_, err := vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &client.RawDataEntry{RawBytes: []byte(fmt.Sprintf("fooval%d", i))})
+		_, err := vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &pb.LeafData{LeafInput: []byte(fmt.Sprintf("fooval%d", i))})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	_, err := client.MapBlockUntilSize(vmap, int64(numToDo))
+	_, err := vmap.BlockUntilSize(int64(numToDo))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ms, err := client.MapVerifiedLatestMapState(vmap, nil)
+	ms, err := vmap.VerifiedLatestMapState(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Make sure we don't break on non-existent entries
 	for i := 0; i < numToDo; i++ {
-		entry, err := client.MapVerifiedGet(vmap, []byte(fmt.Sprintf("baz%d", i)), ms, client.RawDataEntryFactory)
+		entry, err := vmap.VerifiedGet([]byte(fmt.Sprintf("baz%d", i)), ms)
 		if err != nil {
 			t.Fatal(err)
 		}
-		dd, err := entry.Data()
-		if err != nil {
-			t.Fatal(err)
-		}
+		dd := entry.GetLeafInput()
 		if len(dd) != 0 {
 			t.Fatal(string(dd))
 		}
 	}
 
 	for i := 0; i < numToDo; i++ {
-		entry, err := client.MapVerifiedGet(vmap, []byte(fmt.Sprintf("foo%d", i)), ms, client.RawDataEntryFactory)
+		entry, err := vmap.VerifiedGet([]byte(fmt.Sprintf("foo%d", i)), ms)
 		if err != nil {
 			t.Fatal(err)
 		}
-		dd, err := entry.Data()
-		if err != nil {
-			t.Fatal(err)
-		}
+		dd := entry.GetLeafInput()
 		if string(dd) != fmt.Sprintf("fooval%d", i) {
 			t.Fatal(string(dd))
 		}
 	}
 }
 
-func testLog(t *testing.T, baseURL string) {
-	account := client.DefaultClient.WithBaseUrl(baseURL+"/v1").Account("999", "secret")
+func testLog(t *testing.T, cli *client.VerifiableDataStructuresClient) {
+	account := cli.Account("999", "secret")
 	log := account.VerifiableLog("smoketest")
 
-	treeRoot, err := log.TreeHead(client.Head)
+	treeRoot, err := log.TreeHead(0)
 	if !(treeRoot == nil || (treeRoot.TreeSize == 0 && len(treeRoot.RootHash) == 0)) {
 		t.Fatal("Expecting log to not exist.")
 	}
 
-	aer, err := log.Add(&client.RawDataEntry{RawBytes: []byte("foo")})
+	aer, err := log.Add(&pb.LeafData{LeafInput: []byte("foo")})
 	if err != nil {
 		t.Fatal("Failed adding item", err)
 	}
@@ -160,9 +152,9 @@ func testLog(t *testing.T, baseURL string) {
 		}
 	}
 
-	entries := make([]client.VerifiableEntry, treeRoot.TreeSize)
+	entries := make([]client.VerifiableData, treeRoot.TreeSize)
 	for i := int64(0); i < treeRoot.TreeSize; i++ {
-		entries[i], err = log.Entry(i, client.RawDataEntryFactory)
+		entries[i], err = log.Entry(i)
 		if err != nil {
 			t.Fatal("Failure getting entry")
 		}
@@ -196,12 +188,12 @@ func testLog(t *testing.T, baseURL string) {
 		t.Fatal("Failure getting root hash")
 	}
 
-	err = client.LogVerifyConsistency(log, th3, th7)
+	err = log.VerifyConsistency(th3, th7)
 	if err != nil {
 		t.Fatal("Failure to generate consistency between 3 and 7")
 	}
 
-	rootHashes := generateRootHashes(context.Background(), log.Entries(context.Background(), 0, treeRoot.TreeSize, client.RawDataEntryFactory))
+	rootHashes := generateRootHashes(context.Background(), log.Entries(context.Background(), 0, treeRoot.TreeSize))
 	i := 0
 	var last []byte
 	for rh := range rootHashes {
@@ -229,7 +221,7 @@ func testLog(t *testing.T, baseURL string) {
 		}
 	}
 
-	rootHashes = generateRootHashes(context.Background(), log.Entries(context.Background(), 0, treeRoot.TreeSize, client.RawDataEntryFactory))
+	rootHashes = generateRootHashes(context.Background(), log.Entries(context.Background(), 0, treeRoot.TreeSize))
 	i = 0
 	for rh := range rootHashes {
 		last = rh
@@ -253,7 +245,13 @@ func TestFullIntegration(t *testing.T) {
 		Reader: db,
 	}
 
-	go server.StartRESTServer(&pb.ServerConfig{
+	client := &client.VerifiableDataStructuresClient{
+		Service: service,
+	}
+	testMap(t, client)
+	testLog(t, client)
+
+	/*go server.StartRESTServer(&pb.ServerConfig{
 		InsecureServerForTesting: true,
 		RestListenBind:           ":8092",
 		RestServer:               true,
@@ -261,12 +259,12 @@ func TestFullIntegration(t *testing.T) {
 	time.Sleep(time.Millisecond * 50) // let the server startup...
 
 	testMap(t, "http://localhost:8092")
-	testLog(t, "http://localhost:8092")
+	testLog(t, "http://localhost:8092")*/
 }
 
 // GenerateRootHashes is a utility function that emits a channel of root hashes
 // given a channel of input values. This is useful for some unit tests.
-func generateRootHashes(ctx context.Context, input <-chan client.VerifiableEntry) <-chan []byte {
+func generateRootHashes(ctx context.Context, input <-chan client.VerifiableData) <-chan []byte {
 	rv := make(chan []byte)
 	go func() {
 		defer close(rv)
@@ -280,11 +278,7 @@ func generateRootHashes(ctx context.Context, input <-chan client.VerifiableEntry
 				if !ok {
 					return
 				}
-				d, err := b.Data()
-				if err != nil {
-					return
-				}
-				stack = append(stack, client.LeafMerkleTreeHash(d))
+				stack = append(stack, client.LeafMerkleTreeHash(b.GetLeafInput()))
 			}
 
 			for j := index; (j & 1) == 1; j >>= 1 {
@@ -307,14 +301,10 @@ func generateRootHashes(ctx context.Context, input <-chan client.VerifiableEntry
 	return rv
 }
 
-func verifyRootHash(entries []client.VerifiableEntry, answer []byte) bool {
+func verifyRootHash(entries []client.VerifiableData, answer []byte) bool {
 	stack := make([][]byte, 0)
 	for i, b := range entries {
-		d, err := b.Data()
-		if err != nil {
-			return false
-		}
-		stack = append(stack, client.LeafMerkleTreeHash(d))
+		stack = append(stack, client.LeafMerkleTreeHash(b.GetLeafInput()))
 		for j := i; (j & 1) == 1; j >>= 1 {
 			stack = append(stack[:len(stack)-2], client.NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1]))
 		}
