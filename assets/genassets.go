@@ -18,7 +18,7 @@ limitations under the License.
 
 package assets
 
-//go:generate go-bindata -pkg $GOPACKAGE -o assets.go ../www/
+//go:generate go-bindata -pkg $GOPACKAGE -o assets.go www/
 
 /*
     Needs:

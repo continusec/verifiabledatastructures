@@ -18,11 +18,7 @@ limitations under the License.
 
 package api
 
-import (
-	"log"
-
-	"github.com/continusec/verifiabledatastructures/pb"
-)
+import "github.com/continusec/verifiabledatastructures/pb"
 
 type InstantMutator struct {
 	Writer StorageWriter
@@ -30,10 +26,7 @@ type InstantMutator struct {
 
 func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) (MutatorPromise, error) {
 	return &instancePromise{Err: m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
-		log.Println("Instant mutation start...")
-		rv := ApplyMutation(kw, mut)
-		log.Println("Instant mutation end:", rv)
-		return rv
+		return ApplyMutation(kw, mut)
 	})}, nil
 }
 
