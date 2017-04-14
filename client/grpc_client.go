@@ -39,7 +39,6 @@ type GRPCClientConfig struct {
 func (g *GRPCClientConfig) Dial() (pb.VerifiableDataStructuresServiceServer, error) {
 	var dialOptions []grpc.DialOption
 	if g.NoGrpcSecurity {
-		// use system CA pool but disable cert validation
 		log.Println("WARNING: Disabling TLS  when connecting to gRPC server")
 		dialOptions = append(dialOptions, grpc.WithInsecure())
 	} else if len(g.CertDer) != 0 {

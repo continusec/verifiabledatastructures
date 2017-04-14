@@ -241,47 +241,44 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 }
 
-func TestWithHTTPServerAndClient(t *testing.T) {
+func createCleanEmptyService() pb.VerifiableDataStructuresServiceServer {
 	db := &kvstore.TransientHashMapStorage{}
-	service := &api.LocalService{
+	return &api.LocalService{
 		AccessPolicy: &api.StaticOracle{},
 		Mutator: &api.InstantMutator{
 			Writer: db,
 		},
 		Reader: db,
 	}
+}
 
+func runSmokeTests(c pb.VerifiableDataStructuresServiceServer, t *testing.T) {
+	testLog(t, c)
+	testMap(t, c)
+}
+
+func TestWithoutServers(t *testing.T) {
+	runSmokeTests(createCleanEmptyService(), t)
+}
+
+func TestWithHTTPServerAndClient(t *testing.T) {
 	go server.StartRESTServer(&pb.ServerConfig{
 		InsecureServerForTesting: true,
 		RestListenBind:           ":8092",
-	}, service)
+	}, createCleanEmptyService())
 	time.Sleep(time.Millisecond * 50) // let the server startup...
-
-	client := &client.HTTPRESTClient{
+	runSmokeTests(&client.HTTPRESTClient{
 		BaseUrl: "http://localhost:8092/v1",
-	}
-
-	testLog(t, client)
-	testMap(t, client)
+	}, t)
 }
 
 func TestWithGRPCerverAndClient(t *testing.T) {
-	db := &kvstore.TransientHashMapStorage{}
-	service := &api.LocalService{
-		AccessPolicy: &api.StaticOracle{},
-		Mutator: &api.InstantMutator{
-			Writer: db,
-		},
-		Reader: db,
-	}
-
 	go server.StartGRPCServer(&pb.ServerConfig{
 		InsecureServerForTesting: true,
 		GrpcListenBind:           ":8081",
 		GrpcListenProtocol:       "tcp4",
-	}, service)
+	}, createCleanEmptyService())
 	time.Sleep(time.Millisecond * 50) // let the server startup...
-
 	cli, err := (&client.GRPCClientConfig{
 		Address:        "localhost:8081",
 		NoGrpcSecurity: true,
@@ -289,22 +286,7 @@ func TestWithGRPCerverAndClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	testLog(t, cli)
-	testMap(t, cli)
-}
-
-func TestWithoutServers(t *testing.T) {
-	db := &kvstore.TransientHashMapStorage{}
-	service := &api.LocalService{
-		AccessPolicy: &api.StaticOracle{},
-		Mutator: &api.InstantMutator{
-			Writer: db,
-		},
-		Reader: db,
-	}
-	testMap(t, service)
-	testLog(t, service)
+	runSmokeTests(cli, t)
 }
 
 // GenerateRootHashes is a utility function that emits a channel of root hashes
