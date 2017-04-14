@@ -19,8 +19,6 @@ limitations under the License.
 package api
 
 import (
-	"log"
-
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
 )
@@ -105,7 +103,6 @@ func isLeaf(mn *pb.MapNode) bool {
 func calcNodeHash(mn *pb.MapNode, depth uint) ([]byte, error) {
 	if isLeaf(mn) {
 		if depth+BPath(mn.RemainingPath).Length() != 256 {
-			log.Println(depth, BPath(mn.RemainingPath).Length())
 			return nil, ErrLogUnsafeForAccess
 		}
 		rv := mn.LeafHash

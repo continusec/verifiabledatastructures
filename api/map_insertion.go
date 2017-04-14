@@ -20,7 +20,6 @@ package api
 
 import (
 	"bytes"
-	"log"
 
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
@@ -69,7 +68,6 @@ func descendToFork(db KeyReader, path BPath, root *pb.MapNode) (*pb.MapNode, []*
 			head, err = lookupMapHash(db, head.LeftNumber, path.Slice(0, depth+1))
 		}
 		if err != nil {
-			log.Println("Error", err)
 			return nil, nil, err
 		}
 		depth++
@@ -129,7 +127,6 @@ func isEmptyNode(mn *pb.MapNode) bool {
 
 func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client.JSONMapMutationEntry) ([]byte, error) {
 	keyPath := BPathFromKey(mut.Key)
-	log.Println("KEY", keyPath.Str())
 
 	// Get the root node for tree size, will never be nil
 	root, err := lookupMapHash(db, mutationIndex, BPathEmpty)
@@ -147,19 +144,14 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 	var prevLeafHash []byte
 	isMatch := mapNodeRemainingMatches(head, keyPath)
 	if isMatch {
-		log.Println("ISMATCH")
 		prevLeafHash = head.LeafHash
 	} else {
-		log.Println("ISNOTMATCH")
 		prevLeafHash = nullLeafHash
 	}
 	nextLeafHash, err := mutationLeafHash(mut, prevLeafHash)
 	if err != nil {
 		return nil, err
 	}
-	log.Println("NEWLEAF", nextLeafHash)
-
-	log.Println("ANCESTORS", ancestors)
 
 	// Can we short-circuit since nothing changed?
 	if bytes.Equal(prevLeafHash, nextLeafHash) {
@@ -170,8 +162,6 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 		}
 		return calcNodeHash(root, 0)
 	}
-
-	log.Println("HERE")
 
 	// Time to start writing our data
 	err = writeDataByLeafHash(db, pb.LogType_STRUCT_TYPE_MUTATION_LOG, nextLeafHash, &pb.LeafData{
@@ -195,12 +185,9 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 		return writeAncestors(db, last, ancestors, keyPath, mutationIndex)
 	}
 
-	log.Println("HERE2")
-
 	// Add stub nodes for common ancestors
 	for BPath(head.RemainingPath).Length() != 0 && keyPath.At(uint(len(ancestors))) == BPath(head.RemainingPath).At(0) {
 		ancestors = append(ancestors, &pb.MapNode{}) // stub it in, we'll fill it later
-		log.Println("adding stub")
 		head = &pb.MapNode{
 			LeafHash:      head.LeafHash,
 			RemainingPath: BPath(head.RemainingPath).Slice(1, BPath(head.RemainingPath).Length()), // not efficient - let's get it correct first and tidy up ldate

@@ -20,7 +20,6 @@ package api
 
 import (
 	"encoding/binary"
-	"log"
 
 	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/pb"
@@ -171,13 +170,6 @@ func lookupLogTreeHead(kr KeyReader, lt pb.LogType) (*pb.LogTreeHashResponse, er
 // Start pair
 
 func writeMapHash(kr KeyWriter, number int64, path BPath, data *pb.MapNode) error {
-	log.Println("WRITE", number, path.Str(), data.LeftNumber, data.RightNumber, data.LeafHash)
-
-	if len(data.LeafHash) != 0 {
-		if path.Length()+BPath(data.RemainingPath).Length() != 256 {
-			log.Println("***WRITING MAP HASH WITH UNBALANCED PATH", path.Length(), +BPath(data.RemainingPath).Length())
-		}
-	}
 	return kr.Set(mapNodeBucket, append(toIntBinary(uint64(number)), path...), data)
 }
 
@@ -191,7 +183,6 @@ func lookupMapHash(kr KeyReader, number int64, path BPath) (*pb.MapNode, error) 
 	if err != nil {
 		return nil, err
 	}
-	log.Println("READ", number, path.Str(), m.LeftNumber, m.RightNumber, m.LeafHash, BPath(m.RemainingPath).Str())
 
 	return &m, nil
 }

@@ -51,7 +51,7 @@ func (f *DummyTester) Error(args ...interface{}) {
 func testMap(t *testing.T, baseURL string) {
 	account := client.DefaultClient.WithBaseUrl(baseURL+"/v1").Account("999", "secret")
 	vmap := account.VerifiableMap("testmap")
-	numToDo := 4
+	numToDo := 1000
 
 	for i := 0; i < numToDo; i++ {
 		_, err := vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &client.RawDataEntry{RawBytes: []byte(fmt.Sprintf("fooval%d", i))})
@@ -70,20 +70,6 @@ func testMap(t *testing.T, baseURL string) {
 		t.Fatal(err)
 	}
 
-	for i := 0; i < numToDo; i++ {
-		entry, err := client.MapVerifiedGet(vmap, []byte(fmt.Sprintf("foo%d", i)), ms, client.RawDataEntryFactory)
-		if err != nil {
-			t.Fatal(err)
-		}
-		dd, err := entry.Data()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(dd) != fmt.Sprintf("fooval%d", i) {
-			t.Fatal(string(dd))
-		}
-	}
-
 	// Make sure we don't break on non-existent entries
 	for i := 0; i < numToDo; i++ {
 		entry, err := client.MapVerifiedGet(vmap, []byte(fmt.Sprintf("baz%d", i)), ms, client.RawDataEntryFactory)
@@ -95,6 +81,20 @@ func testMap(t *testing.T, baseURL string) {
 			t.Fatal(err)
 		}
 		if len(dd) != 0 {
+			t.Fatal(string(dd))
+		}
+	}
+
+	for i := 0; i < numToDo; i++ {
+		entry, err := client.MapVerifiedGet(vmap, []byte(fmt.Sprintf("foo%d", i)), ms, client.RawDataEntryFactory)
+		if err != nil {
+			t.Fatal(err)
+		}
+		dd, err := entry.Data()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(dd) != fmt.Sprintf("fooval%d", i) {
 			t.Fatal(string(dd))
 		}
 	}
