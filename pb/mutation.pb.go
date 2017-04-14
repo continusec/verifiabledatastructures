@@ -104,10 +104,11 @@ func (m *EntryIndex) GetIndex() int64 {
 
 type MapNode struct {
 	// for parent nodes only
-	LeftNumber  int64  `protobuf:"varint,1,opt,name=left_number,json=leftNumber" json:"left_number,omitempty"`
-	RightNumber int64  `protobuf:"varint,2,opt,name=right_number,json=rightNumber" json:"right_number,omitempty"`
-	LeftHash    []byte `protobuf:"bytes,3,opt,name=left_hash,json=leftHash,proto3" json:"left_hash,omitempty"`
-	RightHash   []byte `protobuf:"bytes,4,opt,name=right_hash,json=rightHash,proto3" json:"right_hash,omitempty"`
+	LeftNumber  int64 `protobuf:"varint,1,opt,name=left_number,json=leftNumber" json:"left_number,omitempty"`
+	RightNumber int64 `protobuf:"varint,2,opt,name=right_number,json=rightNumber" json:"right_number,omitempty"`
+	// set for parents only, if corresponding entry is non-zero
+	LeftHash  []byte `protobuf:"bytes,3,opt,name=left_hash,json=leftHash,proto3" json:"left_hash,omitempty"`
+	RightHash []byte `protobuf:"bytes,4,opt,name=right_hash,json=rightHash,proto3" json:"right_hash,omitempty"`
 	// for leaf nodes only
 	LeafHash      []byte `protobuf:"bytes,6,opt,name=leaf_hash,json=leafHash,proto3" json:"leaf_hash,omitempty"`
 	RemainingPath []byte `protobuf:"bytes,7,opt,name=remaining_path,json=remainingPath,proto3" json:"remaining_path,omitempty"`

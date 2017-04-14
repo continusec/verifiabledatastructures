@@ -245,7 +245,7 @@ func TestFullIntegration(t *testing.T) {
 	}, service)
 	time.Sleep(time.Millisecond * 50) // let the server startup...
 
-	//testMap(t, "http://localhost:8092")
+	testMap(t, "http://localhost:8092")
 	testLog(t, "http://localhost:8092")
 }
 

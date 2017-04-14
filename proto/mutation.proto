@@ -48,9 +48,25 @@ message EntryIndex {
 }
 
 message MapNode {
+    // A map node is either and parent, or it is considered a leaf.
+
+    // If a node has `leaf_hash` set to len() > 0, then it is leaf.
+    // When it is a leaf, `remaining_path` must be set, however all other fields are ignored
+    // It's root hash may be calculated based on those two fields alone
+
+    // If a node, is a parent, then `left_number` and `right_number`, if non-zero, indicate
+    // the next nodes to descend to. If they are zero, then the root hash for that side of
+    // the nodes is is default value for that depth.
+    // If they are non-zero, then `left_hash`/`right_hash` must be set, which contains
+    // the cached value of the hash for that side of the tree.
+
+
+
     // for parent nodes only
-    int64 left_number = 1;  // if zero, default - if either are non-zero, we are a leaf
-    int64 right_number = 2; // if zero, default - if either are non-zero, we are a leaf
+    int64 left_number = 1;  // if zero, default
+    int64 right_number = 2; // if zero, default
+
+    // set for parents only, if corresponding entry is non-zero
     bytes left_hash = 3;    // set if left is non-zero
     bytes right_hash = 4;   // set if right is non-zero
 
