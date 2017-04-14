@@ -22,7 +22,6 @@ import (
 	"log"
 
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/golang/protobuf/proto"
 )
 
 type InstantMutator struct {
@@ -31,9 +30,9 @@ type InstantMutator struct {
 
 func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) (MutatorPromise, error) {
 	return &instancePromise{Err: m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
-		log.Printf("Instant mutation start: %s\n", proto.CompactTextString(mut))
+		log.Println("Instant mutation start...")
 		rv := ApplyMutation(kw, mut)
-		log.Printf("Instant mutation end: %s\n", rv)
+		log.Println("Instant mutation end:", rv)
 		return rv
 	})}, nil
 }

@@ -51,7 +51,7 @@ func (f *DummyTester) Error(args ...interface{}) {
 func testMap(t *testing.T, baseURL string) {
 	account := client.DefaultClient.WithBaseUrl(baseURL+"/v1").Account("999", "secret")
 	vmap := account.VerifiableMap("testmap")
-	numToDo := 10
+	numToDo := 4
 
 	for i := 0; i < numToDo; i++ {
 		_, err := vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &client.RawDataEntry{RawBytes: []byte(fmt.Sprintf("fooval%d", i))})
