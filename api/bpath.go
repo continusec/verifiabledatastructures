@@ -23,16 +23,15 @@ import "crypto/sha256"
 type BPath []byte
 
 func (b BPath) Length() uint {
-	if b == nil || len(b) == 0 { // normally len(b) will not be zero, except after RT to datastore
+	if len(b) == 0 { // special case for zero
 		return 0
 	}
 	// We are a PString, essentially, except 0 means 256 (use nil for real zero)
 	l := uint(b[0])
 	if l == 0 {
 		return 256
-	} else {
-		return l
 	}
+	return l
 }
 
 func (b BPath) At(idx uint) bool {
@@ -55,11 +54,12 @@ func (b BPath) Str() string {
 var (
 	BPathFalse = BPath([]byte{1, 0})
 	BPathTrue  = BPath([]byte{1, 128})
+	BPathEmpty = BPath([]byte{})
 )
 
 func (b BPath) Slice(start, end uint) []byte {
 	if end <= start {
-		return nil
+		return BPathEmpty
 	}
 	l := end - start
 	rv := make([]byte, 1+1+((l-1)/8))
@@ -80,7 +80,7 @@ func (b BPath) Slice(start, end uint) []byte {
 func BPathJoin(a, b BPath) BPath {
 	lA, lB := a.Length(), b.Length()
 	if (lA + lB) == 0 {
-		return nil
+		return BPathEmpty
 	}
 
 	l := lA + lB

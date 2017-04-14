@@ -18,7 +18,12 @@ limitations under the License.
 
 package api
 
-import "github.com/continusec/verifiabledatastructures/pb"
+import (
+	"log"
+
+	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/golang/protobuf/proto"
+)
 
 type InstantMutator struct {
 	Writer StorageWriter
@@ -26,7 +31,10 @@ type InstantMutator struct {
 
 func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) (MutatorPromise, error) {
 	return &instancePromise{Err: m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
-		return ApplyMutation(kw, mut)
+		log.Printf("Instant mutation start: %s\n", proto.CompactTextString(mut))
+		rv := ApplyMutation(kw, mut)
+		log.Printf("Instant mutation end: %s\n", rv)
+		return rv
 	})}, nil
 }
 

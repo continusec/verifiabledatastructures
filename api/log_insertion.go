@@ -133,7 +133,7 @@ func applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
 		if err != nil {
 			return err
 		}
-		mrh, err := setMapValue(db, mapForMutationLog(req.Log), mutLogHead.TreeSize, &mut)
+		mrh, err := setMapValue(db, mapForMutationLog(req.Log), mutLogHead.TreeSize-1, &mut)
 		if err != nil {
 			return err
 		}

@@ -102,7 +102,7 @@ func isLeaf(mn *pb.MapNode) bool {
 
 func calcNodeHash(mn *pb.MapNode, depth uint) ([]byte, error) {
 	if isLeaf(mn) {
-		if depth+uint(len(mn.RemainingPath)) != 256 {
+		if depth+BPath(mn.RemainingPath).Length() != 256 {
 			return nil, ErrLogUnsafeForAccess
 		}
 		rv := mn.LeafHash

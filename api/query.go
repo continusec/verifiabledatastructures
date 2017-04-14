@@ -173,9 +173,9 @@ func writeMapHash(kr KeyWriter, number int64, path []byte, data *pb.MapNode) err
 	return kr.Set(mapNodeBucket, append(toIntBinary(uint64(number)), path...), data)
 }
 
-func lookupMapHash(kr KeyReader, number int64, path []byte) (*pb.MapNode, error) {
+func lookupMapHash(kr KeyReader, number int64, path BPath) (*pb.MapNode, error) {
 	// Special case 0
-	if number == 0 && len(path) == 0 {
+	if number == 0 && path.Length() == 0 {
 		return &pb.MapNode{}, nil
 	}
 	var m pb.MapNode

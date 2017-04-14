@@ -19,6 +19,8 @@ limitations under the License.
 package api
 
 import (
+	"log"
+
 	"golang.org/x/net/context"
 
 	"github.com/continusec/verifiabledatastructures/pb"
@@ -29,8 +31,6 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 	if err != nil {
 		return nil, err
 	}
-
-	return nil, ErrNotImplemented
 
 	if req.TreeSize < 0 {
 		return nil, ErrInvalidTreeRange
@@ -56,7 +56,8 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			return ErrInvalidTreeRange
 		}
 
-		root, err := lookupMapHash(kr, treeSize, emptyPath)
+		root, err := lookupMapHash(kr, treeSize, BPathEmpty)
+
 		if err != nil {
 			return err
 		}
@@ -76,9 +77,17 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			}
 		}
 
-		dataRv, err := lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
-		if err != nil {
-			return err
+		var dataRv *pb.LeafData
+		// Check value is actually us, else we need to manufacture a proof
+		if mapNodeRemainingMatches(cur, kp) {
+			dataRv, err = lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
+			if err != nil {
+				return err
+			}
+		} else {
+			dataRv = &pb.LeafData{} // empty value suffices
+			log.Println("We need to manufacture a proof for a missing value")
+			return ErrNotImplemented
 		}
 
 		rv = &pb.MapGetValueResponse{

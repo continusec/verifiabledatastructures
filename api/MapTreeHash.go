@@ -30,8 +30,6 @@ func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashReque
 		return nil, err
 	}
 
-	return nil, ErrNotImplemented
-
 	if req.TreeSize < 0 {
 		return nil, ErrInvalidTreeRange
 	}
@@ -63,7 +61,7 @@ func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashReque
 		}
 
 		// Get the root node for tree size
-		mapNode, err := lookupMapHash(kr, treeSize, emptyPath)
+		mapNode, err := lookupMapHash(kr, treeSize, BPathEmpty)
 		if err != nil {
 			return err
 		}

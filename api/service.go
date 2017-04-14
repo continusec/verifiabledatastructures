@@ -18,12 +18,7 @@ limitations under the License.
 
 package api
 
-import (
-	"log"
-
-	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/golang/protobuf/proto"
-)
+import "github.com/continusec/verifiabledatastructures/pb"
 
 type LocalService struct {
 	Mutator      MutatorService // if nil, we send to ourself which simply applies instantly, blocking until return
@@ -32,7 +27,6 @@ type LocalService struct {
 }
 
 func ApplyMutation(db KeyWriter, mut *pb.Mutation) error {
-	log.Printf("Mutation: %s\n", proto.CompactTextString(mut))
 	switch {
 	case mut.LogAddEntry != nil:
 		return applyLogAddEntry(db, mut.LogAddEntry)
