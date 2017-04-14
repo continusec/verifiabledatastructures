@@ -70,7 +70,13 @@ func (self *HTTPRESTClient) makeRequest(account *pb.AccountRef, method, path str
 	for _, h := range headers {
 		req.Header.Set(h[0], h[1])
 	}
-	resp, err := self.HttpClient.Do(req)
+
+	httpC := self.HttpClient
+	if httpC == nil {
+		httpC = http.DefaultClient
+	}
+
+	resp, err := httpC.Do(req)
 	if err != nil {
 		return nil, nil, err
 	}

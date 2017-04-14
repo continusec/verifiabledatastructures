@@ -23,11 +23,13 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/continusec/verifiabledatastructures/api"
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/kvstore"
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/server"
 	"golang.org/x/net/context"
 )
 
@@ -46,8 +48,10 @@ func (f *DummyTester) Error(args ...interface{}) {
 	panic("aaeerrgghh!!")
 }
 
-func testMap(t *testing.T, cli *client.VerifiableDataStructuresClient) {
-	account := cli.Account("999", "secret")
+func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
+	account := (&client.VerifiableDataStructuresClient{
+		Service: service,
+	}).Account("999", "secret")
 	vmap := account.VerifiableMap("testmap")
 	numToDo := 1000
 
@@ -92,8 +96,10 @@ func testMap(t *testing.T, cli *client.VerifiableDataStructuresClient) {
 	}
 }
 
-func testLog(t *testing.T, cli *client.VerifiableDataStructuresClient) {
-	account := cli.Account("999", "secret")
+func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
+	account := (&client.VerifiableDataStructuresClient{
+		Service: service,
+	}).Account("999", "secret")
 	log := account.VerifiableLog("smoketest")
 
 	treeRoot, err := log.TreeHead(0)
@@ -235,7 +241,7 @@ func testLog(t *testing.T, cli *client.VerifiableDataStructuresClient) {
 	}
 }
 
-func TestFullIntegration(t *testing.T) {
+func TestWithHTTPServerAndClient(t *testing.T) {
 	db := &kvstore.TransientHashMapStorage{}
 	service := &api.LocalService{
 		AccessPolicy: &api.StaticOracle{},
@@ -245,21 +251,60 @@ func TestFullIntegration(t *testing.T) {
 		Reader: db,
 	}
 
-	client := &client.VerifiableDataStructuresClient{
-		Service: service,
-	}
-	testMap(t, client)
-	testLog(t, client)
-
-	/*go server.StartRESTServer(&pb.ServerConfig{
+	go server.StartRESTServer(&pb.ServerConfig{
 		InsecureServerForTesting: true,
 		RestListenBind:           ":8092",
-		RestServer:               true,
 	}, service)
 	time.Sleep(time.Millisecond * 50) // let the server startup...
 
-	testMap(t, "http://localhost:8092")
-	testLog(t, "http://localhost:8092")*/
+	client := &client.HTTPRESTClient{
+		BaseUrl: "http://localhost:8092/v1",
+	}
+
+	testLog(t, client)
+	testMap(t, client)
+}
+
+func TestWithGRPCerverAndClient(t *testing.T) {
+	db := &kvstore.TransientHashMapStorage{}
+	service := &api.LocalService{
+		AccessPolicy: &api.StaticOracle{},
+		Mutator: &api.InstantMutator{
+			Writer: db,
+		},
+		Reader: db,
+	}
+
+	go server.StartGRPCServer(&pb.ServerConfig{
+		InsecureServerForTesting: true,
+		GrpcListenBind:           ":8081",
+		GrpcListenProtocol:       "tcp4",
+	}, service)
+	time.Sleep(time.Millisecond * 50) // let the server startup...
+
+	cli, err := (&client.GRPCClientConfig{
+		Address:        "localhost:8081",
+		NoGrpcSecurity: true,
+	}).Dial()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testLog(t, cli)
+	testMap(t, cli)
+}
+
+func TestWithoutServers(t *testing.T) {
+	db := &kvstore.TransientHashMapStorage{}
+	service := &api.LocalService{
+		AccessPolicy: &api.StaticOracle{},
+		Mutator: &api.InstantMutator{
+			Writer: db,
+		},
+		Reader: db,
+	}
+	testMap(t, service)
+	testLog(t, service)
 }
 
 // GenerateRootHashes is a utility function that emits a channel of root hashes
