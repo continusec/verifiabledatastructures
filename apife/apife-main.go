@@ -28,8 +28,8 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/continusec/objecthash"
-	"github.com/continusec/verifiabledatastructures"
 	"github.com/continusec/verifiabledatastructures/api"
+	"github.com/continusec/verifiabledatastructures/assets"
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
 
@@ -163,7 +163,7 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 
 func staticHandler(mime, name string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data, err := verifiabledatastructures.Asset("www/" + name)
+		data, err := assets.Asset("www/" + name)
 		if err != nil {
 			writeResponseHeader(w, err)
 			return

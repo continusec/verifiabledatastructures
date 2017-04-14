@@ -16,27 +16,23 @@ limitations under the License.
 
 */
 
-package api
+package server
 
 import (
 	"log"
+	"net/http"
 
+	"github.com/continusec/verifiabledatastructures/apife"
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/golang/protobuf/proto"
 )
 
-type LocalService struct {
-	Mutator      MutatorService // if nil, we send to ourself which simply applies instantly, blocking until return
-	AccessPolicy AuthorizationOracle
-	Reader       StorageReader
-}
-
-func ApplyMutation(db KeyWriter, mut *pb.Mutation) error {
-	log.Printf("Mutation: %s\n", proto.CompactTextString(mut))
-	switch {
-	case mut.LogAddEntry != nil:
-		return applyLogAddEntry(db, mut.LogAddEntry)
-	default:
-		return ErrNotImplemented
+func StartRESTServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) error {
+	if conf.InsecureServerForTesting {
+		log.Println("WARNING: InsecureServerForTesting is set, your connections will not be encrypted")
 	}
+	log.Printf("Listening REST on %s...", conf.RestListenBind)
+	if conf.InsecureServerForTesting {
+		return http.ListenAndServe(conf.RestListenBind, apife.CreateRESTHandler(server))
+	}
+	return http.ListenAndServeTLS(conf.RestListenBind, conf.ServerCertPath, conf.ServerKeyPath, apife.CreateRESTHandler(server))
 }

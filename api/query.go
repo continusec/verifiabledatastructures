@@ -73,11 +73,11 @@ var (
 
 // Start pair
 
-func (l *LocalService) writeDataByLeafHash(kr KeyWriter, lt pb.LogType, lh []byte, data *pb.LeafData) error {
+func writeDataByLeafHash(kr KeyWriter, lt pb.LogType, lh []byte, data *pb.LeafData) error {
 	return kr.Set(buckets[dataByLeafHash][lt], lh, data)
 }
 
-func (l *LocalService) lookupDataByLeafHash(kr KeyReader, lt pb.LogType, lh []byte) (*pb.LeafData, error) {
+func lookupDataByLeafHash(kr KeyReader, lt pb.LogType, lh []byte) (*pb.LeafData, error) {
 	var m pb.LeafData
 	err := kr.Get(buckets[dataByLeafHash][lt], lh, &m)
 	if err != nil {
@@ -88,11 +88,11 @@ func (l *LocalService) lookupDataByLeafHash(kr KeyReader, lt pb.LogType, lh []by
 
 // Start pair
 
-func (l *LocalService) writeLeafNodeByIndex(kr KeyWriter, lt pb.LogType, idx int64, data *pb.LeafNode) error {
+func writeLeafNodeByIndex(kr KeyWriter, lt pb.LogType, idx int64, data *pb.LeafNode) error {
 	return kr.Set(buckets[leafNodeByIndex][lt], toIntBinary(uint64(idx)), data)
 }
 
-func (l *LocalService) lookupLeafNodeByIndex(kr KeyReader, lt pb.LogType, idx int64) (*pb.LeafNode, error) {
+func lookupLeafNodeByIndex(kr KeyReader, lt pb.LogType, idx int64) (*pb.LeafNode, error) {
 	var m pb.LeafNode
 	err := kr.Get(buckets[leafNodeByIndex][lt], toIntBinary(uint64(idx)), &m)
 	if err != nil {
@@ -103,11 +103,11 @@ func (l *LocalService) lookupLeafNodeByIndex(kr KeyReader, lt pb.LogType, idx in
 
 // Start pair
 
-func (l *LocalService) writeTreeNodeByRange(kr KeyWriter, lt pb.LogType, a, b int64, data *pb.TreeNode) error {
+func writeTreeNodeByRange(kr KeyWriter, lt pb.LogType, a, b int64, data *pb.TreeNode) error {
 	return kr.Set(buckets[treeNodeByRange][lt], toDoubleIntBinary(uint64(a), uint64(b)), data)
 }
 
-func (l *LocalService) lookupTreeNodeByRange(kr KeyReader, lt pb.LogType, a, b int64) (*pb.TreeNode, error) {
+func lookupTreeNodeByRange(kr KeyReader, lt pb.LogType, a, b int64) (*pb.TreeNode, error) {
 	var m pb.TreeNode
 	err := kr.Get(buckets[treeNodeByRange][lt], toDoubleIntBinary(uint64(a), uint64(b)), &m)
 	if err != nil {
@@ -118,12 +118,12 @@ func (l *LocalService) lookupTreeNodeByRange(kr KeyReader, lt pb.LogType, a, b i
 
 // Start pair
 
-func (l *LocalService) writeLogRootHashBySize(kr KeyWriter, lt pb.LogType, size int64, data *pb.LogTreeHash) error {
+func writeLogRootHashBySize(kr KeyWriter, lt pb.LogType, size int64, data *pb.LogTreeHash) error {
 	return kr.Set(buckets[rootHashBySize][lt], toIntBinary(uint64(size)), data)
 }
 
 // size must be > 0
-func (l *LocalService) lookupLogRootHashBySize(kr KeyReader, lt pb.LogType, size int64) (*pb.LogTreeHash, error) {
+func lookupLogRootHashBySize(kr KeyReader, lt pb.LogType, size int64) (*pb.LogTreeHash, error) {
 	var m pb.LogTreeHash
 	err := kr.Get(buckets[rootHashBySize][lt], toIntBinary(uint64(size)), &m)
 	if err != nil {
@@ -134,11 +134,11 @@ func (l *LocalService) lookupLogRootHashBySize(kr KeyReader, lt pb.LogType, size
 
 // Start pair
 
-func (l *LocalService) writeIndexByLeafHash(kr KeyWriter, lt pb.LogType, lh []byte, data *pb.EntryIndex) error {
+func writeIndexByLeafHash(kr KeyWriter, lt pb.LogType, lh []byte, data *pb.EntryIndex) error {
 	return kr.Set(buckets[indexByLeafHash][lt], lh, data)
 }
 
-func (l *LocalService) lookupIndexByLeafHash(kr KeyReader, lt pb.LogType, lh []byte) (*pb.EntryIndex, error) {
+func lookupIndexByLeafHash(kr KeyReader, lt pb.LogType, lh []byte) (*pb.EntryIndex, error) {
 	var m pb.EntryIndex
 	err := kr.Get(buckets[indexByLeafHash][lt], lh, &m)
 	if err != nil {
@@ -149,11 +149,11 @@ func (l *LocalService) lookupIndexByLeafHash(kr KeyReader, lt pb.LogType, lh []b
 
 // Start pair
 
-func (l *LocalService) writeLogTreeHead(kr KeyWriter, lt pb.LogType, data *pb.LogTreeHashResponse) error {
+func writeLogTreeHead(kr KeyWriter, lt pb.LogType, data *pb.LogTreeHashResponse) error {
 	return kr.Set(buckets[metadata][lt], headKey, data)
 }
 
-func (l *LocalService) lookupLogTreeHead(kr KeyReader, lt pb.LogType) (*pb.LogTreeHashResponse, error) {
+func lookupLogTreeHead(kr KeyReader, lt pb.LogType) (*pb.LogTreeHashResponse, error) {
 	var lth pb.LogTreeHashResponse
 	err := kr.Get(buckets[metadata][lt], headKey, &lth)
 	switch err {
@@ -169,11 +169,11 @@ func (l *LocalService) lookupLogTreeHead(kr KeyReader, lt pb.LogType) (*pb.LogTr
 
 // Start pair
 
-func (l *LocalService) writeMapHash(kr KeyWriter, number int64, path []byte, data *pb.MapNode) error {
+func writeMapHash(kr KeyWriter, number int64, path []byte, data *pb.MapNode) error {
 	return kr.Set(mapNodeBucket, append(toIntBinary(uint64(number)), path...), data)
 }
 
-func (l *LocalService) lookupMapHash(kr KeyReader, number int64, path []byte) (*pb.MapNode, error) {
+func lookupMapHash(kr KeyReader, number int64, path []byte) (*pb.MapNode, error) {
 	// Special case 0
 	if number == 0 && len(path) == 0 {
 		return &pb.MapNode{}, nil
@@ -188,10 +188,10 @@ func (l *LocalService) lookupMapHash(kr KeyReader, number int64, path []byte) (*
 
 // End pairs
 
-func (l *LocalService) lookupLogEntryHashes(kr KeyReader, lt pb.LogType, first, last int64) ([][]byte, error) {
+func lookupLogEntryHashes(kr KeyReader, lt pb.LogType, first, last int64) ([][]byte, error) {
 	rv := make([][]byte, last-first)
 	for i := first; i < last; i++ { // if we add a range / scan operation to KeyReader, this could be quicker
-		x, err := l.lookupLeafNodeByIndex(kr, lt, i)
+		x, err := lookupLeafNodeByIndex(kr, lt, i)
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +220,7 @@ func toDoubleIntBinary(i, j uint64) []byte {
 	return rv
 }
 
-func (l *LocalService) logBucket(log *pb.LogRef) ([]byte, error) {
+func logBucket(log *pb.LogRef) ([]byte, error) {
 	if log.LogType == pb.LogType_STRUCT_TYPE_LOG {
 		return objecthash.ObjectHash(map[string]interface{}{
 			"account": log.Account.Id,
@@ -236,7 +236,7 @@ func (l *LocalService) logBucket(log *pb.LogRef) ([]byte, error) {
 	})
 }
 
-func (l *LocalService) mapBucket(vmap *pb.MapRef) ([]byte, error) {
+func mapBucket(vmap *pb.MapRef) ([]byte, error) {
 	return objecthash.ObjectHash(map[string]interface{}{
 		"account": vmap.Account.Id,
 		"name":    vmap.Name,

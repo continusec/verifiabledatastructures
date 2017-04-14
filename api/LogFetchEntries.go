@@ -35,12 +35,12 @@ func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntr
 	}
 
 	var rv *pb.LogFetchEntriesResponse
-	ns, err := s.logBucket(req.Log)
+	ns, err := logBucket(req.Log)
 	if err != nil {
 		return nil, ErrInvalidRequest
 	}
 	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
-		head, err := s.lookupLogTreeHead(kr, req.Log.LogType)
+		head, err := lookupLogTreeHead(kr, req.Log.LogType)
 		if err != nil {
 			return err
 		}
@@ -57,14 +57,14 @@ func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntr
 			return ErrInvalidTreeRange
 		}
 
-		hashes, err := s.lookupLogEntryHashes(kr, req.Log.LogType, req.First, last)
+		hashes, err := lookupLogEntryHashes(kr, req.Log.LogType, req.First, last)
 		if err != nil {
 			return err
 		}
 
 		vals := make([]*pb.LeafData, len(hashes))
 		for i, h := range hashes {
-			vals[i], err = s.lookupDataByLeafHash(kr, req.Log.LogType, h)
+			vals[i], err = lookupDataByLeafHash(kr, req.Log.LogType, h)
 			if err != nil {
 				return err
 			}

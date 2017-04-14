@@ -20,6 +20,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
@@ -28,6 +29,139 @@ import (
 var (
 	nullLeafHash = client.LeafMerkleTreeHash([]byte{})
 )
+
+func writeOutLogTreeNodes(db KeyWriter, log *pb.LogRef, entryIndex int64, mtl []byte, stack [][]byte) ([]byte, error) {
+	stack = append(stack, mtl)
+	for zz, width := entryIndex, int64(2); (zz & 1) == 1; zz, width = zz>>1, width<<1 {
+		parN := client.NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1])
+		stack = append(stack[:len(stack)-2], parN)
+		err := writeTreeNodeByRange(db, log.LogType, entryIndex+1-width, entryIndex+1, &pb.TreeNode{Mth: parN})
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Collapse stack to get tree head
+	headHash := stack[len(stack)-1]
+	for z := len(stack) - 2; z >= 0; z-- {
+		headHash = client.NodeMerkleTreeHash(stack[z], headHash)
+	}
+	return headHash, nil
+}
+
+// return nil, nil if already exists
+func addEntryToLog(db KeyWriter, log *pb.LogRef, data *pb.LeafData) (*pb.LogTreeHashResponse, error) {
+	// First, calc our hash
+	mtl := client.LeafMerkleTreeHash(data.LeafInput)
+
+	// Now, see if we already have it stored
+	_, err := lookupIndexByLeafHash(db, log.LogType, mtl)
+	switch err {
+	case nil:
+		// we already have it
+		return nil, nil
+	case ErrNoSuchKey:
+		// good, continue
+	default:
+		return nil, err
+	}
+
+	ltr, err := lookupLogTreeHead(db, log.LogType)
+	if err != nil {
+		return nil, err
+	}
+
+	// First write the data
+	err = writeDataByLeafHash(db, log.LogType, mtl, data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Then write us at the index
+	err = writeLeafNodeByIndex(db, log.LogType, ltr.TreeSize, &pb.LeafNode{Mth: mtl})
+	if err != nil {
+		return nil, err
+	}
+
+	// And our index by leaf hash
+	err = writeIndexByLeafHash(db, log.LogType, mtl, &pb.EntryIndex{Index: ltr.TreeSize})
+	if err != nil {
+		return nil, err
+	}
+
+	// Write out needed hashes
+	stack, err := fetchSubTreeHashes(db, log.LogType, createNeededStack(ltr.TreeSize), true)
+	if err != nil {
+		return nil, err
+	}
+	rootHash, err := writeOutLogTreeNodes(db, log, ltr.TreeSize, mtl, stack)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write log root hash
+	err = writeLogRootHashBySize(db, log.LogType, ltr.TreeSize+1, &pb.LogTreeHash{Mth: rootHash})
+	if err != nil {
+		return nil, err
+	}
+
+	// Update head
+	rv := &pb.LogTreeHashResponse{
+		RootHash: rootHash,
+		TreeSize: ltr.TreeSize + 1,
+	}
+	err = writeLogTreeHead(db, log.LogType, rv)
+	if err != nil {
+		return nil, err
+	}
+
+	// Done!
+	return rv, nil
+}
+
+func applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
+	// Step 1 - add entry to log as request
+	mutLogHead, err := addEntryToLog(db, req.Log, req.Data)
+	if err != nil {
+		return err
+	}
+
+	// Was it already in the log? If so, we were called in error so quit early
+	if mutLogHead == nil {
+		return nil
+	}
+
+	// Special case mutation log for maps
+	if req.Log.LogType == pb.LogType_STRUCT_TYPE_MUTATION_LOG {
+		// Step 2 - add entries to map if needed
+		var mut client.JSONMapMutationEntry
+		err = json.Unmarshal(req.Data.ExtraData, &mut)
+		if err != nil {
+			return err
+		}
+		mrh, err := setMapValue(db, mapForMutationLog(req.Log), mutLogHead.TreeSize, &mut)
+		if err != nil {
+			return err
+		}
+
+		// Step 3 - add entries to treehead log if neeed
+		thld, err := jsonObjectHash(&client.JSONMapTreeHeadResponse{
+			MapHash: mrh,
+			LogTreeHead: &client.JSONLogTreeHeadResponse{
+				Hash:     mutLogHead.RootHash,
+				TreeSize: mutLogHead.TreeSize,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		_, err = addEntryToLog(db, treeHeadLogForMutationLog(req.Log), thld)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 // prevLeafHash must never be nil, it will often be nullLeafHash though
 // Never returns nil (except on err), always returns nullLeafHash instead
@@ -48,7 +182,7 @@ func mutationLeafHash(mut *client.JSONMapMutationEntry, prevLeafHash []byte) ([]
 }
 
 // returns root followed by list of map nodes, not including head which is returned separately, as far as we can descend and match
-func (s *LocalService) descendToFork(db KeyReader, path BPath, root *pb.MapNode) (*pb.MapNode, []*pb.MapNode, error) {
+func descendToFork(db KeyReader, path BPath, root *pb.MapNode) (*pb.MapNode, []*pb.MapNode, error) {
 	rv := make([]*pb.MapNode, 0)
 	head := root
 	depth := uint(0)
@@ -58,13 +192,13 @@ func (s *LocalService) descendToFork(db KeyReader, path BPath, root *pb.MapNode)
 			if head.RightNumber == 0 {
 				return head, rv, nil
 			}
-			head, err = s.lookupMapHash(db, head.RightNumber, path.Slice(0, depth+1))
+			head, err = lookupMapHash(db, head.RightNumber, path.Slice(0, depth+1))
 
 		} else { //left
 			if head.LeftNumber == 0 {
 				return head, rv, nil
 			}
-			head, err = s.lookupMapHash(db, head.LeftNumber, path.Slice(0, depth+1))
+			head, err = lookupMapHash(db, head.LeftNumber, path.Slice(0, depth+1))
 		}
 		if err != nil {
 			return nil, nil, err
@@ -83,7 +217,7 @@ func mapNodeRemainingMatches(n *pb.MapNode, kp BPath) bool {
 	return bytes.Equal(kp.Slice(l-BPath(n.RemainingPath).Length(), l), n.RemainingPath)
 }
 
-func (s *LocalService) writeAncestors(db KeyWriter, last *vMapNode, ancestors []*pb.MapNode, keyPath BPath, mutationIndex int64) ([]byte, error) {
+func writeAncestors(db KeyWriter, last *vMapNode, ancestors []*pb.MapNode, keyPath BPath, mutationIndex int64) ([]byte, error) {
 	// Write out ancestor chain
 	curHash := last.calcNodeHash(uint(len(ancestors)))
 	for i := len(ancestors) - 1; i >= 0; i-- {
@@ -102,7 +236,7 @@ func (s *LocalService) writeAncestors(db KeyWriter, last *vMapNode, ancestors []
 				RightHash:   ancestors[i].RightHash,
 			})
 		}
-		err := s.writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(i)), (*pb.MapNode)(last))
+		err := writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(i)), (*pb.MapNode)(last))
 		if err != nil {
 			return nil, err
 		}
@@ -113,9 +247,9 @@ func (s *LocalService) writeAncestors(db KeyWriter, last *vMapNode, ancestors []
 
 }
 
-func (s *LocalService) setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client.JSONMapMutationEntry) ([]byte, error) {
+func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client.JSONMapMutationEntry) ([]byte, error) {
 	// Get the root node for tree size, will never be nil
-	root, err := s.lookupMapHash(db, mutationIndex, nil)
+	root, err := lookupMapHash(db, mutationIndex, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +257,7 @@ func (s *LocalService) setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex 
 	keyPath := BPathFromKey(mut.Key)
 
 	// First, set head to as far down as we can go
-	head, ancestors, err := s.descendToFork(db, keyPath, root)
+	head, ancestors, err := descendToFork(db, keyPath, root)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +278,7 @@ func (s *LocalService) setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex 
 	// Can we short-circuit since nothing changed?
 	if bytes.Equal(prevLeafHash, nextLeafHash) {
 		// Then we just need to re-write root with new sequence numbers
-		err = s.writeMapHash(db, mutationIndex+1, nil, root)
+		err = writeMapHash(db, mutationIndex+1, nil, root)
 		if err != nil {
 			return nil, err
 		}
@@ -158,11 +292,11 @@ func (s *LocalService) setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex 
 			RemainingPath: head.RemainingPath,
 		})
 		last.setLeftRightForData()
-		err = s.writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), (*pb.MapNode)(last))
+		err = writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), (*pb.MapNode)(last))
 		if err != nil {
 			return nil, err
 		}
-		return s.writeAncestors(db, last, ancestors, keyPath, mutationIndex)
+		return writeAncestors(db, last, ancestors, keyPath, mutationIndex)
 	}
 
 	/*

@@ -21,67 +21,14 @@ package main
 import (
 	"io/ioutil"
 	"log"
-	"net"
-	"net/http"
 	"os"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"github.com/continusec/verifiabledatastructures/api"
-	"github.com/continusec/verifiabledatastructures/apife"
 	"github.com/continusec/verifiabledatastructures/kvstore"
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/server"
 	"github.com/golang/protobuf/proto"
 )
-
-func startGRPCServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) {
-	lis, err := net.Listen(conf.GrpcListenProtocol, conf.GrpcListenBind)
-	if err != nil {
-		log.Fatalf("Error establishing server listener: %s\n", err)
-	}
-	var grpcServer *grpc.Server
-	if conf.InsecureServerForTesting {
-		log.Println("WARNING: InsecureServerForTesting is set, your connections will not be encrypted")
-		grpcServer = grpc.NewServer()
-	} else {
-		tc, err := credentials.NewServerTLSFromFile(conf.ServerCertPath, conf.ServerKeyPath)
-		if err != nil {
-			log.Fatalf("Error reading server keys/certs: %s\n", err)
-		}
-		grpcServer = grpc.NewServer(grpc.Creds(tc))
-	}
-
-	pb.RegisterVerifiableDataStructuresServiceServer(grpcServer, server)
-
-	log.Printf("Listening grpc on %s...", conf.GrpcListenBind)
-
-	grpcServer.Serve(lis)
-}
-
-func startRESTServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) error {
-	if conf.InsecureServerForTesting {
-		log.Println("WARNING: InsecureServerForTesting is set, your connections will not be encrypted")
-	}
-	log.Printf("Listening REST on %s...", conf.RestListenBind)
-	if conf.InsecureServerForTesting {
-		return http.ListenAndServe(conf.RestListenBind, apife.CreateRESTHandler(server))
-	}
-	return http.ListenAndServeTLS(conf.RestListenBind, conf.ServerCertPath, conf.ServerKeyPath, apife.CreateRESTHandler(server))
-}
-
-func startServers(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) {
-	if conf.GrpcServer {
-		go startGRPCServer(conf, server)
-	}
-	if conf.RestServer {
-		go startRESTServer(conf, server)
-	}
-}
-
-func waitForever() {
-	select {}
-}
 
 func main() {
 	if len(os.Args) != 2 {
@@ -102,16 +49,21 @@ func main() {
 	db := &kvstore.BoltBackedService{
 		Path: conf.BoltDbPath,
 	}
-	mutator := &api.InstantMutator{
-		Writer: db,
-	}
 	service := &api.LocalService{
-		AccessPolicy: &api.StaticOracle{Config: conf.Accounts},
-		Mutator:      mutator,
-		Reader:       db,
+		AccessPolicy: &api.StaticOracle{
+			Config: conf.Accounts,
+		},
+		Mutator: &api.InstantMutator{
+			Writer: db,
+		},
+		Reader: db,
 	}
-	mutator.Service = service
 
-	startServers(conf, service)
-	waitForever()
+	if conf.GrpcServer {
+		go server.StartGRPCServer(conf, service)
+	}
+	if conf.RestServer {
+		go server.StartRESTServer(conf, service)
+	}
+	select {} // wait forever
 }

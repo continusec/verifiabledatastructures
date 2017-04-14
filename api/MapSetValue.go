@@ -97,7 +97,7 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 		return nil, err
 	}
 
-	ns, err := s.mapBucket(req.Map)
+	ns, err := mapBucket(req.Map)
 	if err != nil {
 		return nil, ErrInvalidRequest
 	}

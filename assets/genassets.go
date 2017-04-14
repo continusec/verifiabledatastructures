@@ -16,24 +16,17 @@ limitations under the License.
 
 */
 
-package api
+package assets
 
-import "github.com/continusec/verifiabledatastructures/pb"
+//go:generate go-bindata -pkg $GOPACKAGE -o assets.go ../www/
 
-type InstantMutator struct {
-	Writer StorageWriter
-}
+/*
+    Needs:
+	go get -u github.com/jteeuwen/go-bindata/...
 
-func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) (MutatorPromise, error) {
-	return &instancePromise{Err: m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
-		return ApplyMutation(kw, mut)
-	})}, nil
-}
+	Just run:
 
-type instancePromise struct {
-	Err error
-}
+	go generate
 
-func (i *instancePromise) WaitUntilDone() error {
-	return i.Err
-}
+	in this directory to generate the static aassetss.
+*/

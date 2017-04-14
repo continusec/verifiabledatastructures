@@ -44,10 +44,6 @@ type MutatorService interface {
 	QueueMutation(namespace []byte, mut *pb.Mutation) (MutatorPromise, error)
 }
 
-type MutatorApplier interface {
-	ApplyMutation(db KeyWriter, mut *pb.Mutation) error
-}
-
 type MutatorPromise interface {
 	WaitUntilDone() error
 }
