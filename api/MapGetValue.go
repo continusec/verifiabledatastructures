@@ -19,11 +19,8 @@ limitations under the License.
 package api
 
 import (
-	"bytes"
-
 	"golang.org/x/net/context"
 
-	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
@@ -59,65 +56,33 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			return ErrInvalidTreeRange
 		}
 
-		prv := [256][]byte{}
-		var dataRv *pb.LeafData
-		cur, err := lookupMapHash(kr, treeSize, nil)
+		root, err := lookupMapHash(kr, treeSize, emptyPath)
 		if err != nil {
 			return err
 		}
 
 		kp := BPathFromKey(req.Key)
-		ptr := uint(0)
-		for i := uint(0); i < kp.Length(); i++ {
-			var nnum int64
-			if kp.At(i) { // right
-				prv[i] = cur.LeftHash
-				nnum = cur.RightNumber
+		cur, ancestors, err := descendToFork(kr, kp, root)
+		if err != nil {
+			return err
+		}
+
+		proof := make([][]byte, len(ancestors))
+		for i := 0; i < len(ancestors); i++ {
+			if kp.At(uint(i)) { // right
+				proof[i] = ancestors[i].LeftHash
 			} else {
-				prv[i] = cur.RightHash
-				nnum = cur.LeftNumber
-			}
-			if nnum == 0 {
-				break
-			} else {
-				cur, err = lookupMapHash(kr, nnum, kp.Slice(0, i+1))
-				if err != nil {
-					return err
-				}
-				ptr++
+				proof[i] = ancestors[i].RightHash
 			}
 		}
 
-		hmm := BPathCommonPrefixLength(cur.RemainingPath, kp.Slice(ptr, kp.Length()))
-		if len(cur.LeafHash) != 0 && hmm == BPath(cur.RemainingPath).Length() {
-			// winner winner chicken dinner, no more work needed.
-			if bytes.Equal(cur.LeafHash, nullLeafHash) {
-				rv = nil
-			} else {
-				dataRv, err = lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
-				if err != nil {
-					return err
-				}
-			}
-		} else {
-			if hmm > 0 {
-				ptr += hmm
-				h := cur.LeafHash
-				if len(h) != 0 { // special case, root is empty node
-					for i, j := int(BPath(cur.RemainingPath).Length()-1), int(kp.Length()); j >= int(ptr+2); i, j = i-1, j-1 {
-						if BPath(cur.RemainingPath).At(uint(i)) {
-							h = client.NodeMerkleTreeHash(defaultLeafValues[j], h)
-						} else {
-							h = client.NodeMerkleTreeHash(h, defaultLeafValues[j])
-						}
-					}
-					prv[ptr] = h
-				}
-			}
+		dataRv, err := lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
+		if err != nil {
+			return err
 		}
 
 		rv = &pb.MapGetValueResponse{
-			AuditPath: prv[:],
+			AuditPath: proof,
 			TreeSize:  treeSize,
 			Value:     dataRv,
 		}

@@ -63,13 +63,18 @@ func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashReque
 		}
 
 		// Get the root node for tree size
-		mapNode, err := lookupMapHash(kr, treeSize, nil)
+		mapNode, err := lookupMapHash(kr, treeSize, emptyPath)
+		if err != nil {
+			return err
+		}
+
+		rh, err := calcNodeHash(mapNode, 0)
 		if err != nil {
 			return err
 		}
 
 		rv = &pb.MapTreeHashResponse{
-			RootHash: (*vMapNode)(mapNode).calcNodeHash(0),
+			RootHash: rh,
 			MutationLog: &pb.LogTreeHashResponse{
 				RootHash: mutHead.Mth,
 				TreeSize: treeSize,

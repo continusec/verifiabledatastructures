@@ -27,6 +27,7 @@ import (
 
 var (
 	nullLeafHash = client.LeafMerkleTreeHash([]byte{})
+	emptyPath    = BPath([]byte{0})
 )
 
 // prevLeafHash must never be nil, it will often be nullLeafHash though
@@ -75,7 +76,7 @@ func descendToFork(db KeyReader, path BPath, root *pb.MapNode) (*pb.MapNode, []*
 }
 
 func mapNodeIsLeaf(n *pb.MapNode) bool {
-	return n.LeftNumber == 0 && n.RightNumber == 0
+	return len(n.LeafHash) != 0
 }
 
 func mapNodeRemainingMatches(n *pb.MapNode, kp BPath) bool {
@@ -83,30 +84,36 @@ func mapNodeRemainingMatches(n *pb.MapNode, kp BPath) bool {
 	return bytes.Equal(kp.Slice(l-BPath(n.RemainingPath).Length(), l), n.RemainingPath)
 }
 
-func writeAncestors(db KeyWriter, last *vMapNode, ancestors []*pb.MapNode, keyPath BPath, mutationIndex int64) ([]byte, error) {
+func writeAncestors(db KeyWriter, last *pb.MapNode, ancestors []*pb.MapNode, keyPath BPath, mutationIndex int64) ([]byte, error) {
 	// Write out ancestor chain
-	curHash := last.calcNodeHash(uint(len(ancestors)))
+	curHash, err := calcNodeHash(last, uint(len(ancestors)))
+	if err != nil {
+		return nil, err
+	}
 	for i := len(ancestors) - 1; i >= 0; i-- {
 		if keyPath.At(uint(i)) {
-			last = (*vMapNode)(&pb.MapNode{
+			last = &pb.MapNode{
 				LeftNumber:  ancestors[i].LeftNumber,
 				LeftHash:    ancestors[i].LeftHash,
 				RightNumber: mutationIndex + 1,
 				RightHash:   curHash,
-			})
+			}
 		} else {
-			last = (*vMapNode)(&pb.MapNode{
+			last = &pb.MapNode{
 				LeftNumber:  mutationIndex + 1,
 				LeftHash:    curHash,
 				RightNumber: ancestors[i].RightNumber,
 				RightHash:   ancestors[i].RightHash,
-			})
+			}
 		}
 		err := writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(i)), (*pb.MapNode)(last))
 		if err != nil {
 			return nil, err
 		}
-		curHash = last.calcNodeHash(uint(i))
+		curHash, err = calcNodeHash(last, uint(i))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return curHash, nil
@@ -115,7 +122,7 @@ func writeAncestors(db KeyWriter, last *vMapNode, ancestors []*pb.MapNode, keyPa
 
 func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client.JSONMapMutationEntry) ([]byte, error) {
 	// Get the root node for tree size, will never be nil
-	root, err := lookupMapHash(db, mutationIndex, nil)
+	root, err := lookupMapHash(db, mutationIndex, emptyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -148,17 +155,16 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 		if err != nil {
 			return nil, err
 		}
-		return (*vMapNode)(root).calcNodeHash(0), nil
+		return calcNodeHash(root, 0)
 	}
 
 	// OK, instead, is the leaf us exactly? If so, easy we just rewrite it.
 	if isMatch {
-		last := (*vMapNode)(&pb.MapNode{
+		last := &pb.MapNode{
 			LeafHash:      nextLeafHash,
 			RemainingPath: head.RemainingPath,
-		})
-		last.setLeftRightForData()
-		err = writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), (*pb.MapNode)(last))
+		}
+		err = writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), last)
 		if err != nil {
 			return nil, err
 		}

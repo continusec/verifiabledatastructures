@@ -94,52 +94,38 @@ func calcSubTreeHash(kr KeyReader, lt pb.LogType, start, end int64) ([]byte, err
 	return rv, nil
 }
 
-type vMapNode pb.MapNode
-
 var defaultLeafValues = client.GenerateMapDefaultLeafValues()
 
-func (mn *vMapNode) leftNodeHash(depth uint) []byte {
-	if len(mn.LeftHash) == 0 {
-		return defaultLeafValues[depth+1]
-	}
-	return mn.LeftHash
+func isLeaf(mn *pb.MapNode) bool {
+	return len(mn.LeafHash) != 0
 }
 
-func (mn *vMapNode) rightNodeHash(depth uint) []byte {
-	if len(mn.RightHash) == 0 {
-		return defaultLeafValues[depth+1]
-	}
-	return mn.RightHash
-}
-
-// if len(mn.Datahash) > 0, then set the appropriate non-default left or right hash based on the full path.
-// Otherwise, leave well alone.
-func (mn *vMapNode) setLeftRightForData() {
-	if len(mn.LeafHash) != 0 { // don't check nil, as datastore round trip sets an empty length bytearray instead
+func calcNodeHash(mn *pb.MapNode, depth uint) ([]byte, error) {
+	if isLeaf(mn) {
+		if depth+uint(len(mn.RemainingPath)) != 256 {
+			return nil, ErrLogUnsafeForAccess
+		}
 		rv := mn.LeafHash
-		var lastLeft, lastRight []byte
-		var leftDef, rightDef bool
 		for i, j := int(BPath(mn.RemainingPath).Length())-1, 256; i >= 0; i, j = i-1, j-1 {
 			if BPath(mn.RemainingPath).At(uint(i)) {
-				lastLeft, lastRight = defaultLeafValues[j], rv
-				leftDef, rightDef = true, false
+				rv = client.NodeMerkleTreeHash(defaultLeafValues[j], rv)
 			} else {
-				lastLeft, lastRight = rv, defaultLeafValues[j]
-				leftDef, rightDef = false, true
-			}
-			if i > 0 {
-				rv = client.NodeMerkleTreeHash(lastLeft, lastRight)
+				rv = client.NodeMerkleTreeHash(rv, defaultLeafValues[j])
 			}
 		}
-		if !leftDef {
-			mn.LeftHash = lastLeft
-		}
-		if !rightDef {
-			mn.RightHash = lastRight
-		}
+		return rv, nil
 	}
-}
 
-func (mn *vMapNode) calcNodeHash(depth uint) []byte {
-	return client.NodeMerkleTreeHash(mn.leftNodeHash(depth), mn.rightNodeHash(depth))
+	var leftHash, rightHash []byte
+	if mn.LeftNumber == 0 {
+		leftHash = defaultLeafValues[depth+1]
+	} else {
+		leftHash = mn.LeftHash
+	}
+	if mn.RightNumber == 0 {
+		rightHash = defaultLeafValues[depth+1]
+	} else {
+		rightHash = mn.RightHash
+	}
+	return client.NodeMerkleTreeHash(leftHash, rightHash), nil
 }
