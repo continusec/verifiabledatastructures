@@ -23,7 +23,9 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/golang/protobuf/proto"
 )
 
 func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
@@ -42,6 +44,9 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 		return nil, ErrInvalidRequest
 	}
 	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
+		kp := BPathFromKey(req.Key)
+		log.Println("PROOF KEY", kp.Str())
+
 		th, err := lookupLogTreeHead(kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
 		if err != nil {
 			return err
@@ -62,19 +67,20 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			return err
 		}
 
-		kp := BPathFromKey(req.Key)
 		cur, ancestors, err := descendToFork(kr, kp, root)
 		if err != nil {
 			return err
 		}
 
-		proof := make([][]byte, len(ancestors))
+		proof := make([][]byte, kp.Length())
+		ptr := uint(0)
 		for i := 0; i < len(ancestors); i++ {
 			if kp.At(uint(i)) { // right
 				proof[i] = ancestors[i].LeftHash
 			} else {
 				proof[i] = ancestors[i].RightHash
 			}
+			ptr++
 		}
 
 		var dataRv *pb.LeafData
@@ -85,9 +91,34 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 				return err
 			}
 		} else {
-			dataRv = &pb.LeafData{} // empty value suffices
-			log.Println("We need to manufacture a proof for a missing value")
 			return ErrNotImplemented
+			dataRv = &pb.LeafData{} // empty value suffices
+			hmm := BPathCommonPrefixLength(BPath(cur.RemainingPath), kp.Slice(kp.Length()-BPath(cur.RemainingPath).Length(), kp.Length()))
+			log.Println("EMPVAL", hmm, ptr)
+
+			if hmm == 0 {
+				log.Println("NOMATCHINES", hmm, ptr)
+
+				h, err := calcNodeHash(&pb.MapNode{
+					LeafHash:      cur.LeafHash,
+					RemainingPath: BPath(cur.RemainingPath).Slice(1, BPath(cur.RemainingPath).Length()),
+				}, ptr+1)
+				if err != nil {
+					return err
+				}
+				proof[ptr-1] = h
+			} else {
+				ptr += hmm
+				h := cur.LeafHash
+				for i, j := BPath(cur.RemainingPath).Length()-1, kp.Length(); j >= uint(ptr+2); i, j = i-1, j-1 {
+					if BPath(cur.RemainingPath).At(i) {
+						h = client.NodeMerkleTreeHash(defaultLeafValues[j], h)
+					} else {
+						h = client.NodeMerkleTreeHash(h, defaultLeafValues[j])
+					}
+				}
+				proof[ptr] = h
+			}
 		}
 
 		rv = &pb.MapGetValueResponse{
@@ -99,8 +130,11 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 	})
 
 	if err != nil {
+		log.Println("Error getting proof:", err.Error())
 		return nil, err
 	}
+
+	log.Println(proto.CompactTextString(rv))
 
 	return rv, nil
 }

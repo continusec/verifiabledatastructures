@@ -182,8 +182,6 @@ func writeMapHash(kr KeyWriter, number int64, path BPath, data *pb.MapNode) erro
 }
 
 func lookupMapHash(kr KeyReader, number int64, path BPath) (*pb.MapNode, error) {
-	log.Println("READ", number, path.Str())
-
 	// Special case 0
 	if number == 0 && path.Length() == 0 {
 		return &pb.MapNode{}, nil
@@ -193,6 +191,8 @@ func lookupMapHash(kr KeyReader, number int64, path BPath) (*pb.MapNode, error) 
 	if err != nil {
 		return nil, err
 	}
+	log.Println("READ", number, path.Str(), m.LeftNumber, m.RightNumber, m.LeafHash, BPath(m.RemainingPath).Str())
+
 	return &m, nil
 }
 

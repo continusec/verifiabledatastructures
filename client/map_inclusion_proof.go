@@ -16,7 +16,10 @@
 
 package client
 
-import "bytes"
+import (
+	"bytes"
+	"log"
+)
 
 // MapInclusionProof represents the response for getting an entry from a map. It contains both the value itself,
 // as well as an inclusion proof for how that value fits into the map root hash.
@@ -37,8 +40,12 @@ type MapInclusionProof struct {
 // Verify verifies an inclusion proof against a MapTreeHead
 func (self *MapInclusionProof) Verify(head *MapTreeHead) error {
 	if self.TreeSize != head.MutationLogTreeHead.TreeSize {
+		log.Println("reason1")
 		return ErrVerificationFailed
 	}
+
+	log.Printf("%+#v\n", self)
+	log.Printf("%+#v\n", self.Value)
 
 	kp := ConstructMapKeyPath(self.Key)
 	t, err := self.Value.LeafHash()
@@ -59,11 +66,13 @@ func (self *MapInclusionProof) Verify(head *MapTreeHead) error {
 	}
 
 	if !bytes.Equal(t, head.RootHash) {
+		log.Println("reason2", self.AuditPath)
 		return ErrVerificationFailed
 	}
 
 	// should not happen, but guarding anyway
 	if len(t) != 32 {
+		log.Println("reason3")
 		return ErrVerificationFailed
 	}
 

@@ -83,6 +83,21 @@ func testMap(t *testing.T, baseURL string) {
 			t.Fatal(string(dd))
 		}
 	}
+
+	// Make sure we don't break on non-existent entries
+	for i := 0; i < numToDo; i++ {
+		entry, err := client.MapVerifiedGet(vmap, []byte(fmt.Sprintf("baz%d", i)), ms, client.RawDataEntryFactory)
+		if err != nil {
+			t.Fatal(err)
+		}
+		dd, err := entry.Data()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(dd) != 0 {
+			t.Fatal(string(dd))
+		}
+	}
 }
 
 func testLog(t *testing.T, baseURL string) {
