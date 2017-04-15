@@ -281,14 +281,13 @@ func (f *mutationEntryFactory) Format() string {
 	// is included as raw bytes in the mutation entry.
 	if f.isSpecial() {
 		return "/xjson/mutation"
-	} else {
-		return "/xjson"
 	}
+	return "/xjson"
 }
 
 type auditState struct {
 	// Must be set
-	Map VerifiableMap
+	Map *VerifiableMap
 
 	// Current mutation log tree head
 	MutLogHead *LogTreeHead
