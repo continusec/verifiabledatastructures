@@ -44,7 +44,7 @@ func (self *MapInclusionProof) Verify(head *MapTreeHead) error {
 	t := LeafMerkleTreeHash(self.Value.GetLeafInput())
 	for i := len(kp) - 1; i >= 0; i-- {
 		p := self.AuditPath[i]
-		if p == nil {
+		if len(p) == 0 { // some transport layers change nil to zero length, so we handle either in the same way
 			p = defaultLeafValues[i+1]
 		}
 
