@@ -19,6 +19,8 @@ limitations under the License.
 package api
 
 import (
+	"bytes"
+
 	"golang.org/x/net/context"
 
 	"github.com/continusec/verifiabledatastructures/pb"
@@ -79,42 +81,36 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 		}
 
 		var dataRv *pb.LeafData
-		// Check value is actually us, else we need to manufacture a proof
-		if mapNodeRemainingMatches(cur, kp) {
-			dataRv, err = lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
-			if err != nil {
-				return err
+		if len(cur.LeafHash) == 0 { // we're a node
+			dataRv = &pb.LeafData{} // empty value
+			if kp.At(ptr) {         // right
+				proof[ptr] = cur.LeftHash
+			} else {
+				proof[ptr] = cur.RightHash
 			}
-		} else {
-			//return ErrNotImplemented
-			dataRv = &pb.LeafData{} // empty value suffices
+		} else { // we're a leaf
+			// Check value is actually us, else we need to manufacture a proof
+			if bytes.Equal(kp, cur.Path) {
+				dataRv, err = lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
+				if err != nil {
+					return err
+				}
+			} else {
+				dataRv = &pb.LeafData{} // empty value
 
-			// Add empty proof paths for common ancestors
-			for mapNodeIsLeaf(cur) && kp.At(ptr) == BPath(cur.Path).At(ptr) {
-				ptr++
-			}
+				// Add empty proof paths for common ancestors
+				for kp.At(ptr) == BPath(cur.Path).At(ptr) {
+					ptr++
+				}
 
-			// Now we create a new parent with two children, us and the previous node.
-			// Was the previous node a leaf? (if not, we can skip the sibling bit)
-			if isLeaf(cur) {
-				// Start with writing the sibling
+				// Add sibling hash
 				theirHash, err := calcNodeHash(cur, uint(ptr+1))
 				if err != nil {
 					return err
 				}
 				proof[ptr] = theirHash
-				ptr++
-			} else {
-				if kp.At(ptr) { // right
-					proof[ptr] = cur.LeftHash
-				} else {
-					proof[ptr] = cur.RightHash
-				}
-				ptr++ // slap another shrimp on the barbie, one of the above sides will get overwitten when we write out ancestors
 			}
-
 		}
-
 		rv = &pb.MapGetValueResponse{
 			AuditPath: proof,
 			TreeSize:  treeSize,

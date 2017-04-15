@@ -138,7 +138,7 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 
 	// Get previous value to determine if we're a no-op or not
 	var prevLeafHash []byte
-	isMatch := mapNodeRemainingMatches(head, keyPath)
+	isMatch := bytes.Equal(head.Path, keyPath)
 	if isMatch {
 		prevLeafHash = head.LeafHash
 	} else {
@@ -181,14 +181,16 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 		return writeAncestors(db, last, ancestors, keyPath, mutationIndex)
 	}
 
-	// Add stub nodes for common ancestors
-	for mapNodeIsLeaf(head) && keyPath.At(uint(len(ancestors))) == BPath(head.Path).At(uint(len(ancestors))) {
-		ancestors = append(ancestors, &pb.MapNode{}) // stub it in, we'll fill it later
-	}
+	if len(head.LeafHash) == 0 { // node
+		ancestors = append(ancestors, head) // slap another shrimp on the barbie, one of the above sides will get overwitten when we write out ancestors
+	} else { // leaf
+		// Add stub nodes for common ancestors
+		for keyPath.At(uint(len(ancestors))) == BPath(head.Path).At(uint(len(ancestors))) {
+			ancestors = append(ancestors, &pb.MapNode{}) // stub it in, we'll fill it later
+		}
 
-	// Now we create a new parent with two children, us and the previous node.
-	// Was the previous node a leaf? (if not, we can skip the sibling bit)
-	if isLeaf(head) {
+		// Now we create a new parent with two children, us and the previous node.
+		// Was the previous node a leaf? (if not, we can skip the sibling bit)
 		// Start with writing the sibling
 		theirHash, err := calcNodeHash(head, uint(len(ancestors)+1))
 		if err != nil {
@@ -213,18 +215,12 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 
 		// Now put the parent on the pile
 		ancestors = append(ancestors, par)
-	} else {
-		ancestors = append(ancestors, &pb.MapNode{
-			LeftNumber:  head.LeftNumber,
-			RightNumber: head.RightNumber,
-			LeftHash:    head.LeftHash,
-			RightHash:   head.RightHash,
-		}) // slap another shrimp on the barbie, one of the above sides will get overwitten when we write out ancestors
 	}
+
 	// And write us and them out:
 	last := &pb.MapNode{
-		LeafHash: nextLeafHash,
 		Path:     keyPath,
+		LeafHash: nextLeafHash,
 	}
 	err = writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), last)
 	if err != nil {
