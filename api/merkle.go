@@ -102,12 +102,10 @@ func isLeaf(mn *pb.MapNode) bool {
 
 func calcNodeHash(mn *pb.MapNode, depth uint) ([]byte, error) {
 	if isLeaf(mn) {
-		if depth+BPath(mn.RemainingPath).Length() != 256 {
-			return nil, ErrLogUnsafeForAccess
-		}
 		rv := mn.LeafHash
-		for i, j := int(BPath(mn.RemainingPath).Length())-1, 256; i >= 0; i, j = i-1, j-1 {
-			if BPath(mn.RemainingPath).At(uint(i)) {
+		// Must make i int, else we underflow on next line and never terminate
+		for i, j := int(255-depth), 256; i >= 0; i, j = i-1, j-1 {
+			if BPath(mn.Path).At(uint(i)) {
 				rv = client.NodeMerkleTreeHash(defaultLeafValues[j], rv)
 			} else {
 				rv = client.NodeMerkleTreeHash(rv, defaultLeafValues[j])

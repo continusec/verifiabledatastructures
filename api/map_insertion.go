@@ -79,11 +79,7 @@ func mapNodeIsLeaf(n *pb.MapNode) bool {
 }
 
 func mapNodeRemainingMatches(n *pb.MapNode, kp BPath) bool {
-	if len(n.RemainingPath) == 0 { // in case this is a parent node, we can't match
-		return false
-	}
-	l := kp.Length()
-	return bytes.Equal(kp.Slice(l-BPath(n.RemainingPath).Length(), l), n.RemainingPath)
+	return bytes.Equal(kp, n.Path)
 }
 
 func writeAncestors(db KeyWriter, last *pb.MapNode, ancestors []*pb.MapNode, keyPath BPath, mutationIndex int64) ([]byte, error) {
@@ -175,8 +171,8 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 	// OK, instead, is the leaf us exactly? If so, easy we just rewrite it.
 	if isMatch || isEmptyNode(head) {
 		last := &pb.MapNode{
-			LeafHash:      nextLeafHash,
-			RemainingPath: keyPath.Slice(uint(len(ancestors)), keyPath.Length()),
+			LeafHash: nextLeafHash,
+			Path:     keyPath,
 		}
 		err = writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), last)
 		if err != nil {
@@ -186,24 +182,15 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 	}
 
 	// Add stub nodes for common ancestors
-	for BPath(head.RemainingPath).Length() != 0 && keyPath.At(uint(len(ancestors))) == BPath(head.RemainingPath).At(0) {
+	for mapNodeIsLeaf(head) && keyPath.At(uint(len(ancestors))) == BPath(head.Path).At(uint(len(ancestors))) {
 		ancestors = append(ancestors, &pb.MapNode{}) // stub it in, we'll fill it later
-		head = &pb.MapNode{
-			LeafHash:      head.LeafHash,
-			RemainingPath: BPath(head.RemainingPath).Slice(1, BPath(head.RemainingPath).Length()), // not efficient - let's get it correct first and tidy up ldate
-		}
 	}
 
 	// Now we create a new parent with two children, us and the previous node.
 	// Was the previous node a leaf? (if not, we can skip the sibling bit)
 	if isLeaf(head) {
 		// Start with writing the sibling
-		them := &pb.MapNode{
-			LeafHash:      head.LeafHash,
-			RemainingPath: BPath(head.RemainingPath).Slice(1, BPath(head.RemainingPath).Length()),
-		}
-
-		theirHash, err := calcNodeHash(them, uint(len(ancestors)+1))
+		theirHash, err := calcNodeHash(head, uint(len(ancestors)+1))
 		if err != nil {
 			return nil, err
 		}
@@ -219,7 +206,7 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 			par.RightHash = theirHash
 		}
 		// May as well write it out now
-		err = writeMapHash(db, mutationIndex+1, BPathJoin(keyPath.Slice(0, uint(len(ancestors))), appendPath), them)
+		err = writeMapHash(db, mutationIndex+1, BPathJoin(keyPath.Slice(0, uint(len(ancestors))), appendPath), head)
 		if err != nil {
 			return nil, err
 		}
@@ -236,8 +223,8 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 	}
 	// And write us and them out:
 	last := &pb.MapNode{
-		LeafHash:      nextLeafHash,
-		RemainingPath: keyPath.Slice(uint(len(ancestors)), keyPath.Length()),
+		LeafHash: nextLeafHash,
+		Path:     keyPath,
 	}
 	err = writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), last)
 	if err != nil {

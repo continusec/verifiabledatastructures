@@ -51,7 +51,7 @@ message MapNode {
     // A map node is either and parent, or it is considered a leaf.
 
     // If a node has `leaf_hash` set to len() > 0, then it is leaf.
-    // When it is a leaf, `remaining_path` must be set, however all other fields are ignored
+    // When it is a leaf, `path` must be set, however all other fields are ignored
     // It's root hash may be calculated based on those two fields alone
 
     // If a node, is a parent, then `left_number` and `right_number`, if non-zero, indicate
@@ -72,5 +72,5 @@ message MapNode {
 
     // for leaf nodes only
     bytes leaf_hash = 6;      // if set, both left and right num must be zero
-    bytes remaining_path = 7; // if set, both left and right num must be zero
+    bytes path = 7;           // if set, both left and right num must be zero
 }

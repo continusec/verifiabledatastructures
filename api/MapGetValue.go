@@ -90,11 +90,7 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			dataRv = &pb.LeafData{} // empty value suffices
 
 			// Add empty proof paths for common ancestors
-			for BPath(cur.RemainingPath).Length() != 0 && kp.At(ptr) == BPath(cur.RemainingPath).At(0) {
-				cur = &pb.MapNode{
-					LeafHash:      cur.LeafHash,
-					RemainingPath: BPath(cur.RemainingPath).Slice(1, BPath(cur.RemainingPath).Length()), // not efficient - let's get it correct first and tidy up ldate
-				}
+			for mapNodeIsLeaf(cur) && kp.At(ptr) == BPath(cur.Path).At(ptr) {
 				ptr++
 			}
 
@@ -102,12 +98,7 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			// Was the previous node a leaf? (if not, we can skip the sibling bit)
 			if isLeaf(cur) {
 				// Start with writing the sibling
-				them := &pb.MapNode{
-					LeafHash:      cur.LeafHash,
-					RemainingPath: BPath(cur.RemainingPath).Slice(1, BPath(cur.RemainingPath).Length()),
-				}
-
-				theirHash, err := calcNodeHash(them, uint(ptr+1))
+				theirHash, err := calcNodeHash(cur, uint(ptr+1))
 				if err != nil {
 					return err
 				}
