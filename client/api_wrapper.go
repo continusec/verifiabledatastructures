@@ -109,7 +109,7 @@ func (g *VerifiableLog) TreeHead(treeSize int64) (*LogTreeHead, error) {
 func (g *VerifiableLog) Add(e VerifiableData) (LogUpdatePromise, error) {
 	resp, err := g.Service.LogAddEntry(context.Background(), &pb.LogAddEntryRequest{
 		Log: g.Log,
-		Data: &pb.LeafData{
+		Value: &pb.LeafData{
 			LeafInput: e.GetLeafInput(),
 			ExtraData: e.GetExtraData(),
 		},

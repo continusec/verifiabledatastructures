@@ -48,6 +48,6 @@ func (s *LocalService) LogAddEntry(ctx context.Context, req *pb.LogAddEntryReque
 	}
 
 	return &pb.LogAddEntryResponse{
-		LeafHash: client.LeafMerkleTreeHash(req.Data.LeafInput),
+		LeafHash: client.LeafMerkleTreeHash(req.Value.LeafInput),
 	}, nil
 }

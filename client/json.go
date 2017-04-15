@@ -16,7 +16,11 @@
 
 package client
 
-import "time"
+import (
+	"time"
+
+	"github.com/continusec/verifiabledatastructures/pb"
+)
 
 type JSONAddEntryResponse struct {
 	Number int64  `json:"leaf_index"`
@@ -67,10 +71,7 @@ type JSONMapMutationEntry struct {
 	Key    []byte `json:"key,omitempty"`
 
 	// Used for "set" and "update". This is the value that is used to calculate the leaf hash, so for JSON this is the objecthash.
-	ValueLeafInput []byte `json:"value_leaf_input,omitempty"`
-
-	// Used for "set" and "update". This is the value that is used support the leaf input, so for JSON this is the original JSON.
-	ValueExtraData []byte `json:"value_extra_data,omitempty"`
+	Value *pb.LeafData `json:"value,omitempty"`
 
 	// Used for "update". This is the previous leaf hash (not value).
 	PreviousLeafHash []byte `json:"previous,omitempty"`

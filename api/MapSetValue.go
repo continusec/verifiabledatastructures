@@ -63,8 +63,7 @@ func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*client.JSONMapMutationE
 		return rv, nil
 	}
 
-	rv.ValueLeafInput = req.Value.LeafInput
-	rv.ValueExtraData = req.Value.ExtraData
+	rv.Value = req.Value
 
 	switch req.Action {
 	case pb.MapMutationAction_MAP_MUTATION_SET:
@@ -109,7 +108,7 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 				Name:    req.Map.Name,
 				LogType: pb.LogType_STRUCT_TYPE_MUTATION_LOG,
 			},
-			Data: mutData,
+			Value: mutData,
 		},
 	})
 	if err != nil {

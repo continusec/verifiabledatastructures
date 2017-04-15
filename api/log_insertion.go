@@ -115,7 +115,7 @@ func addEntryToLog(db KeyWriter, log *pb.LogRef, data *pb.LeafData) (*pb.LogTree
 
 func applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
 	// Step 1 - add entry to log as request
-	mutLogHead, err := addEntryToLog(db, req.Log, req.Data)
+	mutLogHead, err := addEntryToLog(db, req.Log, req.Value)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
 	if req.Log.LogType == pb.LogType_STRUCT_TYPE_MUTATION_LOG {
 		// Step 2 - add entries to map if needed
 		var mut client.JSONMapMutationEntry
-		err = json.Unmarshal(req.Data.ExtraData, &mut)
+		err = json.Unmarshal(req.Value.ExtraData, &mut)
 		if err != nil {
 			return err
 		}

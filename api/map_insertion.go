@@ -34,12 +34,12 @@ var (
 func mutationLeafHash(mut *client.JSONMapMutationEntry, prevLeafHash []byte) ([]byte, error) {
 	switch mut.Action {
 	case "set":
-		return client.LeafMerkleTreeHash(mut.ValueLeafInput), nil
+		return client.LeafMerkleTreeHash(mut.Value.LeafInput), nil
 	case "delete":
 		return nullLeafHash, nil
 	case "update":
 		if bytes.Equal(prevLeafHash, mut.PreviousLeafHash) {
-			return client.LeafMerkleTreeHash(mut.ValueLeafInput), nil
+			return client.LeafMerkleTreeHash(mut.Value.LeafInput), nil
 		}
 		return prevLeafHash, nil
 	default:
@@ -160,10 +160,7 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client
 	}
 
 	// Time to start writing our data
-	err = writeDataByLeafHash(db, pb.LogType_STRUCT_TYPE_MUTATION_LOG, nextLeafHash, &pb.LeafData{
-		LeafInput: mut.ValueLeafInput,
-		ExtraData: mut.ValueExtraData,
-	})
+	err = writeDataByLeafHash(db, pb.LogType_STRUCT_TYPE_MUTATION_LOG, nextLeafHash, mut.Value)
 	if err != nil {
 		return nil, err
 	}

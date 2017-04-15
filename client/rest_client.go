@@ -104,8 +104,11 @@ func (self *HTTPRESTClient) makeRequest(account *pb.AccountRef, method, path str
 }
 
 func (self *HTTPRESTClient) LogAddEntry(ctx context.Context, req *pb.LogAddEntryRequest) (*pb.LogAddEntryResponse, error) {
-	// TODO - figure out how to deal with extra data...
-	contents, _, err := self.makeLogRequest(req.Log, "POST", "/entry", req.Data.LeafInput, nil)
+	reqData, err := json.Marshal(req.Value)
+	if err != nil {
+		return nil, err
+	}
+	contents, _, err := self.makeLogRequest(req.Log, "POST", "/entry/extra", reqData, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -115,10 +118,10 @@ func (self *HTTPRESTClient) LogAddEntry(ctx context.Context, req *pb.LogAddEntry
 		return nil, err
 	}
 	return &pb.LogAddEntryResponse{LeafHash: aer.Hash}, nil
-
 }
+
 func (self *HTTPRESTClient) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
-	contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/entries/%d-%d%s", req.First, req.Last, ""), nil, nil)
+	contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/entries/%d-%d%s", req.First, req.Last, "/extra"), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -133,12 +136,16 @@ func (self *HTTPRESTClient) LogFetchEntries(ctx context.Context, req *pb.LogFetc
 		Values: make([]*pb.LeafData, len(ger.Entries)),
 	}
 	for i, x := range ger.Entries {
-		rv.Values[i] = &pb.LeafData{
-			LeafInput: x.Data,
+		var edObj pb.LeafData
+		err := json.Unmarshal(x.Data, &edObj)
+		if err != nil {
+			return nil, err
 		}
+		rv.Values[i] = &edObj
 	}
 	return rv, nil
 }
+
 func (self *HTTPRESTClient) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
 	contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d", req.TreeSize), nil, nil)
 	if err != nil {
@@ -154,6 +161,7 @@ func (self *HTTPRESTClient) LogTreeHash(ctx context.Context, req *pb.LogTreeHash
 		TreeSize: cr.TreeSize,
 	}, nil
 }
+
 func (self *HTTPRESTClient) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
 	if len(req.MtlHash) == 0 {
 		contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d/inclusion/%d", req.TreeSize, req.LeafIndex), nil, nil)
@@ -186,6 +194,7 @@ func (self *HTTPRESTClient) LogInclusionProof(ctx context.Context, req *pb.LogIn
 		TreeSize:  cr.TreeSize,
 	}, nil
 }
+
 func (self *HTTPRESTClient) LogConsistencyProof(ctx context.Context, req *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
 	contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d/consistency/%d", req.TreeSize, req.FromSize), nil, nil)
 	if err != nil {
@@ -202,6 +211,7 @@ func (self *HTTPRESTClient) LogConsistencyProof(ctx context.Context, req *pb.Log
 		TreeSize:  cr.Second,
 	}, nil
 }
+
 func (self *HTTPRESTClient) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
 	switch req.Action {
 	case pb.MapMutationAction_MAP_MUTATION_DELETE:
@@ -216,7 +226,11 @@ func (self *HTTPRESTClient) MapSetValue(ctx context.Context, req *pb.MapSetValue
 		}
 		return &pb.MapSetValueResponse{LeafHash: aer.Hash}, nil
 	case pb.MapMutationAction_MAP_MUTATION_SET:
-		contents, _, err := self.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Key), req.Value.LeafInput, nil)
+		reqData, err := json.Marshal(req.Value)
+		if err != nil {
+			return nil, err
+		}
+		contents, _, err := self.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Key)+"/extra", reqData, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -227,7 +241,11 @@ func (self *HTTPRESTClient) MapSetValue(ctx context.Context, req *pb.MapSetValue
 		}
 		return &pb.MapSetValueResponse{LeafHash: aer.Hash}, nil
 	case pb.MapMutationAction_MAP_MUTATION_UPDATE:
-		contents, _, err := self.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Key), req.Value.LeafInput, [][2]string{
+		reqData, err := json.Marshal(req.Value)
+		if err != nil {
+			return nil, err
+		}
+		contents, _, err := self.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Key)+"/extra", reqData, [][2]string{
 			[2]string{"X-Previous-LeafHash", hex.EncodeToString(req.PrevLeafHash)},
 		})
 		if err != nil {
@@ -271,7 +289,7 @@ func parseHeadersForProof(headers http.Header) ([][]byte, error) {
 }
 
 func (self *HTTPRESTClient) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
-	value, headers, err := self.makeMapRequest(req.Map, "GET", fmt.Sprintf("/tree/%d/key/h/%s%s", req.TreeSize, hex.EncodeToString(req.Key), ""), nil, nil)
+	value, headers, err := self.makeMapRequest(req.Map, "GET", fmt.Sprintf("/tree/%d/key/h/%s%s", req.TreeSize, hex.EncodeToString(req.Key), "/extra"), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +299,11 @@ func (self *HTTPRESTClient) MapGetValue(ctx context.Context, req *pb.MapGetValue
 		return nil, err
 	}
 
-	// TODO - figure out how to get ExtraData to return
+	var val pb.LeafData
+	err = json.Unmarshal(value, &val)
+	if err != nil {
+		return nil, err
+	}
 
 	vts, err := strconv.Atoi(headers.Get("X-Verified-TreeSize"))
 	if err != nil {
@@ -291,9 +313,7 @@ func (self *HTTPRESTClient) MapGetValue(ctx context.Context, req *pb.MapGetValue
 	return &pb.MapGetValueResponse{
 		AuditPath: prv,
 		TreeSize:  int64(vts),
-		Value: &pb.LeafData{
-			LeafInput: value,
-		},
+		Value:     &val,
 	}, nil
 }
 func (self *HTTPRESTClient) MapTreeHash(ctx context.Context, req *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {

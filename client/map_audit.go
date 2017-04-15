@@ -153,12 +153,12 @@ func addMutationToTree(root *mapAuditNode, mut *JSONMapMutationEntry) ([]byte, e
 
 	switch mut.Action {
 	case "set":
-		head.LeafHash = LeafMerkleTreeHash(mut.ValueLeafInput)
+		head.LeafHash = LeafMerkleTreeHash(mut.Value.LeafInput)
 	case "delete":
 		head.LeafHash = defaultLeafValues[256]
 	case "update":
 		if bytes.Equal(head.LeafHash, mut.PreviousLeafHash) {
-			head.LeafHash = LeafMerkleTreeHash(mut.ValueLeafInput)
+			head.LeafHash = LeafMerkleTreeHash(mut.Value.LeafInput)
 		}
 	default:
 		return nil, ErrVerificationFailed
@@ -254,12 +254,12 @@ func (f *mutationEntryFactory) CreateFromBytes(b []byte) (VerifiableEntry, error
 			return nil, err
 		}
 
-		if !bytes.Equal(crossCheckLeafHash, LeafMerkleTreeHash(mut.ValueLeafInput)) {
+		if !bytes.Equal(crossCheckLeafHash, LeafMerkleTreeHash(mut.Value.LeafInput)) {
 			return nil, ErrVerificationFailed
 		}
 	} else {
 		// otherwise just create the value
-		valEntry, err = f.ValueFactory.CreateFromBytes(mut.ValueLeafInput)
+		valEntry, err = f.ValueFactory.CreateFromBytes(mut.Value.LeafInput)
 		if err != nil {
 			return nil, err
 		}

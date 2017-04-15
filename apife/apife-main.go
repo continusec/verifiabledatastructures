@@ -49,21 +49,21 @@ const (
 	rawEntry      = 0
 	jsonEntry     = 1
 	redactedEntry = 2
-	mutationEntry = 3
+	extraEntry    = 4
 )
 
 type formatMetadata struct {
-	Suffix                              string
-	EntryFormat                         int
-	Gettable, Addable, Mutation, Redact bool
+	Suffix           string
+	EntryFormat      int
+	Gettable, Redact bool
 }
 
 var (
 	commonSuffixes = []*formatMetadata{
-		{Suffix: "", EntryFormat: rawEntry, Gettable: true, Addable: true},
-		{Suffix: "/xjson", EntryFormat: jsonEntry, Gettable: true, Addable: true},
-		{Suffix: "/xjson/redactable", EntryFormat: redactedEntry, Addable: true, Redact: true},
-		{Suffix: "/xjson/mutation", EntryFormat: mutationEntry, Mutation: true},
+		{Suffix: "", EntryFormat: rawEntry, Gettable: true},
+		{Suffix: "/xjson", EntryFormat: jsonEntry, Gettable: true},
+		{Suffix: "/xjson/redactable", EntryFormat: redactedEntry, Redact: true},
+		{Suffix: "/extra", EntryFormat: extraEntry, Gettable: true},
 	}
 )
 
@@ -88,12 +88,10 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 		{Prefix: "/v1/account/{account:[0-9]+}/map/{log:[0-9a-z-_]+}/log/treehead", LogType: pb.LogType_STRUCT_TYPE_TREEHEAD_LOG},
 	} {
 		for _, f := range commonSuffixes {
-			if t.Addable && f.Addable {
-				// Insert a log entry
-				r.HandleFunc(t.Prefix+"/entry"+f.Suffix, wrapLogFunctionWithFormat(t.LogType, f, as.insertEntryHandler)).Methods("POST")
-			}
+			// Insert a log entry
+			r.HandleFunc(t.Prefix+"/entry"+f.Suffix, wrapLogFunctionWithFormat(t.LogType, f, as.insertEntryHandler)).Methods("POST")
 
-			if f.Gettable || (f.Mutation && t.Mutation) {
+			if f.Gettable {
 				// Get a log entry
 				r.HandleFunc(t.Prefix+"/entry/{number:[0-9]+}"+f.Suffix, wrapLogFunctionWithFormat(t.LogType, f, as.getEntryHandler)).Methods("GET")
 
@@ -123,10 +121,8 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 		{KeyFormat: hexFormat, Ch: "h/{key:[0-9a-f]+}"},
 	} {
 		for _, f := range commonSuffixes {
-			if f.Addable {
-				// Insert and modify map entry
-				r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/"+h.Ch+f.Suffix, wrapMapFunctionWithKeyAndFormat(h.KeyFormat, f.EntryFormat, as.setMapEntry)).Methods("PUT")
-			}
+			// Insert and modify map entry
+			r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/"+h.Ch+f.Suffix, wrapMapFunctionWithKeyAndFormat(h.KeyFormat, f.EntryFormat, as.setMapEntry)).Methods("PUT")
 
 			if f.Gettable {
 				// Get value + proof
@@ -449,8 +445,8 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 	}
 
 	resp, err := as.service.LogAddEntry(requestContext(r), &pb.LogAddEntryRequest{
-		Log:  log,
-		Data: ld,
+		Log:   log,
+		Value: ld,
 	})
 	if err != nil {
 		writeResponseHeader(w, err)
@@ -618,9 +614,10 @@ func getResponseData(ld *pb.LeafData, ef int) ([]byte, error) {
 		return ld.LeafInput, nil
 	case jsonEntry:
 		return ld.ExtraData, nil
+	case extraEntry:
+		return json.Marshal(ld)
 	default:
 		return nil, api.ErrInvalidRequest
-
 	}
 }
 
@@ -662,6 +659,13 @@ func createLeafData(body []byte, ef int) (*pb.LeafData, error) {
 			return nil, api.ErrInvalidRequest
 		}
 		return &pb.LeafData{LeafInput: oh, ExtraData: rb}, nil
+	case extraEntry:
+		var req pb.LeafData
+		err := json.Unmarshal(body, &req)
+		if err != nil {
+			return nil, err
+		}
+		return &pb.LeafData{LeafInput: req.LeafInput, ExtraData: req.ExtraData}, nil
 	default:
 		return nil, api.ErrInvalidRequest
 	}
