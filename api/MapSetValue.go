@@ -19,40 +19,14 @@ limitations under the License.
 package api
 
 import (
-	"encoding/json"
 	"time"
 
 	"golang.org/x/net/context"
 
-	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
-
-func jsonObjectHash(orig interface{}) (*pb.LeafData, error) {
-	// First we marshal it to JSON form, so that we convert objects to mapping
-	ob, err := json.Marshal(orig)
-	if err != nil {
-		return nil, err
-	}
-
-	var o interface{}
-	err = json.Unmarshal(ob, &o)
-	if err != nil {
-		return nil, err
-	}
-
-	oh, err := objecthash.ObjectHash(o)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.LeafData{
-		LeafInput: oh,
-		ExtraData: ob,
-	}, nil
-}
 
 func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) {
 	// is there a better way to clone?

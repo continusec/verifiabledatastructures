@@ -152,11 +152,11 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 		}
 
 		// And make sure we are in it
-		lh, err := ObjectHashWithStdRedaction(mapHead)
+		li, err := ObjectHashWithStdRedaction(mapHead)
 		if err != nil {
 			return nil, err
 		}
-		err = vmap.TreeHeadLog().VerifyInclusion(thlth, lh)
+		err = vmap.TreeHeadLog().VerifyInclusion(thlth, LeafMerkleTreeHash(li))
 		if err != nil {
 			return nil, err
 		}

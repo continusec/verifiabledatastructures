@@ -53,7 +53,7 @@ func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 		Service: service,
 	}).Account("999", "secret")
 	vmap := account.VerifiableMap("testmap")
-	numToDo := 1
+	numToDo := 1000
 
 	for i := 0; i < numToDo; i++ {
 		_, err := vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &pb.LeafData{LeafInput: []byte(fmt.Sprintf("fooval%d", i))})
@@ -181,6 +181,18 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 		}
 	}
 
+	cnt := 0
+	for entry := range log.Entries(context.Background(), 0, treeRoot.TreeSize) {
+		err = log.VerifyInclusion(treeRoot, client.LeafMerkleTreeHash(entry.LeafInput))
+		if err != nil {
+			t.Fatal("Failure verifiying inclusion")
+		}
+		cnt++
+	}
+	if cnt != 205 {
+		t.Fatal("Failed to get all entries")
+	}
+
 	th3, err := log.TreeHead(3)
 	if err != nil {
 		t.Fatal("Failure getting root hash")
@@ -250,7 +262,7 @@ func createCleanEmptyService() pb.VerifiableDataStructuresServiceServer {
 }
 
 func runSmokeTests(c pb.VerifiableDataStructuresServiceServer, t *testing.T) {
-	//testLog(t, c)
+	testLog(t, c)
 	testMap(t, c)
 }
 
@@ -258,7 +270,7 @@ func TestWithoutServers(t *testing.T) {
 	runSmokeTests(createCleanEmptyService(), t)
 }
 
-func testWithHTTPServerAndClient(t *testing.T) {
+func TestWithHTTPServerAndClient(t *testing.T) {
 	go server.StartRESTServer(&pb.ServerConfig{
 		InsecureServerForTesting: true,
 		RestListenBind:           ":8092",
@@ -269,7 +281,7 @@ func testWithHTTPServerAndClient(t *testing.T) {
 	}, t)
 }
 
-func testWithGRPCerverAndClient(t *testing.T) {
+func TestWithGRPCerverAndClient(t *testing.T) {
 	go server.StartGRPCServer(&pb.ServerConfig{
 		InsecureServerForTesting: true,
 		GrpcListenBind:           ":8081",
