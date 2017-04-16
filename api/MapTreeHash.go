@@ -25,7 +25,7 @@ import (
 )
 
 func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {
-	err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
+	_, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
 	if err != nil {
 		return nil, err
 	}

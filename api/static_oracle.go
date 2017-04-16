@@ -25,6 +25,8 @@ type StaticOracle struct {
 }
 
 // VerifyAllowed returns nil if operation is allowed. Other values means no
-func (o *StaticOracle) VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) error {
-	return nil // TODO
+func (o *StaticOracle) VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) (*AccessModifier, error) {
+	return &AccessModifier{
+		FieldFilter: AllFields,
+	}, nil // TODO
 }

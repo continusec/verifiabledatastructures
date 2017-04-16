@@ -27,7 +27,7 @@ import (
 )
 
 func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
-	err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
+	am, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +111,13 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 				proof[ptr] = theirHash
 			}
 		}
+
+		// Check for fields that need redacting
+		dataRv, err = filterLeafData(dataRv, am)
+		if err != nil {
+			return err
+		}
+
 		rv = &pb.MapGetValueResponse{
 			AuditPath: proof,
 			TreeSize:  treeSize,

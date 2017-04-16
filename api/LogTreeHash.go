@@ -25,7 +25,7 @@ import (
 )
 
 func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
-	err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
+	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {
 		return nil, err
 	}

@@ -104,9 +104,15 @@ message LogConsistencyProofResponse {
     repeated bytes audit_path = 3;
 }
 
+enum DataFormat {
+    UNSPECIFIED = 0;
+    JSON = 1;
+}
+
 message LeafData {
     bytes leaf_input = 1;
     bytes extra_data = 2; // ignored by the server, returned to the user, who may have business logic to confirm that the leaf_input has been derived from this, e.g. objecthash
+    DataFormat format = 3; // optional, if set, can define metadata about the format of the ExtraData. e.g. if set to JSON, fields will be filtered.
 }
 
 message LogAddEntryRequest {

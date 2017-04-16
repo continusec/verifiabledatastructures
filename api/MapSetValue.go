@@ -79,7 +79,7 @@ func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*client.JSONMapMutationE
 }
 
 func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
-	err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_SET_VALUE)
+	_, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_SET_VALUE)
 	if err != nil {
 		return nil, err
 	}

@@ -48,9 +48,19 @@ type MutatorPromise interface {
 	WaitUntilDone() error
 }
 
+const (
+	AllFields = "*"
+)
+
+// AccessModifier includes any extra context about how the user can access the data
+type AccessModifier struct {
+	// FieldFilter, if set to a value other than AllFields, will result in ExtraData fields being appropriately filtered.
+	FieldFilter string
+}
+
 type AuthorizationOracle interface {
 	// VerifyAllowed returns nil if operation is allowed. Other values means no
-	VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) error
+	VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) (*AccessModifier, error)
 }
 
 type StorageReader interface {

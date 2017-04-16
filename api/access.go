@@ -18,7 +18,12 @@ limitations under the License.
 
 package api
 
-import "github.com/continusec/verifiabledatastructures/pb"
+import (
+	"encoding/json"
+
+	"github.com/continusec/objecthash"
+	"github.com/continusec/verifiabledatastructures/pb"
+)
 
 const (
 	operationRawAdd         = 1
@@ -48,19 +53,50 @@ var (
 	}
 )
 
-func (s *LocalService) verifyAccessForMap(vmap *pb.MapRef, perm pb.Permission) error {
+func (s *LocalService) verifyAccessForMap(vmap *pb.MapRef, perm pb.Permission) (*AccessModifier, error) {
 	return s.AccessPolicy.VerifyAllowed(vmap.Account.Id, vmap.Account.ApiKey, vmap.Name, perm)
 }
 
-func (s *LocalService) verifyAccessForLog(log *pb.LogRef, perm pb.Permission) error {
+func (s *LocalService) verifyAccessForLog(log *pb.LogRef, perm pb.Permission) (*AccessModifier, error) {
 	return s.AccessPolicy.VerifyAllowed(log.Account.Id, log.Account.ApiKey, log.Name, perm)
 }
 
-func (s *LocalService) verifyAccessForLogOperation(log *pb.LogRef, op int) error {
+func (s *LocalService) verifyAccessForLogOperation(log *pb.LogRef, op int) (*AccessModifier, error) {
 	perm, ok := operationForLogType[log.LogType][op]
 	if !ok {
-		return ErrNotAuthorized
+		return nil, ErrNotAuthorized
 	}
 
 	return s.verifyAccessForLog(log, perm)
+}
+
+func filterLeafData(ld *pb.LeafData, am *AccessModifier) (*pb.LeafData, error) {
+	switch ld.Format {
+	case pb.DataFormat_UNSPECIFIED:
+		return ld, nil
+	case pb.DataFormat_JSON:
+		if am.FieldFilter == AllFields {
+			return ld, nil
+		}
+		var o interface{}
+		err := json.Unmarshal(ld.ExtraData, &o)
+		if err != nil {
+			return nil, ErrInvalidJSON
+		}
+		o, err = objecthash.Filtered(o, am.FieldFilter)
+		if err != nil {
+			return nil, err
+		}
+		rv, err := json.Marshal(o)
+		if err != nil {
+			return nil, err
+		}
+		return &pb.LeafData{
+			LeafInput: ld.LeafInput,
+			ExtraData: rv, // redacted form
+		}, nil
+	default:
+		return nil, ErrInvalidRequest
+	}
+
 }

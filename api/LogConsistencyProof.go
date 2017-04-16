@@ -26,7 +26,7 @@ import (
 )
 
 func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
-	err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
+	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {
 		return nil, err
 	}

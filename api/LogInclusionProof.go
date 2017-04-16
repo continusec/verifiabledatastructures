@@ -26,7 +26,7 @@ import (
 )
 
 func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
-	err := s.verifyAccessForLogOperation(req.Log, operationProveInclusion)
+	_, err := s.verifyAccessForLogOperation(req.Log, operationProveInclusion)
 	if err != nil {
 		return nil, err
 	}

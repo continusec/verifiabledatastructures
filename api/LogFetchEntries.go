@@ -25,7 +25,7 @@ import (
 )
 
 func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
-	err := s.verifyAccessForLogOperation(req.Log, operationReadEntry)
+	am, err := s.verifyAccessForLogOperation(req.Log, operationReadEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +64,23 @@ func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntr
 
 		vals := make([]*pb.LeafData, len(hashes))
 		for i, h := range hashes {
-			vals[i], err = lookupDataByLeafHash(kr, req.Log.LogType, h)
+			v, err := lookupDataByLeafHash(kr, req.Log.LogType, h)
 			if err != nil {
 				return err
+			}
+
+			switch req.Log.LogType {
+			case pb.LogType_STRUCT_TYPE_LOG:
+				vals[i], err = filterLeafData(v, am)
+				if err != nil {
+					return err
+				}
+			case pb.LogType_STRUCT_TYPE_TREEHEAD_LOG:
+				vals[i] = v
+			case pb.LogType_STRUCT_TYPE_MUTATION_LOG:
+				vals[i] = v // TODO
+			default:
+				return ErrInvalidRequest
 			}
 		}
 

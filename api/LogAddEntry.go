@@ -26,7 +26,7 @@ import (
 )
 
 func (s *LocalService) LogAddEntry(ctx context.Context, req *pb.LogAddEntryRequest) (*pb.LogAddEntryResponse, error) {
-	err := s.verifyAccessForLogOperation(req.Log, operationRawAdd)
+	_, err := s.verifyAccessForLogOperation(req.Log, operationRawAdd)
 	if err != nil {
 		return nil, err
 	}
