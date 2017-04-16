@@ -262,7 +262,7 @@ func TestWithHTTPServerAndClient(t *testing.T) {
 	}, createCleanEmptyService())
 	time.Sleep(time.Millisecond * 50) // let the server startup...
 	runSmokeTests(&client.HTTPRESTClient{
-		BaseUrl: "http://localhost:8092/v1",
+		BaseUrl: "http://localhost:8092",
 	}, t)
 }
 

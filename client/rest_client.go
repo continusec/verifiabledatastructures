@@ -31,6 +31,10 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	restAPIVersion = "/v2"
+)
+
 type HTTPRESTClient struct {
 	BaseUrl string
 
@@ -60,7 +64,7 @@ func (self *HTTPRESTClient) makeMapRequest(vmap *pb.MapRef, method, path string,
 // Intended for internal use, MakeRequest makes an HTTP request and converts the error
 // code to those appropriate for the rest of the library.
 func (self *HTTPRESTClient) makeRequest(account *pb.AccountRef, method, path string, data []byte, headers [][2]string) ([]byte, http.Header, error) {
-	req, err := http.NewRequest(method, self.BaseUrl+path, bytes.NewReader(data))
+	req, err := http.NewRequest(method, self.BaseUrl+restAPIVersion+path, bytes.NewReader(data))
 	if err != nil {
 		return nil, nil, err
 	}

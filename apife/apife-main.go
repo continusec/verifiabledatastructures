@@ -50,6 +50,8 @@ const (
 	jsonEntry     = 1
 	redactedEntry = 2
 	extraEntry    = 4
+
+	version = "/v2"
 )
 
 type formatMetadata struct {
@@ -83,9 +85,9 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 		LogType           pb.LogType
 		Addable, Mutation bool
 	}{
-		{Prefix: "/v1/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}", LogType: pb.LogType_STRUCT_TYPE_LOG, Addable: true},
-		{Prefix: "/v1/account/{account:[0-9]+}/map/{log:[0-9a-z-_]+}/log/mutation", LogType: pb.LogType_STRUCT_TYPE_MUTATION_LOG, Mutation: true},
-		{Prefix: "/v1/account/{account:[0-9]+}/map/{log:[0-9a-z-_]+}/log/treehead", LogType: pb.LogType_STRUCT_TYPE_TREEHEAD_LOG},
+		{Prefix: version + "/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}", LogType: pb.LogType_STRUCT_TYPE_LOG, Addable: true},
+		{Prefix: version + "/account/{account:[0-9]+}/map/{log:[0-9a-z-_]+}/log/mutation", LogType: pb.LogType_STRUCT_TYPE_MUTATION_LOG, Mutation: true},
+		{Prefix: version + "/account/{account:[0-9]+}/map/{log:[0-9a-z-_]+}/log/treehead", LogType: pb.LogType_STRUCT_TYPE_TREEHEAD_LOG},
 	} {
 		for _, f := range commonSuffixes {
 			// Insert a log entry
@@ -122,19 +124,19 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 	} {
 		for _, f := range commonSuffixes {
 			// Insert and modify map entry
-			r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/"+h.Ch+f.Suffix, wrapMapFunctionWithKeyAndFormat(h.KeyFormat, f.EntryFormat, as.setMapEntry)).Methods("PUT")
+			r.HandleFunc(version+"/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/"+h.Ch+f.Suffix, wrapMapFunctionWithKeyAndFormat(h.KeyFormat, f.EntryFormat, as.setMapEntry)).Methods("PUT")
 
 			if f.Gettable {
 				// Get value + proof
-				r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/"+h.Ch+f.Suffix, wrapMapFunctionWithKeyAndFormat(h.KeyFormat, f.EntryFormat, as.getMapEntry)).Methods("GET")
+				r.HandleFunc(version+"/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/"+h.Ch+f.Suffix, wrapMapFunctionWithKeyAndFormat(h.KeyFormat, f.EntryFormat, as.getMapEntry)).Methods("GET")
 			}
 		}
 		// Delete a map entry
-		r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/"+h.Ch, wrapMapFunctionWithKey(h.KeyFormat, as.deleteMapEntryHandler)).Methods("DELETE")
+		r.HandleFunc(version+"/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/"+h.Ch, wrapMapFunctionWithKey(h.KeyFormat, as.deleteMapEntryHandler)).Methods("DELETE")
 	}
 
 	// Get STH
-	r.HandleFunc("/v1/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}", wrapMapFunction(as.getMapRootHashHandler)).Methods("GET")
+	r.HandleFunc(version+"/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}", wrapMapFunction(as.getMapRootHashHandler)).Methods("GET")
 
 	// Make sure we return 200 for OPTIONS requests since handlers below will fall through to us
 	r.HandleFunc("/{thing:.*}", func(w http.ResponseWriter, r *http.Request) {
