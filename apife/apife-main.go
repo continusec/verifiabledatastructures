@@ -321,10 +321,7 @@ func (as *apiServer) getLogTreeHashHandler(log *pb.LogRef, vars map[string]strin
 		return
 	}
 
-	writeSuccessJSON(w, &client.JSONLogTreeHeadResponse{
-		TreeSize: resp.TreeSize,
-		Hash:     resp.RootHash,
-	})
+	writeSuccessJSON(w, resp)
 }
 
 func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
@@ -355,11 +352,7 @@ func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]
 		return
 	}
 
-	writeSuccessJSON(w, &client.JSONConsistencyProofResponse{
-		First:  resp.FromSize,
-		Second: resp.TreeSize,
-		Proof:  resp.AuditPath,
-	})
+	writeSuccessJSON(w, resp)
 }
 
 func (as *apiServer) inclusionProofHandler(log *pb.LogRef, vars map[string]string, partial *pb.LogInclusionProofRequest, w http.ResponseWriter, r *http.Request) {
@@ -378,11 +371,7 @@ func (as *apiServer) inclusionProofHandler(log *pb.LogRef, vars map[string]strin
 		return
 	}
 
-	writeSuccessJSON(w, &client.JSONInclusionProofResponse{
-		Number:   resp.LeafIndex,
-		TreeSize: resp.TreeSize,
-		Proof:    resp.AuditPath,
-	})
+	writeSuccessJSON(w, resp)
 }
 
 func (as *apiServer) inclusionByIndexProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
@@ -453,9 +442,8 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 		return
 	}
 
-	writeSuccessJSON(w, &client.JSONAddEntryResponse{
-		Hash: resp.LeafHash,
-	})
+	writeSuccessJSON(w, resp)
+
 }
 
 func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
@@ -507,22 +495,7 @@ func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars 
 		return
 	}
 
-	rv := make([]*client.JSONGetEntryResponse, len(resp.Values))
-	for i, v := range resp.Values {
-		d, err := getResponseData(v, ef.EntryFormat)
-		if err != nil {
-			writeResponseHeader(w, err)
-			return
-		}
-
-		rv[i] = &client.JSONGetEntryResponse{
-			Number: int64(first + i),
-			Data:   d,
-		}
-	}
-	writeSuccessJSON(w, &client.JSONGetEntriesResponse{
-		Entries: rv,
-	})
+	writeSuccessJSON(w, resp)
 }
 
 func (as *apiServer) getMapRootHashHandler(vmap *pb.MapRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
@@ -547,30 +520,25 @@ func (as *apiServer) getMapRootHashHandler(vmap *pb.MapRef, vars map[string]stri
 		return
 	}
 
-	writeSuccessJSON(w, &client.JSONMapTreeHeadResponse{
-		MapHash: resp.RootHash,
-		LogTreeHead: &client.JSONLogTreeHeadResponse{
-			Hash:     resp.MutationLog.RootHash,
-			TreeSize: resp.MutationLog.TreeSize,
-		},
-	})
+	writeSuccessJSON(w, resp)
+
 }
 
-func (as *apiServer) queueMapMutation(vmap *pb.MapRef, partial *pb.MapSetValueRequest, w http.ResponseWriter, r *http.Request) {
-	partial.Map = vmap
-	resp, err := as.service.MapSetValue(requestContext(r), partial)
+func (as *apiServer) queueMapMutation(vmap *pb.MapRef, mut *pb.MapMutation, w http.ResponseWriter, r *http.Request) {
+	resp, err := as.service.MapSetValue(requestContext(r), &pb.MapSetValueRequest{
+		Map:      vmap,
+		Mutation: mut,
+	})
 	if err != nil {
 		writeResponseHeader(w, err)
 		return
 	}
-	writeSuccessJSON(w, &client.JSONAddEntryResponse{
-		Hash: resp.LeafHash,
-	})
+	writeSuccessJSON(w, resp)
 }
 
 func (as *apiServer) deleteMapEntryHandler(vmap *pb.MapRef, key []byte, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	as.queueMapMutation(vmap, &pb.MapSetValueRequest{
-		Action: pb.MapMutationAction_MAP_MUTATION_DELETE,
+	as.queueMapMutation(vmap, &pb.MapMutation{
+		Action: "delete",
 		Key:    key,
 	}, w, r)
 }
@@ -697,17 +665,17 @@ func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 	}
 
 	if len(prevLeafHash) == 0 {
-		as.queueMapMutation(vmap, &pb.MapSetValueRequest{
-			Action: pb.MapMutationAction_MAP_MUTATION_SET,
+		as.queueMapMutation(vmap, &pb.MapMutation{
+			Action: "set",
 			Key:    key,
 			Value:  ld,
 		}, w, r)
 	} else { // must be an update
-		as.queueMapMutation(vmap, &pb.MapSetValueRequest{
-			Action:       pb.MapMutationAction_MAP_MUTATION_UPDATE,
-			Key:          key,
-			Value:        ld,
-			PrevLeafHash: prevLeafHash,
+		as.queueMapMutation(vmap, &pb.MapMutation{
+			Action:           "update",
+			Key:              key,
+			Value:            ld,
+			PreviousLeafHash: prevLeafHash,
 		}, w, r)
 	}
 }

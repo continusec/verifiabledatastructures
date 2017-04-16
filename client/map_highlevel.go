@@ -19,18 +19,19 @@ package client
 import (
 	"time"
 
+	"github.com/continusec/verifiabledatastructures/pb"
+
 	"golang.org/x/net/context"
 )
 
 // MapVerifiedGet gets the value for the given key in the specified MapTreeState, and verifies that it is
 // included in the MapTreeHead (wrapped by the MapTreeState) before returning.
-// factory is normally one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
-func (vmap *VerifiableMap) VerifiedGet(key []byte, mapHead *MapTreeState) (VerifiableData, error) {
+func (vmap *VerifiableMap) VerifiedGet(key []byte, mapHead *MapTreeState) (*pb.LeafData, error) {
 	proof, err := vmap.Get(key, mapHead.TreeSize())
 	if err != nil {
 		return nil, err
 	}
-	err = proof.Verify(&mapHead.MapTreeHead)
+	err = VerifyMapInclusionProof(proof, key, mapHead.MapTreeHead)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +43,7 @@ func (vmap *VerifiableMap) VerifiedGet(key []byte, mapHead *MapTreeState) (Verif
 // size.
 //
 // This is intended for test use.
-func (vmap *VerifiableMap) BlockUntilSize(treeSize int64) (*MapTreeHead, error) {
+func (vmap *VerifiableMap) BlockUntilSize(treeSize int64) (*pb.MapTreeHashResponse, error) {
 	lastHead := int64(-1)
 	timeToSleep := time.Second
 	for {
@@ -50,11 +51,11 @@ func (vmap *VerifiableMap) BlockUntilSize(treeSize int64) (*MapTreeHead, error) 
 		if err != nil {
 			return nil, err
 		}
-		if lth.TreeSize() >= treeSize {
+		if lth.MutationLog.TreeSize >= treeSize {
 			return lth, nil
 		}
-		if lth.TreeSize() > lastHead {
-			lastHead = lth.TreeSize()
+		if lth.MutationLog.TreeSize > lastHead {
+			lastHead = lth.MutationLog.TreeSize
 			// since we got a new tree head, reset sleep time
 			timeToSleep = time.Second
 		} else {
@@ -106,24 +107,23 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 
 	// Short-cut: If prev is nil, and we have no size yet, then we are nil too
 	// since while a map head may be valid, the logs can't be.
-	if prev == nil && mapHead.TreeSize() == 0 {
+	if prev == nil && mapHead.MutationLog.TreeSize == 0 {
 		return nil, nil
 	}
 
 	// If we have a previous state, then make sure both logs are consistent with it
 	if prev != nil {
 		// Make sure that the mutation log is consistent with what we had
-		err = vmap.MutationLog().VerifyConsistency(&prev.MapTreeHead.MutationLogTreeHead,
-			&mapHead.MutationLogTreeHead)
+		err = vmap.MutationLog().VerifyConsistency(prev.MapTreeHead.MutationLog, mapHead.MutationLog)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Get the latest tree head for the tree head log
-	var prevThlth, thlth *LogTreeHead
+	var prevThlth, thlth *pb.LogTreeHashResponse
 	if prev != nil {
-		prevThlth = &prev.TreeHeadLogTreeHead
+		prevThlth = prev.TreeHeadLogTreeHead
 	}
 
 	// Have we verified ourselves yet?
@@ -131,8 +131,12 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 
 	// If we already have a tree head that is the size of our map, then we
 	// probably don't need a new one, so try that first.
-	if prevThlth != nil && prevThlth.TreeSize >= mapHead.TreeSize() {
-		err = vmap.TreeHeadLog().VerifyInclusion(prevThlth, mapHead)
+	if prevThlth != nil && prevThlth.TreeSize >= mapHead.MutationLog.TreeSize {
+		lh, err := ObjectHashWithStdRedaction(mapHead)
+		if err != nil {
+			return nil, err
+		}
+		err = vmap.TreeHeadLog().VerifyInclusion(prevThlth, lh)
 		if err == nil {
 			verifiedInTreeHeadLog = true
 			thlth = prevThlth
@@ -148,7 +152,11 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 		}
 
 		// And make sure we are in it
-		err = vmap.TreeHeadLog().VerifyInclusion(thlth, mapHead)
+		lh, err := ObjectHashWithStdRedaction(mapHead)
+		if err != nil {
+			return nil, err
+		}
+		err = vmap.TreeHeadLog().VerifyInclusion(thlth, lh)
 		if err != nil {
 			return nil, err
 		}
@@ -156,8 +164,8 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 
 	// All good
 	return &MapTreeState{
-		MapTreeHead:         *mapHead,
-		TreeHeadLogTreeHead: *thlth,
+		MapTreeHead:         mapHead,
+		TreeHeadLogTreeHead: thlth,
 	}, nil
 }
 
@@ -174,7 +182,7 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 // key is the key that is being changed
 // value (produced by VerifiableEntryFactory specified when creating the auditor) is the
 //  value being set/deleted/modified.
-type MapAuditFunction func(ctx context.Context, idx int64, key []byte, value VerifiableEntry) error
+type MapAuditFunction func(ctx context.Context, idx int64, key []byte, value *pb.LeafData) error
 
 // MapVerifyMap (Experimental API surface, likely to change) is a utility method for auditors
 // that wish to audit the full content of a map, as well as the map operation. This method
@@ -208,19 +216,19 @@ type MapAuditFunction func(ctx context.Context, idx int64, key []byte, value Ver
 //
 // While suitable for small to medium maps, this requires the entire map be built in-memory
 // which may not be suitable for larger systems that will have more complex requirements.
-func (vmap *VerifiableMap) VerifyMap(ctx context.Context, prev *MapTreeState, head *MapTreeState, factory VerifiableEntryFactory, auditFunc MapAuditFunction) error {
-	var prevLth *LogTreeHead
+func (vmap *VerifiableMap) VerifyMap(ctx context.Context, prev *MapTreeState, head *MapTreeState, leafFunc LeafDataAuditFunction, auditFunc MapAuditFunction) error {
+	var prevLth *pb.LogTreeHashResponse
 	if prev != nil {
-		prevLth = &prev.TreeHeadLogTreeHead
+		prevLth = prev.TreeHeadLogTreeHead
 	}
 
 	if head == nil {
 		return ErrNilTreeHead
 	}
 
-	return vmap.TreeHeadLog().VerifyEntries(ctx, prevLth, &head.TreeHeadLogTreeHead, (&auditState{
-		Map:               vmap,
-		MapAuditFunction:  auditFunc,
-		EntryValueFactory: factory,
+	return vmap.TreeHeadLog().VerifyEntries(ctx, prevLth, head.TreeHeadLogTreeHead, (&auditState{
+		Map:                   vmap,
+		MapAuditFunction:      auditFunc,
+		LeafDataAuditFunction: leafFunc,
 	}).CheckTreeHeadEntry)
 }

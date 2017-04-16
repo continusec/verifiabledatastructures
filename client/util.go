@@ -17,6 +17,8 @@
 package client
 
 import "crypto/sha256"
+import "encoding/json"
+import "github.com/continusec/objecthash"
 
 // ConstructMapKeyPath returns the path in the tree for a given key. Specifically it takes
 // the SHA256 hash of the key, and then returns a big-endian slice of booleans representing
@@ -111,4 +113,18 @@ func SubProof(m, startN, endN int64, b bool) [][2]int64 {
 		return append(SubProof(m, startN, startN+k, b), [2]int64{startN + k, endN})
 	}
 	return append(SubProof(m-k, startN+k, endN, false), [2]int64{startN, startN + k})
+}
+
+func ObjectHashWithStdRedaction(o interface{}) ([]byte, error) {
+	// Seriaize then deserialize into plain map to work with objecthash
+	b, err := json.Marshal(o)
+	if err != nil {
+		return nil, err
+	}
+	var o2 interface{}
+	err = json.Unmarshal(b, &o2)
+	if err != nil {
+		return nil, err
+	}
+	return objecthash.ObjectHashWithStdRedaction(o2)
 }

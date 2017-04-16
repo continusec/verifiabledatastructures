@@ -16,20 +16,22 @@
 
 package client
 
+import "github.com/continusec/verifiabledatastructures/pb"
+
 // MapTreeState represents the current state of a map, intended for persistence by callers.
 // It combines the MapTreeHead which is the current state, with the LogTreeHead for the underlying
 // tree head log which has been verified to include this MapTreeHead
 type MapTreeState struct {
 	// MapTreeHead is the root hash / mutation tree head for the map at this time.
-	MapTreeHead MapTreeHead
+	MapTreeHead *pb.MapTreeHashResponse
 
 	// TreeHeadLogTreeHead is a TreeHead for the Tree Head log, which contains this Map Tree Head.
 	// The tree size in this log tree head may be different to that in the mutation log tree head.
 	// The TreeSize of this MapTreeState is dictated by the tree size of the Mutation Log which the map root hash represents.
-	TreeHeadLogTreeHead LogTreeHead
+	TreeHeadLogTreeHead *pb.LogTreeHashResponse
 }
 
 // TreeSize is a utility method for returning the tree size of the underlying map.
 func (self *MapTreeState) TreeSize() int64 {
-	return self.MapTreeHead.TreeSize()
+	return self.MapTreeHead.MutationLog.TreeSize
 }

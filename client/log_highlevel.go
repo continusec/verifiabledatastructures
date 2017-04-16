@@ -20,18 +20,20 @@ import (
 	"bytes"
 	"time"
 
+	"github.com/continusec/verifiabledatastructures/pb"
+
 	"golang.org/x/net/context"
 )
 
 // LogVerifyInclusion will fetch a proof the the specified MerkleTreeHash is included in the
 // log and verify that it can produce the root hash in the specified LogTreeHead.
-func (log *VerifiableLog) VerifyInclusion(head *LogTreeHead, leaf MerkleTreeLeaf) error {
+func (log *VerifiableLog) VerifyInclusion(head *pb.LogTreeHashResponse, leaf []byte) error {
 	proof, err := log.InclusionProof(head.TreeSize, leaf)
 	if err != nil {
 		return err
 	}
 
-	err = proof.Verify(head)
+	err = VerifyLogInclusionProof(proof, leaf, head)
 	if err != nil {
 		return err
 	}
@@ -42,7 +44,7 @@ func (log *VerifiableLog) VerifyInclusion(head *LogTreeHead, leaf MerkleTreeLeaf
 
 // LogVerifyConsistency takes two tree heads, retrieves a consistency proof, verifies it,
 // and returns the result. The two tree heads may be in either order (even equal), but both must be greater than zero and non-nil.
-func (log *VerifiableLog) VerifyConsistency(a, b *LogTreeHead) error {
+func (log *VerifiableLog) VerifyConsistency(a, b *pb.LogTreeHashResponse) error {
 	if a == nil || b == nil || a.TreeSize <= 0 || b.TreeSize <= 0 {
 		return ErrVerificationFailed
 	}
@@ -65,7 +67,7 @@ func (log *VerifiableLog) VerifyConsistency(a, b *LogTreeHead) error {
 	if err != nil {
 		return err
 	}
-	err = proof.Verify(a, b)
+	err = VerifyLogConsistencyProof(proof, a, b)
 	if err != nil {
 		return err
 	}
@@ -80,7 +82,7 @@ func (log *VerifiableLog) VerifyConsistency(a, b *LogTreeHead) error {
 // when no new tree hash is available.
 //
 // This is intended for test use.
-func (log *VerifiableLog) BlockUntilPresent(leaf MerkleTreeLeaf) (*LogTreeHead, error) {
+func (log *VerifiableLog) BlockUntilPresent(leaf []byte) (*pb.LogTreeHashResponse, error) {
 	lastHead := int64(-1)
 	timeToSleep := time.Second
 	for {
@@ -112,7 +114,7 @@ func (log *VerifiableLog) BlockUntilPresent(leaf MerkleTreeLeaf) (*LogTreeHead, 
 // LogVerifiedLatestTreeHead calls VerifiedTreeHead() with Head to fetch the latest tree head,
 // and additionally verifies that it is newer than the previously passed tree head.
 // For first use, pass nil to skip consistency checking.
-func (log *VerifiableLog) VerifiedLatestTreeHead(prev *LogTreeHead) (*LogTreeHead, error) {
+func (log *VerifiableLog) VerifiedLatestTreeHead(prev *pb.LogTreeHashResponse) (*pb.LogTreeHashResponse, error) {
 	head, err := log.VerifiedTreeHead(prev, Head)
 	if err != nil {
 		return nil, err
@@ -135,7 +137,7 @@ func (log *VerifiableLog) VerifiedLatestTreeHead(prev *LogTreeHead) (*LogTreeHea
 // bypass consistency proof checking. Tree size may be older or newer than the previous head value.
 //
 // Clients typically use VerifyLatestTreeHead().
-func (log *VerifiableLog) VerifiedTreeHead(prev *LogTreeHead, treeSize int64) (*LogTreeHead, error) {
+func (log *VerifiableLog) VerifiedTreeHead(prev *pb.LogTreeHashResponse, treeSize int64) (*pb.LogTreeHashResponse, error) {
 	// special case returning the value we already have
 	if treeSize != 0 && prev != nil && prev.TreeSize == treeSize {
 		return prev, nil
@@ -162,13 +164,13 @@ func (log *VerifiableLog) VerifiedTreeHead(prev *LogTreeHead, treeSize int64) (*
 //
 // Upon success, the LogTreeHead returned is the one used to verify the inclusion proof - it may be newer or older than the one passed in.
 // In either case, it will have been verified as consistent.
-func (log *VerifiableLog) VerifySuppliedInclusionProof(prev *LogTreeHead, proof *LogInclusionProof) (*LogTreeHead, error) {
+func (log *VerifiableLog) VerifySuppliedInclusionProof(prev *pb.LogTreeHashResponse, proof *pb.LogInclusionProofResponse, leaf []byte) (*pb.LogTreeHashResponse, error) {
 	headForInclProof, err := log.VerifiedTreeHead(prev, proof.TreeSize)
 	if err != nil {
 		return nil, err
 	}
 
-	err = proof.Verify(headForInclProof)
+	err = VerifyLogInclusionProof(proof, leaf, headForInclProof)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +183,7 @@ func (log *VerifiableLog) VerifySuppliedInclusionProof(prev *LogTreeHead, proof 
 // a log, as well as the log operation. This method will retrieve all entries in batch from
 // the log between the passed in prev and head LogTreeHeads, and ensure that the root hash in head can be confirmed to accurately represent
 // the contents of all of the log entries retrieved. To start at entry zero, pass nil for prev, which will also bypass consistency proof checking. Head must not be nil.
-func (log *VerifiableLog) VerifyEntries(ctx context.Context, prev *LogTreeHead, head *LogTreeHead, auditFunc LogAuditFunction) error {
+func (log *VerifiableLog) VerifyEntries(ctx context.Context, prev *pb.LogTreeHashResponse, head *pb.LogTreeHashResponse, auditFunc LogAuditFunction) error {
 	if head == nil {
 		return ErrNilTreeHead
 	}

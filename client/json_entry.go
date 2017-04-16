@@ -17,89 +17,69 @@
 package client
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 
 	"github.com/continusec/objecthash"
+	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/golang/protobuf/proto"
 )
 
-// JsonEntry should used when entry MerkleTreeLeafs should be based on ObjectHash rather than the JSON bytes directly.
-// Since there is no canonical encoding for JSON, it is useful to hash these objects in a more defined manner.
-type JsonEntry struct {
-	// The data to add
-	JsonBytes []byte
-	leafHash  []byte
-}
-
-func (self *JsonEntry) GetLeafInput() []byte {
-	return self.JsonBytes // TODO - wrong here to compile
-}
-func (self *JsonEntry) GetExtraData() []byte {
-	return nil // TODO - wrong here to compile
-}
-
-// Data() returns data suitable for downstream processing of this entry by your application.
-func (self *JsonEntry) Data() ([]byte, error) {
-	return self.JsonBytes, nil
-}
-
-// DataForUpload returns the data that should be uploaded
-func (self *JsonEntry) DataForUpload() ([]byte, error) {
-	return self.JsonBytes, nil
-}
-
-func (self *JsonEntry) DataForStorage() ([]byte, []byte, error) {
-	var o interface{}
-	err := json.Unmarshal(self.JsonBytes, &o)
+func JSONEntryFromProto(m proto.Message) (*pb.LeafData, error) {
+	b, err := json.Marshal(m)
 	if err != nil {
-		return nil, nil, ErrInvalidJSON
+		return nil, err
+	}
+	return JSONEntry(b)
+}
+
+func JSONEntry(data []byte) (*pb.LeafData, error) {
+	var o interface{}
+	err := json.Unmarshal(data, &o)
+	if err != nil {
+		return nil, ErrInvalidJSON
+	}
+
+	ojb, err := json.Marshal(o)
+	if err != nil {
+		return nil, err
 	}
 
 	bflh, err := objecthash.ObjectHash(o)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return bflh, self.JsonBytes, nil
+	return &pb.LeafData{
+		LeafInput: bflh,
+		ExtraData: ojb,
+		Format:    pb.DataFormat_JSON,
+	}, nil
 }
 
-// Format returns the format suffix should be be appended to the PUT/POST API call
-func (self *JsonEntry) Format() string {
-	return "/xjson"
-}
+type LeafDataAuditFunction func(*pb.LeafData) error
 
-// LeafHash() returns the leaf hash for this object.
-func (self *JsonEntry) LeafHash() ([]byte, error) {
-	if self.leafHash == nil {
-		if len(self.JsonBytes) == 0 {
-			self.leafHash = LeafMerkleTreeHash(nil)
-		} else {
-			var contents interface{}
-			err := json.Unmarshal(self.JsonBytes, &contents)
-			if err != nil {
-				return nil, err
-			}
-			oh, err := objecthash.ObjectHashWithStdRedaction(contents)
-			if err != nil {
-				return nil, err
-			}
-			self.leafHash = LeafMerkleTreeHash(oh)
-		}
+// JSONValidateObjectHash verifies that the LeafInput is equal to the objecthash of the ExtraData.
+// It ignores the format sent back by the server
+func JSONValidateObjectHash(entry *pb.LeafData) error {
+	var o interface{}
+	err := json.Unmarshal(entry.ExtraData, &o)
+	if err != nil {
+		return ErrVerificationFailed
 	}
-	return self.leafHash, nil
+	h, err := objecthash.ObjectHashWithStdRedaction(o)
+	if err != nil {
+		return ErrVerificationFailed
+	}
+	if !bytes.Equal(entry.LeafInput, h) {
+		return ErrVerificationFailed
+	}
+	return nil
 }
 
-// JsonEntryFactoryImpl is a VerifiableEntryFactory that produces JsonEntry instances upon request.
-type JsonEntryFactoryImpl struct{}
-
-// CreateFromBytes creates a new VerifiableEntry given these bytes from the server.
-func (self *JsonEntryFactoryImpl) CreateFromBytes(b []byte) (VerifiableEntry, error) {
-	return &JsonEntry{JsonBytes: b}, nil
+// JSONLogAuditFunction verifies that the LeafInput is equal to the objecthash of the ExtraData.
+// It ignores the format sent back by the server
+func JSONLogAuditFunction(ctx context.Context, idx int64, entry *pb.LeafData) error {
+	return JSONValidateObjectHash(entry)
 }
-
-// Format returns the format suffix that should be be appended to the GET call.
-func (self *JsonEntryFactoryImpl) Format() string {
-	return "/xjson"
-}
-
-// JsonEntryFactory is an instance of JsonEntryFactoryImpl that is ready for use
-var JsonEntryFactory = &JsonEntryFactoryImpl{}

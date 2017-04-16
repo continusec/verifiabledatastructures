@@ -19,6 +19,8 @@ package client
 import (
 	"errors"
 
+	"github.com/continusec/verifiabledatastructures/pb"
+
 	"golang.org/x/net/context"
 )
 
@@ -64,56 +66,14 @@ var (
 
 // LogAuditFunction is a function that is called for all matching log entries.
 // Return non-nil to stop the audit.
-type LogAuditFunction func(ctx context.Context, idx int64, entry VerifiableData) error
-
-// MerkleTreeLeaf is an interface to represent any object that a Merkle Tree Leaf can be calculated for.
-// This includes RawDataEntry, JsonEntry, RedactedJsonEntry, AddEntryResponse and MapHead.
-type MerkleTreeLeaf interface {
-	// LeafHash() returns the leaf hash for this object.
-	LeafHash() ([]byte, error)
-}
-
-type MTLHash []byte
-
-func (m MTLHash) LeafHash() ([]byte, error) { return LeafMerkleTreeHash(m), nil }
-
-// UploadableEntry is an interface to represent an entry type that can be uploaded as a log entry or map value.
-// This includes RawDataEntry, JsonEntry, RedactableJsonEntry.
-type UploadableEntry interface {
-	// DataForUpload returns the data that should be uploaded
-	DataForUpload() ([]byte, error)
-
-	// Format returns the format suffix that should be be appended to the PUT/POST API call
-	Format() string
-}
-
-// VerifiableEntry is an interface that represents an entry returned from the log
-type VerifiableEntry interface {
-	// LeafHash() returns the leaf hash for this object.
-	LeafHash() ([]byte, error)
-	// Data() returns data suitable for downstream processing of this entry by your application.
-	Data() ([]byte, error)
-}
-
-// VerifiableEntryFactory is an for instantiation of VerifiableEntries from bytes.
-type VerifiableEntryFactory interface {
-	// CreateFromBytes creates a new VerifiableEntry given these bytes from the server.
-	CreateFromBytes(b []byte) (VerifiableEntry, error)
-	// Format returns the format suffix that should be be appended to the GET call.
-	Format() string
-}
-
-type VerifiableData interface {
-	GetLeafInput() []byte
-	GetExtraData() []byte
-}
+type LogAuditFunction func(ctx context.Context, idx int64, entry *pb.LeafData) error
 
 type MapUpdatePromise interface {
-	MerkleTreeLeaf
-	Wait() (*MapTreeHead, error)
+	Wait() (*pb.MapTreeHashResponse, error)
+	LeafHash() []byte
 }
 
 type LogUpdatePromise interface {
-	MerkleTreeLeaf
-	Wait() (*LogTreeHead, error)
+	Wait() (*pb.LogTreeHashResponse, error)
+	LeafHash() []byte
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/golang/protobuf/proto"
 )
 
 func jsonObjectHash(orig interface{}) (*pb.LeafData, error) {
@@ -53,29 +54,19 @@ func jsonObjectHash(orig interface{}) (*pb.LeafData, error) {
 	}, nil
 }
 
-func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*client.JSONMapMutationEntry, error) {
-	rv := &client.JSONMapMutationEntry{
-		Key:       req.Key,
-		Timestamp: time.Now(),
+func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) {
+	// is there a better way to clone?
+	b, err := proto.Marshal(req.Mutation)
+	if err != nil {
+		return nil, err
 	}
-	if req.Action == pb.MapMutationAction_MAP_MUTATION_DELETE {
-		rv.Action = "delete"
-		return rv, nil
+	var rv pb.MapMutation
+	err = proto.Unmarshal(b, &rv)
+	if err != nil {
+		return nil, err
 	}
-
-	rv.Value = req.Value
-
-	switch req.Action {
-	case pb.MapMutationAction_MAP_MUTATION_SET:
-		rv.Action = "set"
-		return rv, nil
-	case pb.MapMutationAction_MAP_MUTATION_UPDATE:
-		rv.Action = "update"
-		rv.PreviousLeafHash = req.PrevLeafHash
-		return rv, nil
-	default:
-		return nil, ErrInvalidRequest
-	}
+	rv.Timestamp = time.Now().Format(time.RFC3339Nano)
+	return &rv, nil
 }
 
 func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
@@ -91,7 +82,7 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 		return nil, ErrInvalidRequest
 	}
 
-	mutData, err := jsonObjectHash(mm)
+	mutData, err := client.JSONEntryFromProto(mm)
 	if err != nil {
 		return nil, err
 	}

@@ -40,6 +40,7 @@ It has these top-level messages:
 	MapGetValueResponse
 	LogFetchEntriesRequest
 	LogFetchEntriesResponse
+	MapMutation
 */
 package pb
 

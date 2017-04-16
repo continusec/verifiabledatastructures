@@ -21,7 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
+
+	"github.com/continusec/verifiabledatastructures/pb"
 
 	"golang.org/x/net/context"
 )
@@ -101,7 +102,7 @@ func (node *mapAuditNode) CalcHash() []byte {
 
 // Given a root node, update it with a given map mutation, returning the new
 // root hash.
-func addMutationToTree(root *mapAuditNode, mut *JSONMapMutationEntry) ([]byte, error) {
+func addMutationToTree(root *mapAuditNode, mut *pb.MapMutation) ([]byte, error) {
 	keyPath := ConstructMapKeyPath(mut.Key)
 	head := root
 
@@ -168,135 +169,18 @@ func addMutationToTree(root *mapAuditNode, mut *JSONMapMutationEntry) ([]byte, e
 	return root.CalcHash(), nil
 }
 
-// MutationWithJsonEntryResponse is the structured used when requesting experimental
-// type /xjson/mutation as the entry type.
-type mutationWithJsonEntryResponse struct {
-	// MutationLogEntry contains the bytes for the mutation log JSON entry
-	MutationLogEntry []byte `json:"mutation_log_entry"`
-
-	// OHInput contains the bytes used for the input to make the object hash that is
-	// the value in the MutationLogEntry
-	OHInput []byte `json:"objecthash_input"`
-}
-
-// MutationEntry is a type of VerifiableEntry that contains both the
-// log entry, and then separately the value used in that log entry. This is useful to use
-// when the values in a MutationLog are stored as /xjson, and auditors need access to the
-// actual value itself. While just the hash of the value is sufficient to audit that the
-// map is operating correctly, auditors often need to audit properties of the underlying
-// entry as well which is why it is made available.
-type mutationEntry struct {
-	LogEntry VerifiableEntry
-	Value    VerifiableEntry
-}
-
-// LeafHash returns the leaf hash for the wrapped LogEntry
-func (e *mutationEntry) LeafHash() ([]byte, error) {
-	return e.LogEntry.LeafHash()
-}
-
-// Data returns the data for the wrapped LogEntry
-func (e *mutationEntry) Data() ([]byte, error) {
-	return e.LogEntry.Data()
-}
-
-// MutationEntryFactory will create instances of MutationEntry on-demand, using the
-// ValueFactory as the factory for creating the actual values for the MutationEntry.
-// This should be set to match the type of entry stored as the map values.
-// MutationEntryFactory should only be used with Mutation Logs.
-type mutationEntryFactory struct {
-	ValueFactory VerifiableEntryFactory
-}
-
-// isSpecial determines whether special handling is needed for values.
-// If the underlying value format is Json or RedactedJson, then we need to request
-// the special mutation format, else we should just request xjson, since the value
-// is included as raw bytes in the mutation entry.
-func (f *mutationEntryFactory) isSpecial() bool {
-	return strings.HasPrefix(f.ValueFactory.Format(), "/xjson")
-}
-
-// CreateFromBytes creates a new instance of MutationEntry. In addition, if a separate
-// value is returned by the server (e.g. the underlying bytes for an objecthash map value)
-// then this will verify that this value matches the objecthash map value.
-func (f *mutationEntryFactory) CreateFromBytes(b []byte) (VerifiableEntry, error) {
-	var mwjer mutationWithJsonEntryResponse
-	var valEntry VerifiableEntry
-
-	// First, find where the bytes are for that mutation entry
-	bytesForMutation := b
-	if f.isSpecial() {
-		err := json.NewDecoder(bytes.NewReader(b)).Decode(&mwjer)
-		if err != nil {
-			return nil, err
-		}
-		bytesForMutation = mwjer.MutationLogEntry
-	}
-
-	// Now decode the map mutation as we need the value to either make the separate value
-	// or to cross check against the real value
-	var mut JSONMapMutationEntry
-	err := json.NewDecoder(bytes.NewReader(bytesForMutation)).Decode(&mut)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get bytes for the value
-	if f.isSpecial() {
-		valEntry, err = f.ValueFactory.CreateFromBytes(mwjer.OHInput)
-		if err != nil {
-			return nil, err
-		}
-
-		// Make sure the leaf hash actually matches the value as expected
-		crossCheckLeafHash, err := valEntry.LeafHash()
-		if err != nil {
-			return nil, err
-		}
-
-		if !bytes.Equal(crossCheckLeafHash, LeafMerkleTreeHash(mut.Value.LeafInput)) {
-			return nil, ErrVerificationFailed
-		}
-	} else {
-		// otherwise just create the value
-		valEntry, err = f.ValueFactory.CreateFromBytes(mut.Value.LeafInput)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Finally, wrap the JsonEntry
-	jsonEntry, err := JsonEntryFactory.CreateFromBytes(bytesForMutation)
-	if err != nil {
-		return nil, err
-	}
-
-	return &mutationEntry{LogEntry: jsonEntry, Value: valEntry}, nil
-}
-
-// Format returns the format needed to underlying requests to get-entries.
-func (f *mutationEntryFactory) Format() string {
-	// If the underlying value format is Json or RedactedJson, then we need to request
-	// the special mutation format, else we should just request JSON, since the value
-	// is included as raw bytes in the mutation entry.
-	if f.isSpecial() {
-		return "/xjson/mutation"
-	}
-	return "/xjson"
-}
-
 type auditState struct {
 	// Must be set
 	Map *VerifiableMap
 
 	// Current mutation log tree head
-	MutLogHead *LogTreeHead
+	MutLogHead *pb.LogTreeHashResponse
 
-	// Audit function, called for each mutation
+	// Audit function, called for each mutation that changes the map
 	MapAuditFunction MapAuditFunction
 
-	// Factory to create values for entries
-	EntryValueFactory VerifiableEntryFactory
+	// Called for each value on each mutation, regardless of whether it affects the map hash
+	LeafDataAuditFunction LeafDataAuditFunction
 
 	// Not set:
 	Root            mapAuditNode // not a pointer so that we get good empty value
@@ -325,15 +209,27 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 
 		// Perform audit of the mutation log, providing a special function to apply mutations
 		// to our copy of the map
-		err = mutLog.VerifyEntries(ctx, a.MutLogHead, mutLogHead, func(ctx context.Context, idx int64, entry VerifiableData) error {
-			// Get the mutation
-			mutationJson := entry.GetExtraData() // TODO, this probably needs fixing
-
-			// Decode it into standard structure
-			var mutation JSONMapMutationEntry
-			err = json.Unmarshal(mutationJson, &mutation)
+		err = mutLog.VerifyEntries(ctx, a.MutLogHead, mutLogHead, func(ctx context.Context, idx int64, entry *pb.LeafData) error {
+			// First, verify that the LeafData is in fact well formed objecthash
+			err := JSONValidateObjectHash(entry)
 			if err != nil {
 				return err
+			}
+
+			// At this point, we're satisfied that ExtraData is OK
+
+			// Decode it into standard structure
+			var mutation pb.MapMutation
+			err = json.Unmarshal(entry.ExtraData, &mutation)
+			if err != nil {
+				return err
+			}
+
+			if a.LeafDataAuditFunction != nil {
+				err = a.LeafDataAuditFunction(mutation.Value)
+				if err != nil {
+					return err
+				}
 			}
 
 			// Apply it to our copy of the map
@@ -344,7 +240,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 
 			// Keep our own copy of the mutation log hash stack so that we can
 			// verify the mutation log heads as well.
-			lh := LeafMerkleTreeHash(entry.GetLeafInput())
+			lh := LeafMerkleTreeHash(entry.LeafInput)
 
 			// Apply to stack
 			a.MutLogHashStack = append(a.MutLogHashStack, lh)
@@ -365,16 +261,11 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 			// Finally, if we actually made a change (ie the mutation did something)
 			// then call the underlying audit function provided by the client.
 			if a.MapAuditFunction != nil && !bytes.Equal(lastRootHash, rh) {
-				/*me, ok := entry.(*mutationEntry)
-				if !ok {
-					return ErrVerificationFailed
-				}
-
-				err = a.MapAuditFunction(ctx, idx, mutation.Key, me.Value)
+				err = a.MapAuditFunction(ctx, idx, mutation.Key, mutation.Value)
 				if err != nil {
 					return err
-				}*/
-				return ErrVerificationFailed // TODO
+				}
+				return nil
 			}
 
 			// Save for next time
@@ -399,30 +290,34 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 }
 
 // CheckTreeHeadEntry is the audit function that checks the actual tree head is correct
-func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry VerifiableData) error {
-	// Get the tree head data
-	treeHeadJson := entry.GetLeafInput() // TODO WRONG
+func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry *pb.LeafData) error {
+	// Step 0, are we a valid JSON hash?
+	err := JSONValidateObjectHash(entry)
+	if err != nil {
+		return err
+	}
 
+	// Get the tree head data
 	// Decode it into standard structure
-	var mth JSONMapTreeHeadResponse
-	err := json.NewDecoder(bytes.NewReader(treeHeadJson)).Decode(&mth)
+	var mth pb.MapTreeHashResponse
+	err = json.Unmarshal(entry.ExtraData, &mth)
 	if err != nil {
 		return err
 	}
 
 	// Advance the state of the auditor to at least this size
-	err = a.ProcessUntilAtLeast(ctx, mth.LogTreeHead.TreeSize)
+	err = a.ProcessUntilAtLeast(ctx, mth.MutationLog.TreeSize)
 	if err != nil {
 		return err
 	}
 
 	// Check map root hash (subtract 1 from index since size 1 is the first meaningful)
-	if !bytes.Equal(a.MapTreeHeads[mth.LogTreeHead.TreeSize-1], mth.MapHash) {
+	if !bytes.Equal(a.MapTreeHeads[mth.MutationLog.TreeSize-1], mth.RootHash) {
 		return ErrVerificationFailed
 	}
 
 	// Check mutation log hash (subtract 1 from index since size 1 is the first meaningful)
-	if !bytes.Equal(a.MutationLogTreeHeads[mth.LogTreeHead.TreeSize-1], mth.LogTreeHead.Hash) {
+	if !bytes.Equal(a.MutationLogTreeHeads[mth.MutationLog.TreeSize-1], mth.MutationLog.RootHash) {
 		return ErrVerificationFailed
 	}
 

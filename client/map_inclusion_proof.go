@@ -16,31 +16,19 @@
 
 package client
 
-import "bytes"
+import (
+	"bytes"
 
-// MapInclusionProof represents the response for getting an entry from a map. It contains both the value itself,
-// as well as an inclusion proof for how that value fits into the map root hash.
-type MapInclusionProof struct {
-	// Key is the key for which this inclusion proof is valid
-	Key []byte
-
-	// Value represents the entry for which this proof is valid
-	Value VerifiableData
-
-	// AuditPath is the set of Merkle Tree Hashes needed to prove consistency
-	AuditPath [][]byte
-
-	// TreeSize is the size of the tree for which this proof is valid
-	TreeSize int64
-}
+	"github.com/continusec/verifiabledatastructures/pb"
+)
 
 // Verify verifies an inclusion proof against a MapTreeHead
-func (self *MapInclusionProof) Verify(head *MapTreeHead) error {
-	if self.TreeSize != head.MutationLogTreeHead.TreeSize {
+func VerifyMapInclusionProof(self *pb.MapGetValueResponse, key []byte, head *pb.MapTreeHashResponse) error {
+	if self.TreeSize != head.MutationLog.TreeSize {
 		return ErrVerificationFailed
 	}
 
-	kp := ConstructMapKeyPath(self.Key)
+	kp := ConstructMapKeyPath(key)
 	t := LeafMerkleTreeHash(self.Value.GetLeafInput())
 	for i := len(kp) - 1; i >= 0; i-- {
 		p := self.AuditPath[i]

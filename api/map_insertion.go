@@ -31,7 +31,7 @@ var (
 
 // prevLeafHash must never be nil, it will often be nullLeafHash though
 // Never returns nil (except on err), always returns nullLeafHash instead
-func mutationLeafHash(mut *client.JSONMapMutationEntry, prevLeafHash []byte) ([]byte, error) {
+func mutationLeafHash(mut *pb.MapMutation, prevLeafHash []byte) ([]byte, error) {
 	switch mut.Action {
 	case "set":
 		return client.LeafMerkleTreeHash(mut.Value.LeafInput), nil
@@ -121,7 +121,7 @@ func isEmptyNode(mn *pb.MapNode) bool {
 	return ((len(mn.LeafHash) == 0) || bytes.Equal(mn.LeafHash, nullLeafHash)) && mn.LeftNumber == 0 && mn.RightNumber == 0
 }
 
-func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *client.JSONMapMutationEntry) ([]byte, error) {
+func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *pb.MapMutation) ([]byte, error) {
 	keyPath := BPathFromKey(mut.Key)
 
 	// Get the root node for tree size, will never be nil

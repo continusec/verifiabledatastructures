@@ -124,20 +124,9 @@ message LogAddEntryResponse {
     bytes leaf_hash = 1;
 }
 
-enum MapMutationAction {
-    MAP_MUTATION_SET = 0;
-    MAP_MUTATION_DELETE = 1;
-    MAP_MUTATION_UPDATE = 2;
-}
-
 message MapSetValueRequest {
     MapRef map = 1;
-
-    MapMutationAction action = 2;
-
-    bytes key = 3;
-    LeafData value = 4; // if MAP_MUTATION_SET or MAP_MUTATION_UPDATE
-    bytes prev_leaf_hash = 5; // if MAP_MUTATION_UPDATE
+    MapMutation mutation = 2;
 }
 
 message MapSetValueResponse {
@@ -164,4 +153,12 @@ message LogFetchEntriesRequest {
 
 message LogFetchEntriesResponse {
     repeated LeafData values = 1;
+}
+
+message MapMutation {
+    string timestamp = 1; // Set by the server. RFC3339 - may not be applied in order. Added as a rough nonce.
+    string action  = 2;   // One of "set", "delete", "update"
+    bytes key = 3;
+    LeafData value = 4;
+    bytes previous_leaf_hash = 5;
 }

@@ -128,7 +128,7 @@ func applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
 	// Special case mutation log for maps
 	if req.Log.LogType == pb.LogType_STRUCT_TYPE_MUTATION_LOG {
 		// Step 2 - add entries to map if needed
-		var mut client.JSONMapMutationEntry
+		var mut pb.MapMutation
 		err = json.Unmarshal(req.Value.ExtraData, &mut)
 		if err != nil {
 			return err
@@ -139,12 +139,9 @@ func applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
 		}
 
 		// Step 3 - add entries to treehead log if neeed
-		thld, err := jsonObjectHash(&client.JSONMapTreeHeadResponse{
-			MapHash: mrh,
-			LogTreeHead: &client.JSONLogTreeHeadResponse{
-				Hash:     mutLogHead.RootHash,
-				TreeSize: mutLogHead.TreeSize,
-			},
+		thld, err := jsonObjectHash(&pb.MapTreeHashResponse{
+			RootHash:    mrh,
+			MutationLog: mutLogHead,
 		})
 		if err != nil {
 			return err

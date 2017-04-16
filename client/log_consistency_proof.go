@@ -16,40 +16,32 @@
 
 package client
 
-import "bytes"
+import (
+	"bytes"
 
-// LogConsistencyProof is a class to represent a consistency proof for a given log.
-type LogConsistencyProof struct {
-	// AuditPath is the set of Merkle Tree Hashes needed to prove consistency
-	AuditPath [][]byte
-
-	// FirstSize is the size of the first tree
-	FirstSize int64
-
-	// SecondSize is the size of the second tree
-	SecondSize int64
-}
+	"github.com/continusec/verifiabledatastructures/pb"
+)
 
 // Verify will verify that the consistency proof stored in this object can produce both the LogTreeHeads passed to this method.
-func (self *LogConsistencyProof) Verify(first, second *LogTreeHead) error {
-	if first.TreeSize != self.FirstSize {
+func VerifyLogConsistencyProof(self *pb.LogConsistencyProofResponse, first, second *pb.LogTreeHashResponse) error {
+	if first.TreeSize != self.FromSize {
 		return ErrVerificationFailed
 	}
 
-	if second.TreeSize != self.SecondSize {
+	if second.TreeSize != self.TreeSize {
 		return ErrVerificationFailed
 	}
 
-	if self.FirstSize < 1 {
+	if self.FromSize < 1 {
 		return ErrVerificationFailed
 	}
 
-	if self.FirstSize >= second.TreeSize {
+	if self.FromSize >= second.TreeSize {
 		return ErrVerificationFailed
 	}
 
 	var proof [][]byte
-	if IsPow2(self.FirstSize) {
+	if IsPow2(self.FromSize) {
 		proof = make([][]byte, 1+len(self.AuditPath))
 		proof[0] = first.RootHash
 		copy(proof[1:], self.AuditPath)
@@ -57,7 +49,7 @@ func (self *LogConsistencyProof) Verify(first, second *LogTreeHead) error {
 		proof = self.AuditPath
 	}
 
-	fn, sn := self.FirstSize-1, second.TreeSize-1
+	fn, sn := self.FromSize-1, second.TreeSize-1
 	for 1 == (fn & 1) {
 		fn >>= 1
 		sn >>= 1

@@ -16,25 +16,14 @@
 
 package client
 
-import "bytes"
+import (
+	"bytes"
 
-// LogInclusionProof is a class to represent a consistency proof for a given log.
-type LogInclusionProof struct {
-	// AuditPath is the set of Merkle Tree Hashes needed to prove inclusion
-	AuditPath [][]byte
-
-	// TreeSize is the size of the tree for which this proof is valid
-	TreeSize int64
-
-	// LeafIndex is the index of this leaf within the tree
-	LeafIndex int64
-
-	// LeafHash is the Merkle Tree Leaf hash for which this proof is based
-	LeafHash []byte
-}
+	"github.com/continusec/verifiabledatastructures/pb"
+)
 
 // Verify verifies an inclusion proof against a LogTreeHead
-func (self *LogInclusionProof) Verify(head *LogTreeHead) error {
+func VerifyLogInclusionProof(self *pb.LogInclusionProofResponse, leafHash []byte, head *pb.LogTreeHashResponse) error {
 	if self.TreeSize != head.TreeSize {
 		return ErrVerificationFailed
 	}
@@ -46,7 +35,7 @@ func (self *LogInclusionProof) Verify(head *LogTreeHead) error {
 	}
 
 	fn, sn := self.LeafIndex, self.TreeSize-1
-	r := self.LeafHash
+	r := leafHash
 	for _, p := range self.AuditPath {
 		if (fn == sn) || ((fn & 1) == 1) {
 			r = NodeMerkleTreeHash(p, r)

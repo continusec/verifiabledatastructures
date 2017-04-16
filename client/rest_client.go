@@ -112,12 +112,12 @@ func (self *HTTPRESTClient) LogAddEntry(ctx context.Context, req *pb.LogAddEntry
 	if err != nil {
 		return nil, err
 	}
-	var aer JSONAddEntryResponse
-	err = json.Unmarshal(contents, &aer)
+	var rv pb.LogAddEntryResponse
+	err = json.Unmarshal(contents, &rv)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.LogAddEntryResponse{LeafHash: aer.Hash}, nil
+	return &rv, nil
 }
 
 func (self *HTTPRESTClient) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
@@ -126,24 +126,12 @@ func (self *HTTPRESTClient) LogFetchEntries(ctx context.Context, req *pb.LogFetc
 		return nil, err
 	}
 
-	var ger JSONGetEntriesResponse
-	err = json.Unmarshal(contents, &ger)
+	var rv pb.LogFetchEntriesResponse
+	err = json.Unmarshal(contents, &rv)
 	if err != nil {
 		return nil, err
 	}
-
-	rv := &pb.LogFetchEntriesResponse{
-		Values: make([]*pb.LeafData, len(ger.Entries)),
-	}
-	for i, x := range ger.Entries {
-		var edObj pb.LeafData
-		err := json.Unmarshal(x.Data, &edObj)
-		if err != nil {
-			return nil, err
-		}
-		rv.Values[i] = &edObj
-	}
-	return rv, nil
+	return &rv, nil
 }
 
 func (self *HTTPRESTClient) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
@@ -151,15 +139,12 @@ func (self *HTTPRESTClient) LogTreeHash(ctx context.Context, req *pb.LogTreeHash
 	if err != nil {
 		return nil, err
 	}
-	var cr JSONLogTreeHeadResponse
-	err = json.Unmarshal(contents, &cr)
+	var rv pb.LogTreeHashResponse
+	err = json.Unmarshal(contents, &rv)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.LogTreeHashResponse{
-		RootHash: cr.Hash,
-		TreeSize: cr.TreeSize,
-	}, nil
+	return &rv, nil
 }
 
 func (self *HTTPRESTClient) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
@@ -168,31 +153,23 @@ func (self *HTTPRESTClient) LogInclusionProof(ctx context.Context, req *pb.LogIn
 		if err != nil {
 			return nil, err
 		}
-		var cr JSONInclusionProofResponse
-		err = json.Unmarshal(contents, &cr)
+		var rv pb.LogInclusionProofResponse
+		err = json.Unmarshal(contents, &rv)
 		if err != nil {
 			return nil, err
 		}
-		return &pb.LogInclusionProofResponse{
-			AuditPath: cr.Proof,
-			LeafIndex: cr.Number,
-			TreeSize:  cr.TreeSize,
-		}, nil
+		return &rv, nil
 	}
 	contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d/inclusion/h/%s", req.TreeSize, hex.EncodeToString(req.MtlHash)), nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	var cr JSONInclusionProofResponse
-	err = json.Unmarshal(contents, &cr)
+	var rv pb.LogInclusionProofResponse
+	err = json.Unmarshal(contents, &rv)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.LogInclusionProofResponse{
-		AuditPath: cr.Proof,
-		LeafIndex: cr.Number,
-		TreeSize:  cr.TreeSize,
-	}, nil
+	return &rv, nil
 }
 
 func (self *HTTPRESTClient) LogConsistencyProof(ctx context.Context, req *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
@@ -200,63 +177,59 @@ func (self *HTTPRESTClient) LogConsistencyProof(ctx context.Context, req *pb.Log
 	if err != nil {
 		return nil, err
 	}
-	var cr JSONConsistencyProofResponse
-	err = json.Unmarshal(contents, &cr)
+	var rv pb.LogConsistencyProofResponse
+	err = json.Unmarshal(contents, &rv)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.LogConsistencyProofResponse{
-		AuditPath: cr.Proof,
-		FromSize:  cr.First,
-		TreeSize:  cr.Second,
-	}, nil
+	return &rv, nil
 }
 
 func (self *HTTPRESTClient) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
-	switch req.Action {
-	case pb.MapMutationAction_MAP_MUTATION_DELETE:
-		contents, _, err := self.makeMapRequest(req.Map, "DELETE", "/key/h/"+hex.EncodeToString(req.Key), nil, nil)
+	switch req.Mutation.Action {
+	case "delete":
+		contents, _, err := self.makeMapRequest(req.Map, "DELETE", "/key/h/"+hex.EncodeToString(req.Mutation.Key), nil, nil)
 		if err != nil {
 			return nil, err
 		}
-		var aer JSONAddEntryResponse
-		err = json.Unmarshal(contents, &aer)
+		var rv pb.MapSetValueResponse
+		err = json.Unmarshal(contents, &rv)
 		if err != nil {
 			return nil, err
 		}
-		return &pb.MapSetValueResponse{LeafHash: aer.Hash}, nil
-	case pb.MapMutationAction_MAP_MUTATION_SET:
-		reqData, err := json.Marshal(req.Value)
+		return &rv, nil
+	case "set":
+		reqData, err := json.Marshal(req.Mutation.Value)
 		if err != nil {
 			return nil, err
 		}
-		contents, _, err := self.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Key)+"/extra", reqData, nil)
+		contents, _, err := self.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Mutation.Key)+"/extra", reqData, nil)
 		if err != nil {
 			return nil, err
 		}
-		var aer JSONAddEntryResponse
-		err = json.Unmarshal(contents, &aer)
+		var rv pb.MapSetValueResponse
+		err = json.Unmarshal(contents, &rv)
 		if err != nil {
 			return nil, err
 		}
-		return &pb.MapSetValueResponse{LeafHash: aer.Hash}, nil
-	case pb.MapMutationAction_MAP_MUTATION_UPDATE:
-		reqData, err := json.Marshal(req.Value)
+		return &rv, nil
+	case "update":
+		reqData, err := json.Marshal(req.Mutation.Value)
 		if err != nil {
 			return nil, err
 		}
-		contents, _, err := self.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Key)+"/extra", reqData, [][2]string{
-			[2]string{"X-Previous-LeafHash", hex.EncodeToString(req.PrevLeafHash)},
+		contents, _, err := self.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Mutation.Key)+"/extra", reqData, [][2]string{
+			[2]string{"X-Previous-LeafHash", hex.EncodeToString(req.Mutation.PreviousLeafHash)},
 		})
 		if err != nil {
 			return nil, err
 		}
-		var aer JSONAddEntryResponse
-		err = json.Unmarshal(contents, &aer)
+		var rv pb.MapSetValueResponse
+		err = json.Unmarshal(contents, &rv)
 		if err != nil {
 			return nil, err
 		}
-		return &pb.MapSetValueResponse{LeafHash: aer.Hash}, nil
+		return &rv, nil
 	default:
 		return nil, ErrInternalError
 	}
@@ -299,13 +272,13 @@ func (self *HTTPRESTClient) MapGetValue(ctx context.Context, req *pb.MapGetValue
 		return nil, err
 	}
 
-	var val pb.LeafData
-	err = json.Unmarshal(value, &val)
+	vts, err := strconv.Atoi(headers.Get("X-Verified-TreeSize"))
 	if err != nil {
 		return nil, err
 	}
 
-	vts, err := strconv.Atoi(headers.Get("X-Verified-TreeSize"))
+	var rv pb.LeafData
+	err = json.Unmarshal(value, &rv)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +286,7 @@ func (self *HTTPRESTClient) MapGetValue(ctx context.Context, req *pb.MapGetValue
 	return &pb.MapGetValueResponse{
 		AuditPath: prv,
 		TreeSize:  int64(vts),
-		Value:     &val,
+		Value:     &rv,
 	}, nil
 }
 func (self *HTTPRESTClient) MapTreeHash(ctx context.Context, req *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {
@@ -321,16 +294,10 @@ func (self *HTTPRESTClient) MapTreeHash(ctx context.Context, req *pb.MapTreeHash
 	if err != nil {
 		return nil, err
 	}
-	var cr JSONMapTreeHeadResponse
-	err = json.Unmarshal(contents, &cr)
+	var rv pb.MapTreeHashResponse
+	err = json.Unmarshal(contents, &rv)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.MapTreeHashResponse{
-		RootHash: cr.MapHash,
-		MutationLog: &pb.LogTreeHashResponse{
-			RootHash: cr.LogTreeHead.Hash,
-			TreeSize: cr.LogTreeHead.TreeSize,
-		},
-	}, nil
+	return &rv, nil
 }
