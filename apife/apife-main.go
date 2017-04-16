@@ -219,13 +219,6 @@ func wrapLogFunction(logType pb.LogType, f func(*pb.LogRef, map[string]string, h
 	}
 }
 
-func wrapAccountFunction(f func(*pb.AccountRef, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars, accRef := accountRefFromRequest(r)
-		f(accRef, vars, w, r)
-	}
-}
-
 func wrapLogFunctionWithFormat(logType pb.LogType, ef *formatMetadata, f func(*pb.LogRef, *formatMetadata, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return wrapLogFunction(logType, func(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		f(log, ef, vars, w, r)
@@ -402,21 +395,6 @@ func (as *apiServer) inclusionByHashProofHandler(log *pb.LogRef, vars map[string
 	as.inclusionProofHandler(log, vars, &pb.LogInclusionProofRequest{
 		MtlHash: mtlHash,
 	}, w, r)
-}
-
-func redactJSON(b []byte) ([]byte, error) {
-	var o interface{}
-	err := json.Unmarshal(b, &o)
-	if err != nil {
-		return nil, err
-	}
-
-	o, err = objecthash.Redactable(o)
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(o)
 }
 
 func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {

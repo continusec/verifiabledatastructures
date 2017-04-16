@@ -33,21 +33,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-type Failable interface {
-	Error(args ...interface{})
-}
-
-type DummyTester struct {
-	failed bool
-}
-
-func (f *DummyTester) Error(args ...interface{}) {
-	fmt.Println(args...)
-	fmt.Println("FAILURE!!!")
-	f.failed = true
-	panic("aaeerrgghh!!")
-}
-
 func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	account := (&client.VerifiableDataStructuresClient{
 		Service: service,

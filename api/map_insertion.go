@@ -74,14 +74,6 @@ func descendToFork(db KeyReader, path BPath, root *pb.MapNode) (*pb.MapNode, []*
 	}
 }
 
-func mapNodeIsLeaf(n *pb.MapNode) bool {
-	return len(n.LeafHash) != 0
-}
-
-func mapNodeRemainingMatches(n *pb.MapNode, kp BPath) bool {
-	return bytes.Equal(kp, n.Path)
-}
-
 func writeAncestors(db KeyWriter, last *pb.MapNode, ancestors []*pb.MapNode, keyPath BPath, mutationIndex int64) ([]byte, error) {
 	// Write out ancestor chain
 	curHash, err := calcNodeHash(last, uint(len(ancestors)))

@@ -66,8 +66,6 @@ var (
 	buckets = generateBucketNames()
 
 	headKey       = []byte("head")
-	mapsBucket    = []byte("maps")
-	logsBucket    = []byte("logs")
 	mapNodeBucket = []byte("map_node")
 )
 
@@ -199,13 +197,6 @@ func lookupLogEntryHashes(kr KeyReader, lt pb.LogType, first, last int64) ([][]b
 		rv[i-first] = x.Mth
 	}
 	return rv, nil
-}
-
-func keyForIdx(prefix []byte, i uint64) []byte {
-	rv := make([]byte, len(prefix)+8)
-	copy(rv, prefix)
-	binary.BigEndian.PutUint64(rv[len(prefix):], i)
-	return rv
 }
 
 func toIntBinary(i uint64) []byte {

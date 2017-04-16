@@ -21,8 +21,25 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/continusec/verifiabledatastructures/pb"
+
 	"golang.org/x/net/context"
 )
+
+func mustCreateJSONEntry(t *testing.T, v []byte) *pb.LeafData {
+	rv, err := JSONEntry(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rv
+}
+func mustCreateRedactableJSONEntry(t *testing.T, v []byte) *pb.LeafData {
+	rv, err := RedactableJsonEntry(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rv
+}
 
 // Start a server on :8080 and run a set of client library tests against it.
 // Remove the "go " on the first line to start and keep serving - useful when testing
@@ -66,27 +83,27 @@ func TestStuff(t *testing.T) {
 	mockServer.IncrementSequence() // skip log creation test
 	mockServer.IncrementSequence() // skip log creation test
 
-	_, err = log.Add(&RawDataEntry{RawBytes: []byte("foo")})
+	_, err = log.Add(&pb.LeafData{LeafInput: []byte("foo")})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = log.Add(&JsonEntry{JsonBytes: []byte("{\"name\":\"adam\",\"ssn\":123.45}")})
+	_, err = log.Add(mustCreateJSONEntry(t, []byte("{\"name\":\"adam\",\"ssn\":123.45}")))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = log.Add(&RedactableJsonEntry{JsonBytes: []byte("{\"name\":\"adam\",\"ssn\":123.45}")})
+	_, err = log.Add(mustCreateRedactableJSONEntry(t, []byte("{\"name\":\"adam\",\"ssn\":123.45}")))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	addResp, err := log.Add(&RawDataEntry{RawBytes: []byte("foo")})
+	addResp, err := log.Add(&pb.LeafData{LeafInput: []byte("foo")})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = log.BlockUntilPresent(addResp)
+	_, err = log.BlockUntilPresent(addResp.LeafHash())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +117,7 @@ func TestStuff(t *testing.T) {
 	}
 
 	for i := 0; i < 100; i++ {
-		_, err = log.Add(&RawDataEntry{RawBytes: []byte(fmt.Sprintf("foo-%d", i))})
+		_, err = log.Add(&pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo-%d", i))})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -115,22 +132,22 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = log.VerifyInclusion(head103, &RawDataEntry{RawBytes: []byte("foo27")})
+	err = log.VerifyInclusion(head103, LeafMerkleTreeHash([]byte("foo27")))
 	if err != ErrNotFound {
 		t.Fatal(err)
 	}
 
-	inclProof, err := log.InclusionProof(head103.TreeSize, &RawDataEntry{RawBytes: []byte("foo-27")})
+	inclProof, err := log.InclusionProof(head103.TreeSize, LeafMerkleTreeHash([]byte("foo-27")))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = inclProof.Verify(head103)
+	err = VerifyLogInclusionProof(inclProof, LeafMerkleTreeHash([]byte("foo-27")), head103)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = inclProof.Verify(head)
+	err = VerifyLogInclusionProof(inclProof, LeafMerkleTreeHash([]byte("foo-27")), head)
 	if err != ErrVerificationFailed {
 		t.Fatal(err)
 	}
@@ -145,22 +162,22 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = cons.Verify(head50, head103)
+	err = VerifyLogConsistencyProof(cons, head50, head103)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = cons.Verify(head, head103)
+	err = VerifyLogConsistencyProof(cons, head, head103)
 	if err != ErrVerificationFailed {
 		t.Fatal(err)
 	}
 
-	inclProof, err = log.InclusionProof(10, &RawDataEntry{RawBytes: []byte("foo")})
+	inclProof, err = log.InclusionProof(10, LeafMerkleTreeHash([]byte("foo")))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	h10, err := log.VerifySuppliedInclusionProof(head103, inclProof)
+	h10, err := log.VerifySuppliedInclusionProof(head103, inclProof, LeafMerkleTreeHash([]byte("foo")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +189,7 @@ func TestStuff(t *testing.T) {
 	ctx := context.TODO()
 
 	count := 0
-	err = log.VerifyEntries(ctx, nil, head103, func(ctx context.Context, idx int64, entry VerifiableData) error {
+	err = log.VerifyEntries(ctx, nil, head103, func(ctx context.Context, idx int64, entry *pb.LeafData) error {
 		entry.GetLeafInput() // TODO
 
 		count++
@@ -192,7 +209,7 @@ func TestStuff(t *testing.T) {
 	}
 
 	count = 0
-	err = log.VerifyEntries(ctx, head1, head103, func(ctx context.Context, idx int64, entry VerifiableData) error {
+	err = log.VerifyEntries(ctx, head1, head103, func(ctx context.Context, idx int64, entry *pb.LeafData) error {
 		entry.GetLeafInput() // TODO
 
 		count++
@@ -211,7 +228,7 @@ func TestStuff(t *testing.T) {
 	}
 
 	count = 0
-	err = log.VerifyEntries(ctx, head1, head3, func(ctx context.Context, idx int64, entry VerifiableData) error {
+	err = log.VerifyEntries(ctx, head1, head3, func(ctx context.Context, idx int64, entry *pb.LeafData) error {
 		entry.GetLeafInput() // TODO
 		count++
 		return nil
@@ -224,7 +241,7 @@ func TestStuff(t *testing.T) {
 	}
 
 	count = 0
-	err = log.VerifyEntries(ctx, head50, head103, func(ctx context.Context, idx int64, entry VerifiableData) error {
+	err = log.VerifyEntries(ctx, head50, head103, func(ctx context.Context, idx int64, entry *pb.LeafData) error {
 		entry.GetLeafInput() // TODO
 		count++
 		return nil
@@ -236,7 +253,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = log.VerifyInclusion(head103, &JsonEntry{JsonBytes: []byte("{    \"ssn\":  123.4500 ,   \"name\" :  \"adam\"}")})
+	err = log.VerifyInclusion(head103, LeafMerkleTreeHash(mustCreateJSONEntry(t, []byte("{    \"ssn\":  123.4500 ,   \"name\" :  \"adam\"}")).LeafInput))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,7 +276,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(-1)
 	}
 
-	err = log.VerifyInclusion(head103, MTLHash(redEnt.GetLeafInput()))
+	err = log.VerifyInclusion(head103, LeafMerkleTreeHash(redEnt.LeafInput))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +299,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(-1)
 	}
 
-	err = log.VerifyInclusion(head103, MTLHash(redEnt.GetLeafInput()))
+	err = log.VerifyInclusion(head103, LeafMerkleTreeHash(redEnt.LeafInput))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,23 +313,23 @@ func TestStuff(t *testing.T) {
 	mockServer.IncrementSequence() // skip map creation test
 	mockServer.IncrementSequence() // skip map creation test
 
-	_, err = vmap.Set([]byte("foo"), &RawDataEntry{RawBytes: []byte("foo")})
+	_, err = vmap.Set([]byte("foo"), &pb.LeafData{LeafInput: []byte("foo")})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = vmap.Set([]byte("fiz"), &JsonEntry{JsonBytes: []byte("{\"name\":\"adam\",\"ssn\":123.45}")})
+	_, err = vmap.Set([]byte("fiz"), mustCreateJSONEntry(t, []byte("{\"name\":\"adam\",\"ssn\":123.45}")))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	waitResp, err := vmap.Set([]byte("foz"), &RedactableJsonEntry{JsonBytes: []byte("{\"name\":\"adam\",\"ssn\":123.45}")})
+	waitResp, err := vmap.Set([]byte("foz"), mustCreateRedactableJSONEntry(t, []byte("{\"name\":\"adam\",\"ssn\":123.45}")))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for i := 0; i < 100; i++ {
-		_, err = vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &RawDataEntry{RawBytes: []byte(fmt.Sprintf("fooval%d", i))})
+		_, err = vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &pb.LeafData{LeafInput: []byte(fmt.Sprintf("fooval%d", i))})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -333,7 +350,7 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mlHead, err := vmap.MutationLog().BlockUntilPresent(waitResp)
+	mlHead, err := vmap.MutationLog().BlockUntilPresent(waitResp.LeafHash())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -347,31 +364,16 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if mrHead.MutationLogTreeHead.TreeSize != 106 {
+	if mrHead.MutationLog.TreeSize != 106 {
 		t.Fatal(err)
 	}
 
-	entryResp, err := vmap.Get([]byte("foo"), mrHead.MutationLogTreeHead.TreeSize)
+	entryResp, err := vmap.Get([]byte("foo"), mrHead.MutationLog.TreeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = entryResp.Verify(mrHead)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dd = entryResp.Value.GetLeafInput() // TODO
-	if len(dd) > 0 {
-		t.Fatal(-10)
-	}
-
-	entryResp, err = vmap.Get([]byte("foo-29"), mrHead.MutationLogTreeHead.TreeSize)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = entryResp.Verify(mrHead)
+	err = VerifyMapInclusionProof(entryResp, []byte("foo"), mrHead)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,12 +383,27 @@ func TestStuff(t *testing.T) {
 		t.Fatal(-10)
 	}
 
-	entryResp, err = vmap.Get([]byte("foo29"), mrHead.MutationLogTreeHead.TreeSize)
+	entryResp, err = vmap.Get([]byte("foo-29"), mrHead.MutationLog.TreeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = entryResp.Verify(mrHead)
+	err = VerifyMapInclusionProof(entryResp, []byte("foo-29"), mrHead)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dd = entryResp.Value.GetLeafInput() // TODO
+	if len(dd) > 0 {
+		t.Fatal(-10)
+	}
+
+	entryResp, err = vmap.Get([]byte("foo29"), mrHead.MutationLog.TreeSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = VerifyMapInclusionProof(entryResp, []byte("foo29"), mrHead)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -481,7 +498,7 @@ func TestStuff(t *testing.T) {
 
 	client = localClient.Account("7981306761429961588", "testupdate")
 	vmap = client.VerifiableMap("loadtestmap2")
-	_, err = vmap.Update([]byte("fooyo"), &RawDataEntry{RawBytes: []byte("bar")}, &RawDataEntry{})
+	_, err = vmap.Update([]byte("fooyo"), &pb.LeafData{LeafInput: []byte("bar")}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
