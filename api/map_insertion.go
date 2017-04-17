@@ -152,9 +152,11 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *pb.Map
 	}
 
 	// Time to start writing our data
-	err = writeDataByLeafHash(db, pb.LogType_STRUCT_TYPE_MUTATION_LOG, nextLeafHash, mut.Value)
-	if err != nil {
-		return nil, err
+	if !bytes.Equal(nextLeafHash, nullLeafHash) {
+		err = writeDataByLeafHash(db, pb.LogType_STRUCT_TYPE_MUTATION_LOG, nextLeafHash, mut.Value)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// OK, instead, is the leaf us exactly? If so, easy we just rewrite it.

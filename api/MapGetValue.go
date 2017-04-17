@@ -91,9 +91,13 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 		} else { // we're a leaf
 			// Check value is actually us, else we need to manufacture a proof
 			if bytes.Equal(kp, cur.Path) {
-				dataRv, err = lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
-				if err != nil {
-					return err
+				if bytes.Equal(cur.LeafHash, nullLeafHash) {
+					dataRv = &pb.LeafData{} // empty value
+				} else {
+					dataRv, err = lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
+					if err != nil {
+						return err
+					}
 				}
 			} else {
 				dataRv = &pb.LeafData{} // empty value

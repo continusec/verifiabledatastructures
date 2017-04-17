@@ -6,7 +6,16 @@ It was originally written by Adam Eijdenberg (<adam@continusec.com>) and is rele
 
 Enjoy.
 
+# Quickstart
+
+```bash
+go get -u github.com/continusec/verifiabledatastructures/cmd/vdbserver
+vdbserver
+```
+
 # Development Commands
+
+The following commands are useful for those working with the source.
 
 ## Re-generate proto
 
@@ -16,9 +25,21 @@ mkdir pb
 go generate
 ```
 
+## Re-generate assets
+
+```bash
+cd assets
+go generate
+```
+
 ## Rebuild server
 ```bash
 go install github.com/continusec/verifiabledatastructures/cmd/vdbserver
+```
+
+## Run tests
+```bash
+go test github.com/continusec/verifiabledatastructures/tests
 ```
 
 ## Sample config file for server

@@ -16,9 +16,12 @@
 
 package client
 
-import "crypto/sha256"
-import "encoding/json"
-import "github.com/continusec/objecthash"
+import (
+	"crypto/sha256"
+	"encoding/json"
+
+	"github.com/continusec/objecthash"
+)
 
 // ConstructMapKeyPath returns the path in the tree for a given key. Specifically it takes
 // the SHA256 hash of the key, and then returns a big-endian slice of booleans representing
