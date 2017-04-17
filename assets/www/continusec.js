@@ -130,38 +130,6 @@ ContinusecClient.prototype.getVerifiableLog = function (name) {
 };
 
 /**
- * Fetch the list of logs held by this account.
- * @param {listLogsSuccessCallback} success called on success
- * @param {failureCallback} failure called on failure
- */
-ContinusecClient.prototype.listLogs = function (success, failure) {
-	this.makeRequest("GET", "/logs", null, function (data) {
-		var obj = JSON.parse(data);
-        var rv = [];
-        for (var i = 0; i < obj.results.length; i++) {
-            rv.push(new LogInfo(obj.results[i].name));
-        }
-        success(rv);
-	}, failure);
-};
-
-/**
- * Fetch the list of maps held by this account.
- * @param {listMapsSuccessCallback} success called on success
- * @param {failureCallback} failure called on failure
- */
-ContinusecClient.prototype.listMaps = function (success, failure) {
-	this.makeRequest("GET", "/maps", null, function (data) {
-		var obj = JSON.parse(data);
-        var rv = [];
-        for (var i = 0; i < obj.results.length; i++) {
-            rv.push(new MapInfo(obj.results[i].name));
-        }
-        success(rv);
-	}, failure);
-};
-
-/**
  * @private
  */
 ContinusecClient.prototype.makeRequest = function (method, path, data, success, failure) {
@@ -228,6 +196,17 @@ VerifiableMap.prototype.getTreeHeadLog = function () {
     return new VerifiableLog(this.client, this.path + "/log/treehead");
 };
 
+
+/**
+ * protobuf helpfully skips encoding a value for 0, so we need to handle this when reading in.
+ */
+function protoNumber(n) {
+    if (n == undefined) {
+        return 0;
+    } else {
+        return Number(n);
+    }
+}
 
 
 /**
@@ -311,34 +290,6 @@ VerifiableMap.prototype.getTreeHeadLog = function () {
  */
 
 /**
- * Send API call to create this map. This should only be called once, and subsequent
- * calls will cause an exception to be generated.
- * @param {emptySuccessCallback} success called on success
- * @param {failureCallback} failure called on failure
- */
-VerifiableMap.prototype.create = function (success, failure) {
-    this.client.makeRequest("PUT", this.path, null, function (data, req) {
-        success();
-    }, function (reason) {
-        failure(reason);
-    });
-};
-
-/**
- * Destroy will send an API call to delete this map - this operation removes it permanently,
- * and renders the name unusable again within the same account, so please use with caution.
- * @param {emptySuccessCallback} success called on success
- * @param {failureCallback} failure called on failure
- */
-VerifiableMap.prototype.destroy = function (success, failure) {
-    this.client.makeRequest("DELETE", this.path, null, function (data, req) {
-        success();
-    }, function (reason) {
-        failure(reason);
-    });
-};
-
-/**
  * For a given key, return the value and inclusion proof for the given treeSize.
  * @param {string} key the key in the map.
  * @param {int} treeSize the tree size.
@@ -347,7 +298,7 @@ VerifiableMap.prototype.destroy = function (success, failure) {
  * @param {failureCallback} failure called on failure
  */
 VerifiableMap.prototype.getValue = function (key, treeSize, factory, success, failure) {
-    this.client.makeRequest("GET", this.path + "/tree/" + treeSize + "/key/h/" + hexString(key) + factory.getFormat(), null, function (data, req) {
+    this.client.makeRequest("GET", this.path + "/tree/" + treeSize + "/key/h/" + hexString(key) + "/extra", null, function (data, req) {
         var verifiedTreeSize = req.getResponseHeader("X-Verified-Treesize");
         if (verifiedTreeSize === null) {
             failure(CONTINUSEC_NOT_FOUND_ERROR);
@@ -370,7 +321,7 @@ VerifiableMap.prototype.getValue = function (key, treeSize, factory, success, fa
                 auditPath[Number(pieces[0].trim())] = decodeHex(pieces[1].trim());
             }
         }
-        success(new MapEntryResponse(key, factory.createFromBytes(data), verifiedTreeSize, auditPath));
+        success(new MapEntryResponse(key, factory.createFromLeafData(JSON.parse(data)), verifiedTreeSize, auditPath));
     }, function (reason) {
         failure(reason);
     });
@@ -442,7 +393,7 @@ VerifiableMap.prototype.deleteValue = function (key, success, failure) {
 VerifiableMap.prototype.getTreeHead = function (treeSize, success, failure) {
     this.client.makeRequest("GET", this.path + "/tree/" + treeSize, null, function (data, req) {
         var obj = JSON.parse(data);
-        success(new MapTreeHead(new LogTreeHead(Number(obj.mutation_log.tree_size), atob(obj.mutation_log.tree_hash)), atob(obj.map_hash)));
+        success(new MapTreeHead(new LogTreeHead(protoNumber(obj.mutation_log.tree_size), atob(obj.mutation_log.root_hash)), atob(obj.root_hash)));
     }, function (reason) {
         failure(reason);
     });
@@ -552,34 +503,6 @@ var VerifiableLog = function (client, path) {
 };
 
 /**
- * Send API call to create this log. This should only be called once, and subsequent
- * calls will cause an exception to be generated.
- * @param {emptySuccessCallback} success called on success
- * @param {failureCallback} failure called on failure
- */
-VerifiableLog.prototype.create = function (success, failure) {
-    this.client.makeRequest("PUT", this.path, null, function (data, req) {
-        success();
-    }, function (reason) {
-        failure(reason);
-    });
-};
-
-/**
- * Destroy will send an API call to delete this log - this operation removes it permanently,
- * and renders the name unusable again within the same account, so please use with caution.
- * @param {emptySuccessCallback} success called on success
- * @param {failureCallback} failure called on failure
- */
-VerifiableLog.prototype.destroy = function (success, failure) {
-    this.client.makeRequest("DELETE", this.path, null, function (data, req) {
-        success();
-    }, function (reason) {
-        failure(reason);
-    });
-};
-
-/**
  * Send API call to add an entry to the log. Note the entry is added asynchronously, so while
  * the library will return as soon as the server acknowledges receipt of entry, it may not be
  * reflected in the tree hash (or inclusion proofs) until the server has sequenced the entry.
@@ -608,7 +531,7 @@ VerifiableLog.prototype.add = function (value, success, failure) {
 VerifiableLog.prototype.getTreeHead = function (treeSize, success, failure) {
     this.client.makeRequest("GET", this.path + "/tree/" + treeSize, null, function (data, req) {
         var obj = JSON.parse(data);
-        success(new LogTreeHead(Number(obj.tree_size), obj.tree_hash === null ? null : atob(obj.tree_hash)));
+        success(new LogTreeHead(protoNumber(obj.tree_size), obj.root_hash === null ? null : atob(obj.root_hash)));
     }, function (reason) {
         failure(reason);
     });
@@ -623,8 +546,8 @@ VerifiableLog.prototype.getTreeHead = function (treeSize, success, failure) {
  * @param {failureCallback} failure called on failure
  */
 VerifiableLog.prototype.getEntry = function (idx, factory, success, failure) {
-    this.client.makeRequest("GET", this.path + "/entry/" + idx + factory.getFormat(), null, function (data, req) {
-        success(factory.createFromBytes(data, idx));
+    this.client.makeRequest("GET", this.path + "/entry/" + idx + "/extra", null, function (data, req) {
+        success(factory.createFromLeafData(data, idx));
     }, function (reason) {
         failure(reason);
     });
@@ -642,11 +565,11 @@ VerifiableLog.prototype.getEntry = function (idx, factory, success, failure) {
  * @param {failureCallback} failure called on failure
  */
 VerifiableLog.prototype.getEntries = function (startIdx, endIdx, factory, each, success, failure) {
-    this.client.makeRequest("GET", this.path + "/entries/" + startIdx + "-" + endIdx + factory.getFormat(), null, function (data, req) {
+    this.client.makeRequest("GET", this.path + "/entries/" + startIdx + "-" + endIdx + "/extra", null, function (data, req) {
     	try {
 			var obj = JSON.parse(data);
-			for (var i = 0; i < obj.entries.length; i++) {
-				each(startIdx + i, factory.createFromBytes(atob(obj.entries[i].leaf_data)));
+			for (var i = 0; i < obj.values.length; i++) {
+				each(startIdx + i, factory.createFromLeafData(obj.values[i]));
 			}
 		} catch (err) {
 			failure(err);
@@ -749,10 +672,10 @@ VerifiableLog.prototype.getInclusionProof = function (treeSize, leaf, success, f
     this.client.makeRequest("GET", this.path + "/tree/" + treeSize + "/inclusion/h/" + hexString(lh), null, function (data, req) {
         var obj = JSON.parse(data);
         var auditPath = [];
-        for (var i = 0; i < obj.proof.length; i++) {
-            auditPath.push(atob(obj.proof[i]));
+        for (var i = 0; i < obj.audit_path.length; i++) {
+            auditPath.push(atob(obj.audit_path[i]));
         }
-        success(new LogInclusionProof(lh, Number(obj.tree_size), Number(obj.leaf_index), auditPath));
+        success(new LogInclusionProof(lh, protoNumber(obj.tree_size), protoNumber(obj.leaf_index), auditPath));
     }, function (reason) {
         failure(reason);
     });
@@ -773,7 +696,7 @@ VerifiableLog.prototype.getInclusionProofByIndex = function (treeSize, leafIndex
         for (var i = 0; i < obj.proof.length; i++) {
             auditPath.push(atob(obj.proof[i]));
         }
-        success(new LogInclusionProof(null, Number(obj.tree_size), Number(obj.leaf_index), auditPath));
+        success(new LogInclusionProof(null, protoNumber(obj.tree_size), protoNumber(obj.leaf_index), auditPath));
     }, function (reason) {
         failure(reason);
     });
@@ -812,10 +735,10 @@ VerifiableLog.prototype.getConsistencyProof = function (firstSize, secondSize, s
     this.client.makeRequest("GET", this.path + "/tree/" + secondSize + "/consistency/" + firstSize, null, function (data, req) {
         var obj = JSON.parse(data);
         var auditPath = [];
-        for (var i = 0; i < obj.proof.length; i++) {
-            auditPath.push(atob(obj.proof[i]));
+        for (var i = 0; i < obj.audit_path.length; i++) {
+            auditPath.push(atob(obj.audit_path[i]));
         }
-        success(new LogConsistencyProof(firstSize, secondSize, auditPath));
+        success(new LogConsistencyProof(protoNumber(obj.from_size), protoNumber(obj.tree_size), auditPath));
     }, function (reason) {
         failure(reason);
     });
@@ -1309,7 +1232,7 @@ RawDataEntryFactory.prototype.getFormat = function () { return ""; };
  * @param {string} bytes the bytes as returned by the server.
  * @return {RawDataEntry} the new entry.
  */
-RawDataEntryFactory.prototype.createFromBytes = function (b) { return new RawDataEntry(b); };
+RawDataEntryFactory.prototype.createFromLeafData = function (b) { return new RawDataEntry(atob(b.leaf_input)); };
 
 /**
  * Singleton instance of RawDataEntryFactory ready for your use.
@@ -1336,7 +1259,7 @@ JsonEntryFactory.prototype.getFormat = function () { return "/xjson"; };
  * @param {string} bytes the bytes as returned by the server.
  * @return {JsonEntry} the new entry.
  */
-JsonEntryFactory.prototype.createFromBytes = function (b) { return new JsonEntry(b); };
+JsonEntryFactory.prototype.createFromLeafData = function (b) { return new JsonEntry(atob(b.extra_data)); };
 
 /**
  * Singleton instance of JsonEntryFactory ready for your use.
@@ -1363,7 +1286,7 @@ RedactedJsonEntryFactory.prototype.getFormat = function () { return "/xjson"; };
  * @param {string} bytes the bytes as returned by the server.
  * @return {RedactedJsonEntry} the new entry.
  */
-RedactedJsonEntryFactory.prototype.createFromBytes = function (b) { return new RedactedJsonEntry(b); };
+RedactedJsonEntryFactory.prototype.createFromLeafData = function (b) { return new RedactedJsonEntry(atob(b.extra_data)); };
 
 /**
  * Singleton instance of RedactedJsonEntryFactory ready for your use.
@@ -1606,9 +1529,9 @@ MapTreeHead.prototype.getLeafHash = function () {
 	return leafMerkleTreeHash(objectHashWithStdRedaction({
 	    "mutation_log": {
 	        "tree_size": this.getMutationLogTreeHead().getTreeSize(),
-	        "tree_hash": btoa(this.getMutationLogTreeHead().getRootHash()),
+	        "root_hash": btoa(this.getMutationLogTreeHead().getRootHash()),
 	    },
-	    "map_hash": btoa(this.getRootHash()),
+	    "root_hash": btoa(this.getRootHash()),
 	}));
 }
 
