@@ -137,7 +137,9 @@ ContinusecClient.prototype.makeRequest = function (method, path, data, success, 
     req.onload = function (evt) {
         switch (req.status) {
         case 200:
-            success(binaryArrayToString(new Uint8Array(req.response)), req);
+            var b = binaryArrayToString(new Uint8Array(req.response));
+            //console.log(b);
+            success(b, req);
             break;
         case 400:
             failure(CONTINUSEC_INVALID_RANGE_ERROR);
@@ -1232,7 +1234,7 @@ RawDataEntryFactory.prototype.getFormat = function () { return ""; };
  * @param {string} bytes the bytes as returned by the server.
  * @return {RawDataEntry} the new entry.
  */
-RawDataEntryFactory.prototype.createFromLeafData = function (b) { return new RawDataEntry(atob(b.leaf_input)); };
+RawDataEntryFactory.prototype.createFromLeafData = function (b) { return new RawDataEntry(b.leaf_input == undefined ? "" : atob(b.leaf_input)); };
 
 /**
  * Singleton instance of RawDataEntryFactory ready for your use.
@@ -1259,7 +1261,7 @@ JsonEntryFactory.prototype.getFormat = function () { return "/xjson"; };
  * @param {string} bytes the bytes as returned by the server.
  * @return {JsonEntry} the new entry.
  */
-JsonEntryFactory.prototype.createFromLeafData = function (b) { return new JsonEntry(atob(b.extra_data)); };
+JsonEntryFactory.prototype.createFromLeafData = function (b) { return new JsonEntry(b.extra_data == undefined ? "" : atob(b.extra_data)); };
 
 /**
  * Singleton instance of JsonEntryFactory ready for your use.
