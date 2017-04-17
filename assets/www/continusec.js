@@ -190,7 +190,7 @@ ContinusecClient.prototype.makeRequest = function (method, path, data, success, 
     req.onerror = function (evt) {
         failure(CONTINUSEC_NETWORK_ERROR);
     };
-    req.open(method, this.baseURL + "/v1/account/" + this.account + path, true);
+    req.open(method, this.baseURL + "/v2/account/" + this.account + path, true);
     req.responseType = "arraybuffer";
     req.setRequestHeader("Authorization", 'Key ' + this.apiKey);
     req.send(data);

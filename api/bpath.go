@@ -57,7 +57,7 @@ var (
 	BPathEmpty = BPath([]byte{})
 )
 
-func (b BPath) Slice(start, end uint) []byte {
+func (b BPath) Slice(start, end uint) BPath {
 	if end <= start {
 		return BPathEmpty
 	}
@@ -103,15 +103,6 @@ func BPathJoin(a, b BPath) BPath {
 	}
 
 	return rv
-}
-
-func BPathCommonPrefixLength(a, b BPath) uint {
-	count := uint(0)
-	lA, lB := a.Length(), b.Length()
-	for (count < lA) && (count < lB) && (a.At(count) == b.At(count)) {
-		count++
-	}
-	return count
 }
 
 func BPathFromKey(key []byte) BPath {
