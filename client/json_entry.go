@@ -46,7 +46,7 @@ func JSONEntry(data []byte) (*pb.LeafData, error) {
 		return nil, err
 	}
 
-	bflh, err := objecthash.ObjectHash(o)
+	bflh, err := objecthash.ObjectHashWithStdRedaction(o)
 	if err != nil {
 		return nil, err
 	}

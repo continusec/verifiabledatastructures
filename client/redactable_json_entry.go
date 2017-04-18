@@ -17,11 +17,48 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/pb"
 )
+
+func ShedRedacted(b []byte) ([]byte, error) {
+	var contents interface{}
+	err := json.Unmarshal(b, &contents)
+	if err != nil {
+		return nil, err
+	}
+	newContents, err := objecthash.UnredactableWithStdPrefix(contents)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(newContents)
+}
+
+// VerifyAndShedRedacted verifies that the LeafInput in data is the
+// objecthash of the ExtraData, it then sheds redacted fields, and converts
+// redactible tuples to values, finally re-serializing JSON and returning.
+func VerifyAndShedRedacted(data *pb.LeafData) ([]byte, error) {
+	var contents interface{}
+	err := json.Unmarshal(data.ExtraData, &contents)
+	if err != nil {
+		return nil, err
+	}
+	oh, err := objecthash.ObjectHashWithStdRedaction(contents)
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(oh, data.LeafInput) {
+		return nil, ErrVerificationFailed
+	}
+	newContents, err := objecthash.UnredactableWithStdPrefix(contents)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(newContents)
+}
 
 func RedactableJsonEntry(data []byte) (*pb.LeafData, error) {
 	var o interface{}
