@@ -93,10 +93,11 @@ func TestStuff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = log.Add(mustCreateRedactableJSONEntry(t, []byte("{\"name\":\"adam\",\"ssn\":123.45}")))
+	/*_, err = log.Add(mustCreateRedactableJSONEntry(t, []byte("{\"name\":\"adam\",\"ssn\":123.45}")))
 	if err != nil {
 		t.Fatal(err)
-	}
+	}*/
+	mockServer.IncrementSequence()
 
 	addResp, err := log.Add(&pb.LeafData{LeafInput: []byte("foo")})
 	if err != nil {

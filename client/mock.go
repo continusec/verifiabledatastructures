@@ -34,6 +34,7 @@ type proxyAndRecordHandler struct {
 	Dir                   string
 	Sequence              int
 	FailOnMissing         bool
+	WhackNextRequest      bool
 }
 
 type savedResponse struct {
@@ -172,6 +173,8 @@ func sendSavedRequest(savedReq *savedRequest, headerIn, headerOut []string) (*sa
 }
 
 func (self *proxyAndRecordHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer func() { self.WhackNextRequest = false }()
+
 	// Special case CORS for Javascript client
 	if r.Method == "OPTIONS" {
 		w.Header().Set("access-control-allow-headers", strings.Join(self.InHeaders, ","))
@@ -211,14 +214,25 @@ func (self *proxyAndRecordHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		fmt.Println(self.Sequence, "From cache", canonReq.URL)
 	}
 	if !xavedPair.Request.Equals(canonReq) {
-		fmt.Println(self.Sequence, "Bad request, got ", canonReq)
-		fmt.Println(self.Sequence, "wanted           ", xavedPair.Request)
-		return
+		if self.WhackNextRequest {
+			fmt.Println(self.Sequence, "Overwriting request")
+			xavedPair.Request = canonReq
+			err = xavedPair.Write(self.Dir, self.Sequence)
+			if err != nil {
+				fmt.Println(self.Sequence, "Error saving response:", err)
+				return
+			}
+		} else {
+			fmt.Println(self.Sequence, "Bad request, got ", canonReq)
+			fmt.Println(self.Sequence, "wanted           ", xavedPair.Request)
+			return
+		}
 	}
 
 	self.writeResponse(xavedPair.Response, w)
 	self.IncrementSequence()
 }
+
 func (self *proxyAndRecordHandler) IncrementSequence() {
 	self.Sequence++
 }
