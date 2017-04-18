@@ -38,7 +38,7 @@ func demoMode() {
 
 	db := &kvstore.TransientHashMapStorage{}
 	service := &api.LocalService{
-		AccessPolicy: &api.StaticOracle{},
+		AccessPolicy: &api.AnythingGoesOracle{},
 		Mutator: &api.InstantMutator{
 			Writer: db,
 		},
@@ -80,7 +80,7 @@ func realMode(confPath string) {
 	}
 	service := &api.LocalService{
 		AccessPolicy: &api.StaticOracle{
-			Config: conf.Accounts,
+			Policy: conf.Accounts,
 		},
 		Mutator: &api.InstantMutator{
 			Writer: db,

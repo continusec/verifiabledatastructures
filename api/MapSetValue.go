@@ -43,6 +43,7 @@ func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) 
 	return &rv, nil
 }
 
+// MapSetValue sets a value in a map
 func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
 	_, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_SET_VALUE)
 	if err != nil {

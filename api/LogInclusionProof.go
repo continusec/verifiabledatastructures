@@ -25,6 +25,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
+// LogInclusionProof returns an inclusion proof
 func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationProveInclusion)
 	if err != nil {

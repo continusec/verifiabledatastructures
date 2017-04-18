@@ -238,7 +238,7 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 func createCleanEmptyService() pb.VerifiableDataStructuresServiceServer {
 	db := &kvstore.TransientHashMapStorage{}
 	return &api.LocalService{
-		AccessPolicy: &api.StaticOracle{},
+		AccessPolicy: &api.AnythingGoesOracle{},
 		Mutator: &api.InstantMutator{
 			Writer: db,
 		},

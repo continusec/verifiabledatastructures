@@ -26,6 +26,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
+// MapGetValue returns a value from a map
 func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
 	am, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
 	if err != nil {

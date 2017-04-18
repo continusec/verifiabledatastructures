@@ -28,6 +28,8 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
+// StartGRPCServer starts a gRPC server given a service. Normally this service is an instance
+// of LocalService.
 func StartGRPCServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) {
 	lis, err := net.Listen(conf.GrpcListenProtocol, conf.GrpcListenBind)
 	if err != nil {

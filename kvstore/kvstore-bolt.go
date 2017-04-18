@@ -31,6 +31,7 @@ import (
 
 // BoltBackedService gives a service that persists to a BoltDB file.
 type BoltBackedService struct {
+	// Path is a path to a directory where we will create files, one per user Map / user Log.
 	Path string
 
 	dbLock sync.RWMutex
@@ -88,6 +89,7 @@ func (bbs *BoltBackedService) getOrCreateDB(ns []byte) (*bolt.DB, error) {
 	return db, nil
 }
 
+// ExecuteReadOnly executes a read only query
 func (bbs *BoltBackedService) ExecuteReadOnly(namespace []byte, f func(db api.KeyReader) error) error {
 	db, err := bbs.getOrCreateDB(namespace)
 	if err != nil {
@@ -97,6 +99,8 @@ func (bbs *BoltBackedService) ExecuteReadOnly(namespace []byte, f func(db api.Ke
 		return f(&boltReaderWriter{Tx: tx})
 	})
 }
+
+// ExecuteUpdate executes an update query
 func (bbs *BoltBackedService) ExecuteUpdate(namespace []byte, f func(db api.KeyWriter) error) error {
 	db, err := bbs.getOrCreateDB(namespace)
 	if err != nil {

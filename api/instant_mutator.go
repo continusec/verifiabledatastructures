@@ -20,10 +20,14 @@ package api
 
 import "github.com/continusec/verifiabledatastructures/pb"
 
+// InstantMutator will synchronously apply the mutation. This is suitable
+// for test and low-usage environments.
 type InstantMutator struct {
+	// Writer is the database to apply the mutations
 	Writer StorageWriter
 }
 
+// QueueMutation applies the mutation, normally asynchronously, but synchronously for the InstantMutator
 func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) (MutatorPromise, error) {
 	return &instancePromise{Err: m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
 		return ApplyMutation(kw, mut)
@@ -34,6 +38,6 @@ type instancePromise struct {
 	Err error
 }
 
-func (i *instancePromise) WaitUntilDone() error {
+func (i *instancePromise) Wait() error {
 	return i.Err
 }

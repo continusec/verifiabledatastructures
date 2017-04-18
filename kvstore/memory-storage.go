@@ -32,6 +32,7 @@ type TransientHashMapStorage struct {
 	data   map[string]map[string][]byte
 }
 
+// ExecuteReadOnly executes a read only query
 func (bbs *TransientHashMapStorage) ExecuteReadOnly(namespace []byte, f func(db api.KeyReader) error) error {
 	key := hex.EncodeToString(namespace)
 
@@ -49,6 +50,7 @@ func (bbs *TransientHashMapStorage) ExecuteReadOnly(namespace []byte, f func(db 
 	return f(&memoryThing{Data: db})
 }
 
+// ExecuteUpdate executes an update query
 func (bbs *TransientHashMapStorage) ExecuteUpdate(namespace []byte, f func(db api.KeyWriter) error) error {
 	key := hex.EncodeToString(namespace)
 

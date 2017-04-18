@@ -20,12 +20,21 @@ package api
 
 import "github.com/continusec/verifiabledatastructures/pb"
 
+// LocalService is the main object used to create an instance of the server or embedded
+// Verifiable Data Structures API. It may be wrapped by client directly, or used to
+// start a gRPC and/or HTTP REST server
 type LocalService struct {
-	Mutator      MutatorService // if nil, we send to ourself which simply applies instantly, blocking until return
+	// Mutator, if set is where mutations for the logs and maps are sent. If nil, we are readonly
+	Mutator MutatorService
+
+	// AccessPolicy determines if a user initiated operation is allowed or not
 	AccessPolicy AuthorizationOracle
-	Reader       StorageReader
+
+	// Reader points to the underlying data that we can read from
+	Reader StorageReader
 }
 
+// ApplyMutation should be called by a MutatorService to apply the given mutation to a log/map
 func ApplyMutation(db KeyWriter, mut *pb.Mutation) error {
 	switch {
 	case mut.LogAddEntry != nil:

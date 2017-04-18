@@ -20,13 +20,24 @@ package api
 
 import "github.com/continusec/verifiabledatastructures/pb"
 
-type StaticOracle struct {
-	Config []*pb.Account
+// AnythingGoesOracle allows all operations on all fields, all the time
+type AnythingGoesOracle struct{}
+
+// VerifyAllowed always returns nil, and allows access to all fields
+func (o *AnythingGoesOracle) VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) (*AccessModifier, error) {
+	return &AccessModifier{
+		FieldFilter: AllFields,
+	}, nil
 }
 
-// VerifyAllowed returns nil if operation is allowed. Other values means no
+// StaticOracle applies a policy based on the configuration file specified.
+type StaticOracle struct {
+	Policy []*pb.Account
+}
+
+// VerifyAllowed returns value as specifed in the policy
 func (o *StaticOracle) VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) (*AccessModifier, error) {
 	return &AccessModifier{
 		FieldFilter: AllFields,
-	}, nil // TODO
+	}, nil
 }

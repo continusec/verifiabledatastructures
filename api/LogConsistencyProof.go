@@ -25,6 +25,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
+// LogConsistencyProof verifies the consisitency of a log
 func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {

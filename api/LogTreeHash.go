@@ -24,6 +24,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
+// LogTreeHash returns the log tree hash
 func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {

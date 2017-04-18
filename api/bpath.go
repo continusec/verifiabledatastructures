@@ -20,8 +20,10 @@ package api
 
 import "crypto/sha256"
 
+// BPath represents a binary path (up to 256 bits)
 type BPath []byte
 
+// Length returns the length of a path. The length of a nil path is 0.
 func (b BPath) Length() uint {
 	if len(b) == 0 { // special case for zero
 		return 0
@@ -34,10 +36,12 @@ func (b BPath) Length() uint {
 	return l
 }
 
+// At returns the boolean value at that position in the path.
 func (b BPath) At(idx uint) bool {
 	return ((b[1+(idx/8)] >> (7 - (idx % 8))) & 1) == 1
 }
 
+// Str returnsa string representation of the path, suitable for debugging.
 func (b BPath) Str() string {
 	rv := ""
 	l := b.Length()
@@ -52,11 +56,17 @@ func (b BPath) Str() string {
 }
 
 var (
+	// BPathFalse is a path of length 1, with value False
 	BPathFalse = BPath([]byte{1, 0})
-	BPathTrue  = BPath([]byte{1, 128})
+
+	// BPathTrue is a path of length 1, with value True
+	BPathTrue = BPath([]byte{1, 128})
+
+	// BPathEmpty is a path of length 0
 	BPathEmpty = BPath([]byte{})
 )
 
+// Slice returns a slice inclusive of the first index, and exclusive of the second.
 func (b BPath) Slice(start, end uint) BPath {
 	if end <= start {
 		return BPathEmpty
@@ -77,6 +87,7 @@ func (b BPath) Slice(start, end uint) BPath {
 	return rv
 }
 
+// BPathJoin joins two paths.
 func BPathJoin(a, b BPath) BPath {
 	lA, lB := a.Length(), b.Length()
 	if (lA + lB) == 0 {
@@ -105,6 +116,7 @@ func BPathJoin(a, b BPath) BPath {
 	return rv
 }
 
+// BPathFromKey creates a BPath based on a key. This is done by taking SHA256 hash of the key
 func BPathFromKey(key []byte) BPath {
 	h := sha256.Sum256(key)
 	nm := len(h) * 8

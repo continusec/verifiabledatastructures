@@ -26,6 +26,8 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
+// StartRESTServer starts an HTTP REST server given a service. Normally this service is an instance
+// of LocalService.
 func StartRESTServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) error {
 	if conf.InsecureServerForTesting {
 		log.Println("WARNING: InsecureServerForTesting is set, your connections will not be encrypted")
