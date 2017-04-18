@@ -56,7 +56,7 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 		return nil, ErrInvalidRequest
 	}
 
-	mutData, err := client.JSONEntryFromProto(mm)
+	mutData, err := client.CreateJSONLeafDataFromProto(mm)
 	if err != nil {
 		return nil, err
 	}

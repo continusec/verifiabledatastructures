@@ -24,7 +24,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-// MapVerifiedGet gets the value for the given key in the specified MapTreeState, and verifies that it is
+// VerifiedGet gets the value for the given key in the specified MapTreeState, and verifies that it is
 // included in the MapTreeHead (wrapped by the MapTreeState) before returning.
 func (vmap *VerifiableMap) VerifiedGet(key []byte, mapHead *MapTreeState) (*pb.LeafData, error) {
 	proof, err := vmap.Get(key, mapHead.TreeSize())
@@ -38,7 +38,7 @@ func (vmap *VerifiableMap) VerifiedGet(key []byte, mapHead *MapTreeState) (*pb.L
 	return proof.Value, nil
 }
 
-// MapBlockUntilSize blocks until the map has caught up to a certain size. This polls
+// BlockUntilSize blocks until the map has caught up to a certain size. This polls
 // TreeHead() until such time as a new tree hash is produced that is of at least this
 // size.
 //
@@ -66,7 +66,7 @@ func (vmap *VerifiableMap) BlockUntilSize(treeSize int64) (*pb.MapTreeHashRespon
 	}
 }
 
-// MapVerifiedLatestMapState fetches the latest MapTreeState, verifies it is consistent with,
+// VerifiedLatestMapState fetches the latest MapTreeState, verifies it is consistent with,
 // and newer than, any previously passed state.
 func (vmap *VerifiableMap) VerifiedLatestMapState(prev *MapTreeState) (*MapTreeState, error) {
 	head, err := vmap.VerifiedMapState(prev, Head)
@@ -86,7 +86,7 @@ func (vmap *VerifiableMap) VerifiedLatestMapState(prev *MapTreeState) (*MapTreeS
 	return head, nil
 }
 
-// MapVerifiedMapState returns a wrapper for the MapTreeHead for a given tree size, along with
+// VerifiedMapState returns a wrapper for the MapTreeHead for a given tree size, along with
 // a LogTreeHead for the TreeHeadLog that has been verified to contain this map tree head.
 // The value returned by this will have been proven to be consistent with any passed prev value.
 // Note that the TreeHeadLogTreeHead returned may differ between calls, even for the same treeSize,
@@ -132,11 +132,11 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 	// If we already have a tree head that is the size of our map, then we
 	// probably don't need a new one, so try that first.
 	if prevThlth != nil && prevThlth.TreeSize >= mapHead.MutationLog.TreeSize {
-		lh, err := ObjectHashWithStdRedaction(mapHead)
+		lh, err := CreateJSONLeafDataFromObject(mapHead)
 		if err != nil {
 			return nil, err
 		}
-		err = vmap.TreeHeadLog().VerifyInclusion(prevThlth, lh)
+		err = vmap.TreeHeadLog().VerifyInclusion(prevThlth, lh.LeafInput)
 		if err == nil {
 			verifiedInTreeHeadLog = true
 			thlth = prevThlth
@@ -152,11 +152,11 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 		}
 
 		// And make sure we are in it
-		li, err := ObjectHashWithStdRedaction(mapHead)
+		li, err := CreateJSONLeafDataFromObject(mapHead)
 		if err != nil {
 			return nil, err
 		}
-		err = vmap.TreeHeadLog().VerifyInclusion(thlth, LeafMerkleTreeHash(li))
+		err = vmap.TreeHeadLog().VerifyInclusion(thlth, LeafMerkleTreeHash(li.LeafInput))
 		if err != nil {
 			return nil, err
 		}
@@ -169,22 +169,7 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 	}, nil
 }
 
-// MapAuditFunction is a function called by a map auditor after a MapMutation has been to
-// an audited map, and verified to have been processsed correctly by the map. This function
-// gives an opportunity for a map auditor to indicate success/failure of the audit based on
-// other characteristics, such as correctness of the values of the entires.
-// Note that this is only called if the mutation resulted in a change to the map root hash,
-// so for example it is not called for a mutation that does not modify the value for a key,
-// such as setting the same value again (that is already set), or updates based on a previous
-// value where the previous value is not current.
-// idx the index of the mutation - while this will always increase, there may be gaps per the
-// reasons outlined above.
-// key is the key that is being changed
-// value (produced by VerifiableEntryFactory specified when creating the auditor) is the
-//  value being set/deleted/modified.
-type MapAuditFunction func(ctx context.Context, idx int64, key []byte, value *pb.LeafData) error
-
-// MapVerifyMap (Experimental API surface, likely to change) is a utility method for auditors
+// VerifyMap (Experimental API surface, likely to change) is a utility method for auditors
 // that wish to audit the full content of a map, as well as the map operation. This method
 // will verify every entry in the TreeHeadLogTreeHead between prev and head - and to do so
 // will retrieve *all* mutation entries from the underlying mutation log, and play them

@@ -22,7 +22,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-// Verify will verify that the consistency proof stored in this object can produce both the LogTreeHeads passed to this method.
+// VerifyLogConsistencyProof will verify that the consistency proof stored in this object can produce both the LogTreeHeads passed to this method.
 func VerifyLogConsistencyProof(self *pb.LogConsistencyProofResponse, first, second *pb.LogTreeHashResponse) error {
 	if first.TreeSize != self.FromSize {
 		return ErrVerificationFailed

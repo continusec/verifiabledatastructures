@@ -14,8 +14,8 @@
    limitations under the License.
 */
 
-// Package continusec provides golang client libraries for interacting with the
-// verifiable datastructures provided by Continusec.
+// Package client provides golang client libraries for interacting with the
+// verifiable datastructures API provided by Continusec.
 //
 // Sample usage is as follows:
 //
@@ -79,13 +79,3 @@
 //     if err != nil { ... }
 //
 package client
-
-import "net/http"
-
-var (
-	// DefaultClient uses the default base URL and default HttpClient.
-	DefaultClient = &HTTPRESTClient{
-		BaseUrl:    "https://api.continusec.com/v1",
-		HttpClient: http.DefaultClient,
-	}
-)

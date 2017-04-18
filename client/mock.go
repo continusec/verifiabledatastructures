@@ -63,12 +63,12 @@ func filePathForSeq(path string, seq int) string {
 	return filepath.Join(path, fmt.Sprintf("%04d.response", seq))
 }
 
-func (self *savedPair) Write(path string, seq int) error {
+func (s *savedPair) Write(path string, seq int) error {
 	fi, err := os.Create(filePathForSeq(path, seq))
 	if err != nil {
 		return err
 	}
-	err = json.NewEncoder(fi).Encode(self)
+	err = json.NewEncoder(fi).Encode(s)
 	if err != nil {
 		return err
 	}
@@ -143,12 +143,12 @@ func saveResponse(resp *http.Response, headerFilter []string) (*savedResponse, e
 	}, nil
 }
 
-func (self *proxyAndRecordHandler) writeResponse(saved *savedResponse, w http.ResponseWriter) {
+func (s *proxyAndRecordHandler) writeResponse(saved *savedResponse, w http.ResponseWriter) {
 	for k, vs := range saved.Headers {
 		w.Header()[k] = vs
 	}
 	w.Header().Set("access-control-allow-origin", "*")
-	w.Header().Set("access-control-expose-headers", strings.Join(self.OutHeaders, ","))
+	w.Header().Set("access-control-expose-headers", strings.Join(s.OutHeaders, ","))
 	w.WriteHeader(saved.StatusCode)
 	w.Write(saved.Body)
 }
@@ -172,69 +172,69 @@ func sendSavedRequest(savedReq *savedRequest, headerIn, headerOut []string) (*sa
 	return saveResponse(resp, headerOut)
 }
 
-func (self *proxyAndRecordHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer func() { self.WhackNextRequest = false }()
+func (s *proxyAndRecordHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer func() { s.WhackNextRequest = false }()
 
 	// Special case CORS for Javascript client
 	if r.Method == "OPTIONS" {
-		w.Header().Set("access-control-allow-headers", strings.Join(self.InHeaders, ","))
-		w.Header().Set("access-control-expose-headers", strings.Join(self.OutHeaders, ","))
+		w.Header().Set("access-control-allow-headers", strings.Join(s.InHeaders, ","))
+		w.Header().Set("access-control-expose-headers", strings.Join(s.OutHeaders, ","))
 		w.Header().Set("access-control-allow-origin", "*")
 		w.Header().Set("access-control-allow-methods", "PUT,POST,GET,DELETE")
 		w.WriteHeader(200)
 		return
 	}
-	canonReq, err := saveRequest(r, self.Host, self.InHeaders)
+	canonReq, err := saveRequest(r, s.Host, s.InHeaders)
 	if err != nil {
-		fmt.Println(self.Sequence, "Error saving request:", err)
+		fmt.Println(s.Sequence, "Error saving request:", err)
 		return
 	}
-	xavedPair, err := loadSavedIfThere(self.Dir, self.Sequence)
+	xavedPair, err := loadSavedIfThere(s.Dir, s.Sequence)
 	if err != nil {
-		if self.FailOnMissing {
-			fmt.Println(self.Sequence, "Error loading response:", err)
+		if s.FailOnMissing {
+			fmt.Println(s.Sequence, "Error loading response:", err)
 			return
 		}
-		fmt.Println(self.Sequence, "Fetching", canonReq.URL)
-		sr, err := sendSavedRequest(canonReq, self.InHeaders, self.OutHeaders)
+		fmt.Println(s.Sequence, "Fetching", canonReq.URL)
+		sr, err := sendSavedRequest(canonReq, s.InHeaders, s.OutHeaders)
 		if err != nil {
-			fmt.Println(self.Sequence, "Error receiving response:", err)
+			fmt.Println(s.Sequence, "Error receiving response:", err)
 			return
 		}
 		xavedPair = &savedPair{
 			Request:  canonReq,
 			Response: sr,
 		}
-		err = xavedPair.Write(self.Dir, self.Sequence)
+		err = xavedPair.Write(s.Dir, s.Sequence)
 		if err != nil {
-			fmt.Println(self.Sequence, "Error saving response:", err)
+			fmt.Println(s.Sequence, "Error saving response:", err)
 			return
 		}
 	} else {
-		fmt.Println(self.Sequence, "From cache", canonReq.URL)
+		fmt.Println(s.Sequence, "From cache", canonReq.URL)
 	}
 	if !xavedPair.Request.Equals(canonReq) {
-		if self.WhackNextRequest {
-			fmt.Println(self.Sequence, "Overwriting request")
+		if s.WhackNextRequest {
+			fmt.Println(s.Sequence, "Overwriting request")
 			xavedPair.Request = canonReq
-			err = xavedPair.Write(self.Dir, self.Sequence)
+			err = xavedPair.Write(s.Dir, s.Sequence)
 			if err != nil {
-				fmt.Println(self.Sequence, "Error saving response:", err)
+				fmt.Println(s.Sequence, "Error saving response:", err)
 				return
 			}
 		} else {
-			fmt.Println(self.Sequence, "Bad request, got ", canonReq)
-			fmt.Println(self.Sequence, "wanted           ", xavedPair.Request)
+			fmt.Println(s.Sequence, "Bad request, got ", canonReq)
+			fmt.Println(s.Sequence, "wanted           ", xavedPair.Request)
 			return
 		}
 	}
 
-	self.writeResponse(xavedPair.Response, w)
-	self.IncrementSequence()
+	s.writeResponse(xavedPair.Response, w)
+	s.IncrementSequence()
 }
 
-func (self *proxyAndRecordHandler) IncrementSequence() {
-	self.Sequence++
+func (s *proxyAndRecordHandler) IncrementSequence() {
+	s.Sequence++
 }
 
 func runMockServer(hostport string, pr *proxyAndRecordHandler) {

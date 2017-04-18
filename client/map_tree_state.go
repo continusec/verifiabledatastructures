@@ -32,6 +32,6 @@ type MapTreeState struct {
 }
 
 // TreeSize is a utility method for returning the tree size of the underlying map.
-func (self *MapTreeState) TreeSize() int64 {
-	return self.MapTreeHead.MutationLog.TreeSize
+func (mts *MapTreeState) TreeSize() int64 {
+	return mts.MapTreeHead.MutationLog.TreeSize
 }

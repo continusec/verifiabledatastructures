@@ -211,7 +211,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 		// to our copy of the map
 		err = mutLog.VerifyEntries(ctx, a.MutLogHead, mutLogHead, func(ctx context.Context, idx int64, entry *pb.LeafData) error {
 			// First, verify that the LeafData is in fact well formed objecthash
-			err := JSONValidateObjectHash(entry)
+			err := ValidateJSONLeafData(entry)
 			if err != nil {
 				return err
 			}
@@ -292,7 +292,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 // CheckTreeHeadEntry is the audit function that checks the actual tree head is correct
 func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry *pb.LeafData) error {
 	// Step 0, are we a valid JSON hash?
-	err := JSONValidateObjectHash(entry)
+	err := ValidateJSONLeafData(entry)
 	if err != nil {
 		return err
 	}

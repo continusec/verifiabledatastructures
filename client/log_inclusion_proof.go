@@ -22,7 +22,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-// Verify verifies an inclusion proof against a LogTreeHead
+// VerifyLogInclusionProof verifies an inclusion proof against a LogTreeHead
 func VerifyLogInclusionProof(self *pb.LogInclusionProofResponse, leafHash []byte, head *pb.LogTreeHashResponse) error {
 	if self.TreeSize != head.TreeSize {
 		return ErrVerificationFailed

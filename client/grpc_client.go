@@ -29,14 +29,24 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-type GRPCClientConfig struct {
-	NoGrpcSecurity bool   // if set, we ignore everything
-	CertDer        []byte // if set, we use this
+// GRPCClient provides a way to access a remote Verifiable Data Structures API
+// using gRPC. This is preferred over the REST server/client.
+type GRPCClient struct {
+	// NoGrpcSecurity if set will disable TLS for this connection
+	NoGrpcSecurity bool
 
+	// CertDer is an ASN.1 DER X.509 certificate that the certificate presented by the server
+	// must be signed by. This can be either a self-signed, or private CA cert.
+	// If not set, the system CA pool is used.
+	CertDer []byte
+
+	// Address of the server to connect to, e.g. "localhost:8080"
 	Address string
 }
 
-func (g *GRPCClientConfig) Dial() (pb.VerifiableDataStructuresServiceServer, error) {
+// Dial connects to the server and returns an object to communicate with it.
+// Most users will wrap this with the higher-level API.
+func (g *GRPCClient) Dial() (pb.VerifiableDataStructuresServiceServer, error) {
 	var dialOptions []grpc.DialOption
 	if g.NoGrpcSecurity {
 		log.Println("WARNING: Disabling TLS  when connecting to gRPC server")

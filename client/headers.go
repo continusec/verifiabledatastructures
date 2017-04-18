@@ -36,24 +36,24 @@ var (
 	ErrNotAuthorized = errors.New("Unauthorized request. Check API key, account and log/map name")
 
 	// ErrInternalError is an unspecified error. Contact info@continusec.com if these persist.
-	ErrInternalError = errors.New("Unspecified error.")
+	ErrInternalError = errors.New("Unspecified error")
 
 	// ErrInvalidRange is returned when an invalid index is specified in the request, for example
 	// if a tree size is specified that is greater than the current size of the tree / map.
-	ErrInvalidRange = errors.New("Invalid range requested.")
+	ErrInvalidRange = errors.New("Invalid range requested")
 
 	// ErrNotFound is returned when the request is understood and authorized, however the underlying
 	// map/log cannot be found. Check the name of the map/log and verify that you have already created it.
 	// This is also returned if an inclusion proof is requested for a non-existent element.
-	ErrNotFound = errors.New("Can't find log/map/entry. Check the log/map/entry is created.")
+	ErrNotFound = errors.New("Can't find log/map/entry. Check the log/map/entry is created")
 
-	// Verification of proof failed.
-	ErrVerificationFailed = errors.New("ErrVerificationFailed")
+	// ErrVerificationFailed means that verification of proof failed.
+	ErrVerificationFailed = errors.New("Failed to verify")
 
-	// Object may already exist
+	// ErrObjectConflict is not used
 	ErrObjectConflict = errors.New("ErrObjectConflict")
 
-	// A nil tree head was unexpectedly passed as input
+	// ErrNilTreeHead means a nil tree head was unexpectedly passed as input
 	ErrNilTreeHead = errors.New("ErrNilTreeHead")
 
 	// ErrNotAllEntriesReturned can occur if Json is requested, but the data on the server was
@@ -68,12 +68,39 @@ var (
 // Return non-nil to stop the audit.
 type LogAuditFunction func(ctx context.Context, idx int64, entry *pb.LeafData) error
 
+// MapUpdatePromise is returned by operations that change a map.
 type MapUpdatePromise interface {
+	// Wait will wait for the mutation to apply to the map, generally this is done by polling the map.
 	Wait() (*pb.MapTreeHashResponse, error)
+
+	// LeafHash returns the hash of the queued mutation log entry. This can be used to poll the mutation log.
 	LeafHash() []byte
 }
 
+// LogUpdatePromise is returned by operations that change a log.
 type LogUpdatePromise interface {
+	// Wait will wait for the add to apply to the log, generally this is done by polling the log.
 	Wait() (*pb.LogTreeHashResponse, error)
+
+	// LeafHash returns the hash of the queued log entry. This can be used to poll the log.
 	LeafHash() []byte
 }
+
+// LeafDataAuditFunction validates that a LeafData object is correctly constructed.
+// Generally this means to verify that the LeafInput is correctly derived from the other fields.
+type LeafDataAuditFunction func(*pb.LeafData) error
+
+// MapAuditFunction is a function called by a map auditor after a MapMutation has been to
+// an audited map, and verified to have been processsed correctly by the map. This function
+// gives an opportunity for a map auditor to indicate success/failure of the audit based on
+// other characteristics, such as correctness of the values of the entires.
+// Note that this is only called if the mutation resulted in a change to the map root hash,
+// so for example it is not called for a mutation that does not modify the value for a key,
+// such as setting the same value again (that is already set), or updates based on a previous
+// value where the previous value is not current.
+// idx the index of the mutation - while this will always increase, there may be gaps per the
+// reasons outlined above.
+// key is the key that is being changed
+// value (produced by VerifiableEntryFactory specified when creating the auditor) is the
+//  value being set/deleted/modified.
+type MapAuditFunction func(ctx context.Context, idx int64, key []byte, value *pb.LeafData) error

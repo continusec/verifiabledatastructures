@@ -22,7 +22,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-// Verify verifies an inclusion proof against a MapTreeHead
+// VerifyMapInclusionProof verifies an inclusion proof against a MapTreeHead
 func VerifyMapInclusionProof(self *pb.MapGetValueResponse, key []byte, head *pb.MapTreeHashResponse) error {
 	if self.TreeSize != head.MutationLog.TreeSize {
 		return ErrVerificationFailed

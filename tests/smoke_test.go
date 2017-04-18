@@ -262,7 +262,7 @@ func TestWithHTTPServerAndClient(t *testing.T) {
 	}, createCleanEmptyService())
 	time.Sleep(time.Millisecond * 50) // let the server startup...
 	runSmokeTests(&client.HTTPRESTClient{
-		BaseUrl: "http://localhost:8092",
+		BaseURL: "http://localhost:8092",
 	}, t)
 }
 
@@ -273,7 +273,7 @@ func TestWithGRPCerverAndClient(t *testing.T) {
 		GrpcListenProtocol:       "tcp4",
 	}, createCleanEmptyService())
 	time.Sleep(time.Millisecond * 50) // let the server startup...
-	cli, err := (&client.GRPCClientConfig{
+	cli, err := (&client.GRPCClient{
 		Address:        "localhost:8081",
 		NoGrpcSecurity: true,
 	}).Dial()

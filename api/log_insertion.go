@@ -139,7 +139,7 @@ func applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
 		}
 
 		// Step 3 - add entries to treehead log if neeed
-		thld, err := client.JSONEntryFromProto(&pb.MapTreeHashResponse{
+		thld, err := client.CreateJSONLeafDataFromProto(&pb.MapTreeHashResponse{
 			RootHash:    mrh,
 			MutationLog: mutLogHead,
 		})

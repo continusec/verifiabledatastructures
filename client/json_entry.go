@@ -18,7 +18,6 @@ package client
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 
 	"github.com/continusec/objecthash"
@@ -26,24 +25,12 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-func JSONEntryFromProto(m proto.Message) (*pb.LeafData, error) {
-	b, err := json.Marshal(m)
-	if err != nil {
-		return nil, err
-	}
-	return JSONEntry(b)
-}
-
-func JSONEntry(data []byte) (*pb.LeafData, error) {
+// CreateJSONLeafData creates a JSON based objecthash for the given JSON bytes.
+func CreateJSONLeafData(data []byte) (*pb.LeafData, error) {
 	var o interface{}
 	err := json.Unmarshal(data, &o)
 	if err != nil {
 		return nil, ErrInvalidJSON
-	}
-
-	ojb, err := json.Marshal(o)
-	if err != nil {
-		return nil, err
 	}
 
 	bflh, err := objecthash.ObjectHashWithStdRedaction(o)
@@ -53,16 +40,33 @@ func JSONEntry(data []byte) (*pb.LeafData, error) {
 
 	return &pb.LeafData{
 		LeafInput: bflh,
-		ExtraData: ojb,
+		ExtraData: data,
 		Format:    pb.DataFormat_JSON,
 	}, nil
 }
 
-type LeafDataAuditFunction func(*pb.LeafData) error
+// CreateJSONLeafDataFromProto creates a JSON based objecthash for the given proto.
+func CreateJSONLeafDataFromProto(m proto.Message) (*pb.LeafData, error) {
+	b, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+	return CreateJSONLeafData(b)
+}
 
-// JSONValidateObjectHash verifies that the LeafInput is equal to the objecthash of the ExtraData.
-// It ignores the format sent back by the server
-func JSONValidateObjectHash(entry *pb.LeafData) error {
+// CreateJSONLeafDataFromObject creates a JSON based objecthash for the given object.
+// The object is first serialized then unmarshalled into a string map.
+func CreateJSONLeafDataFromObject(o interface{}) (*pb.LeafData, error) {
+	data, err := json.Marshal(o)
+	if err != nil {
+		return nil, err
+	}
+	return CreateJSONLeafData(data)
+}
+
+// ValidateJSONLeafData verifies that the LeafInput is equal to the objecthash of the ExtraData.
+// It ignores the format field.
+func ValidateJSONLeafData(entry *pb.LeafData) error {
 	var o interface{}
 	err := json.Unmarshal(entry.ExtraData, &o)
 	if err != nil {
@@ -78,8 +82,50 @@ func JSONValidateObjectHash(entry *pb.LeafData) error {
 	return nil
 }
 
-// JSONLogAuditFunction verifies that the LeafInput is equal to the objecthash of the ExtraData.
-// It ignores the format sent back by the server
-func JSONLogAuditFunction(ctx context.Context, idx int64, entry *pb.LeafData) error {
-	return JSONValidateObjectHash(entry)
+// ShedRedactedJSONFields will parse the JSON, shed any redacted fields,
+// and replace othe redactable tuples with the value component only,
+// then write back out JSON suitable for parsing into the eventual object
+// it should be used in.
+func ShedRedactedJSONFields(b []byte) ([]byte, error) {
+	var contents interface{}
+	err := json.Unmarshal(b, &contents)
+	if err != nil {
+		return nil, err
+	}
+	newContents, err := objecthash.UnredactableWithStdPrefix(contents)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(newContents)
+}
+
+// CreateRedactableJSONLeafData creates a LeafData node with fields suitable
+// for redaction, ie it replaces all values with a <nonce, value> tuple.
+func CreateRedactableJSONLeafData(data []byte) (*pb.LeafData, error) {
+	var o interface{}
+	err := json.Unmarshal(data, &o)
+	if err != nil {
+		return nil, ErrInvalidJSON
+	}
+
+	o, err = objecthash.Redactable(o)
+	if err != nil {
+		return nil, err
+	}
+
+	ojb, err := json.Marshal(o)
+	if err != nil {
+		return nil, err
+	}
+
+	bflh, err := objecthash.ObjectHash(o)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.LeafData{
+		LeafInput: bflh,
+		ExtraData: ojb,
+		Format:    pb.DataFormat_JSON,
+	}, nil
 }

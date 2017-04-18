@@ -27,14 +27,14 @@ import (
 )
 
 func mustCreateJSONEntry(t *testing.T, v []byte) *pb.LeafData {
-	rv, err := JSONEntry(v)
+	rv, err := CreateJSONLeafData(v)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return rv
 }
 func mustCreateRedactableJSONEntry(t *testing.T, v []byte) *pb.LeafData {
-	rv, err := RedactableJsonEntry(v)
+	rv, err := CreateRedactableJSONLeafData(v)
 	if err != nil {
 		t.Fatal(err)
 	}

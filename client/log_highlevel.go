@@ -25,7 +25,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-// LogVerifyInclusion will fetch a proof the the specified MerkleTreeHash is included in the
+// VerifyInclusion will fetch a proof the the specified MerkleTreeHash is included in the
 // log and verify that it can produce the root hash in the specified LogTreeHead.
 func (log *VerifiableLog) VerifyInclusion(head *pb.LogTreeHashResponse, leaf []byte) error {
 	proof, err := log.InclusionProof(head.TreeSize, leaf)
@@ -42,7 +42,7 @@ func (log *VerifiableLog) VerifyInclusion(head *pb.LogTreeHashResponse, leaf []b
 	return nil
 }
 
-// LogVerifyConsistency takes two tree heads, retrieves a consistency proof, verifies it,
+// VerifyConsistency takes two tree heads, retrieves a consistency proof, verifies it,
 // and returns the result. The two tree heads may be in either order (even equal), but both must be greater than zero and non-nil.
 func (log *VerifiableLog) VerifyConsistency(a, b *pb.LogTreeHashResponse) error {
 	if a == nil || b == nil || a.TreeSize <= 0 || b.TreeSize <= 0 {
@@ -76,7 +76,7 @@ func (log *VerifiableLog) VerifyConsistency(a, b *pb.LogTreeHashResponse) error 
 	return nil
 }
 
-// LogBlockUntilPresent blocks until the log is able to produce a LogTreeHead that includes the
+// BlockUntilPresent blocks until the log is able to produce a LogTreeHead that includes the
 // specified MerkleTreeLeaf. This polls TreeHead() and InclusionProof() until such time as a new
 // tree hash is produced that includes the given MerkleTreeLeaf. Exponential back-off is used
 // when no new tree hash is available.
@@ -111,7 +111,7 @@ func (log *VerifiableLog) BlockUntilPresent(leaf []byte) (*pb.LogTreeHashRespons
 	}
 }
 
-// LogVerifiedLatestTreeHead calls VerifiedTreeHead() with Head to fetch the latest tree head,
+// VerifiedLatestTreeHead calls VerifiedTreeHead() with Head to fetch the latest tree head,
 // and additionally verifies that it is newer than the previously passed tree head.
 // For first use, pass nil to skip consistency checking.
 func (log *VerifiableLog) VerifiedLatestTreeHead(prev *pb.LogTreeHashResponse) (*pb.LogTreeHashResponse, error) {
@@ -132,7 +132,7 @@ func (log *VerifiableLog) VerifiedLatestTreeHead(prev *pb.LogTreeHashResponse) (
 	return head, nil
 }
 
-// LogVerifiedTreeHead is a utility method to fetch a LogTreeHead and verifies that it is consistent with
+// VerifiedTreeHead is a utility method to fetch a LogTreeHead and verifies that it is consistent with
 // a tree head earlier fetched and persisted. For first use, pass nil for prev, which will
 // bypass consistency proof checking. Tree size may be older or newer than the previous head value.
 //
@@ -158,7 +158,7 @@ func (log *VerifiableLog) VerifiedTreeHead(prev *pb.LogTreeHashResponse, treeSiz
 	return head, nil
 }
 
-// LogVerifySuppliedInclusionProof is a utility method that fetches any required tree heads that are needed
+// VerifySuppliedInclusionProof is a utility method that fetches any required tree heads that are needed
 // to verify a supplied log inclusion proof. Additionally it will ensure that any fetched tree heads are consistent
 // with any prior supplied LogTreeHead (which may be nil, to skip consistency checks).
 //
@@ -179,7 +179,7 @@ func (log *VerifiableLog) VerifySuppliedInclusionProof(prev *pb.LogTreeHashRespo
 	return headForInclProof, nil
 }
 
-// LogVerifyEntries is a utility method for auditors that wish to audit the full content of
+// VerifyEntries is a utility method for auditors that wish to audit the full content of
 // a log, as well as the log operation. This method will retrieve all entries in batch from
 // the log between the passed in prev and head LogTreeHeads, and ensure that the root hash in head can be confirmed to accurately represent
 // the contents of all of the log entries retrieved. To start at entry zero, pass nil for prev, which will also bypass consistency proof checking. Head must not be nil.

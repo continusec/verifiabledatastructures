@@ -22,7 +22,9 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-// VerifiableDataStructuresClient
+// VerifiableDataStructuresClient is the primary point to begin interaction with
+// a verifiable data structures service. This client providers convenience wrappers around
+// an underlying lower-level API.
 type VerifiableDataStructuresClient struct {
 	Service pb.VerifiableDataStructuresServiceServer
 }
@@ -72,6 +74,7 @@ func (acc *Account) VerifiableLog(name string) *VerifiableLog {
 	}
 }
 
+// VerifiableMap is an object used to interace with Verifiable Maps.
 type VerifiableMap struct {
 	Map     *pb.MapRef
 	Service pb.VerifiableDataStructuresServiceServer

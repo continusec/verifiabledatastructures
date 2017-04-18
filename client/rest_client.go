@@ -35,14 +35,17 @@ const (
 	restAPIVersion = "/v2"
 )
 
+// HTTPRESTClient provides a way to access the API over HTTP REST.
+// Where possible it is suggested that the GRPCClient be used in preference.
 type HTTPRESTClient struct {
-	BaseUrl string
+	// BaseURL is the URL (with no trailing slash) of the server, e.g. http://localhost:8081
+	BaseURL string
 
-	// The client to use for sending requests.
-	HttpClient *http.Client
+	// HTTPClient is the client to use for sending requests.
+	HTTPClient *http.Client
 }
 
-func (self *HTTPRESTClient) makeLogRequest(log *pb.LogRef, method, path string, data []byte, headers [][2]string) ([]byte, http.Header, error) {
+func (c *HTTPRESTClient) makeLogRequest(log *pb.LogRef, method, path string, data []byte, headers [][2]string) ([]byte, http.Header, error) {
 	prefix := ""
 	switch log.LogType {
 	case pb.LogType_STRUCT_TYPE_LOG:
@@ -54,17 +57,17 @@ func (self *HTTPRESTClient) makeLogRequest(log *pb.LogRef, method, path string, 
 	default:
 		return nil, nil, ErrInternalError
 	}
-	return self.makeRequest(log.Account, method, prefix+path, data, headers)
+	return c.makeRequest(log.Account, method, prefix+path, data, headers)
 }
 
-func (self *HTTPRESTClient) makeMapRequest(vmap *pb.MapRef, method, path string, data []byte, headers [][2]string) ([]byte, http.Header, error) {
-	return self.makeRequest(vmap.Account, method, fmt.Sprintf("/account/%s/map/%s", vmap.Account.Id, vmap.Name)+path, data, headers)
+func (c *HTTPRESTClient) makeMapRequest(vmap *pb.MapRef, method, path string, data []byte, headers [][2]string) ([]byte, http.Header, error) {
+	return c.makeRequest(vmap.Account, method, fmt.Sprintf("/account/%s/map/%s", vmap.Account.Id, vmap.Name)+path, data, headers)
 }
 
 // Intended for internal use, MakeRequest makes an HTTP request and converts the error
 // code to those appropriate for the rest of the library.
-func (self *HTTPRESTClient) makeRequest(account *pb.AccountRef, method, path string, data []byte, headers [][2]string) ([]byte, http.Header, error) {
-	req, err := http.NewRequest(method, self.BaseUrl+restAPIVersion+path, bytes.NewReader(data))
+func (c *HTTPRESTClient) makeRequest(account *pb.AccountRef, method, path string, data []byte, headers [][2]string) ([]byte, http.Header, error) {
+	req, err := http.NewRequest(method, c.BaseURL+restAPIVersion+path, bytes.NewReader(data))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -75,7 +78,7 @@ func (self *HTTPRESTClient) makeRequest(account *pb.AccountRef, method, path str
 		req.Header.Set(h[0], h[1])
 	}
 
-	httpC := self.HttpClient
+	httpC := c.HTTPClient
 	if httpC == nil {
 		httpC = http.DefaultClient
 	}
@@ -107,12 +110,13 @@ func (self *HTTPRESTClient) makeRequest(account *pb.AccountRef, method, path str
 	}
 }
 
-func (self *HTTPRESTClient) LogAddEntry(ctx context.Context, req *pb.LogAddEntryRequest) (*pb.LogAddEntryResponse, error) {
+// LogAddEntry adds an entry to the log.
+func (c *HTTPRESTClient) LogAddEntry(ctx context.Context, req *pb.LogAddEntryRequest) (*pb.LogAddEntryResponse, error) {
 	reqData, err := json.Marshal(req.Value)
 	if err != nil {
 		return nil, err
 	}
-	contents, _, err := self.makeLogRequest(req.Log, "POST", "/entry/extra", reqData, nil)
+	contents, _, err := c.makeLogRequest(req.Log, "POST", "/entry/extra", reqData, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -124,8 +128,9 @@ func (self *HTTPRESTClient) LogAddEntry(ctx context.Context, req *pb.LogAddEntry
 	return &rv, nil
 }
 
-func (self *HTTPRESTClient) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
-	contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/entries/%d-%d%s", req.First, req.Last, "/extra"), nil, nil)
+// LogFetchEntries fetches entries from the log
+func (c *HTTPRESTClient) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
+	contents, _, err := c.makeLogRequest(req.Log, "GET", fmt.Sprintf("/entries/%d-%d%s", req.First, req.Last, "/extra"), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -138,8 +143,9 @@ func (self *HTTPRESTClient) LogFetchEntries(ctx context.Context, req *pb.LogFetc
 	return &rv, nil
 }
 
-func (self *HTTPRESTClient) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
-	contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d", req.TreeSize), nil, nil)
+// LogTreeHash fetches the tree hash from the log
+func (c *HTTPRESTClient) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
+	contents, _, err := c.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d", req.TreeSize), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -151,9 +157,10 @@ func (self *HTTPRESTClient) LogTreeHash(ctx context.Context, req *pb.LogTreeHash
 	return &rv, nil
 }
 
-func (self *HTTPRESTClient) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
+// LogInclusionProof fetches an inclusion proof from the logs
+func (c *HTTPRESTClient) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
 	if len(req.MtlHash) == 0 {
-		contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d/inclusion/%d", req.TreeSize, req.LeafIndex), nil, nil)
+		contents, _, err := c.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d/inclusion/%d", req.TreeSize, req.LeafIndex), nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -164,7 +171,7 @@ func (self *HTTPRESTClient) LogInclusionProof(ctx context.Context, req *pb.LogIn
 		}
 		return &rv, nil
 	}
-	contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d/inclusion/h/%s", req.TreeSize, hex.EncodeToString(req.MtlHash)), nil, nil)
+	contents, _, err := c.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d/inclusion/h/%s", req.TreeSize, hex.EncodeToString(req.MtlHash)), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -176,8 +183,9 @@ func (self *HTTPRESTClient) LogInclusionProof(ctx context.Context, req *pb.LogIn
 	return &rv, nil
 }
 
-func (self *HTTPRESTClient) LogConsistencyProof(ctx context.Context, req *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
-	contents, _, err := self.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d/consistency/%d", req.TreeSize, req.FromSize), nil, nil)
+// LogConsistencyProof fetches a consistency proof from the log
+func (c *HTTPRESTClient) LogConsistencyProof(ctx context.Context, req *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
+	contents, _, err := c.makeLogRequest(req.Log, "GET", fmt.Sprintf("/tree/%d/consistency/%d", req.TreeSize, req.FromSize), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -189,10 +197,11 @@ func (self *HTTPRESTClient) LogConsistencyProof(ctx context.Context, req *pb.Log
 	return &rv, nil
 }
 
-func (self *HTTPRESTClient) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
+// MapSetValue sets a value in the map
+func (c *HTTPRESTClient) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
 	switch req.Mutation.Action {
 	case "delete":
-		contents, _, err := self.makeMapRequest(req.Map, "DELETE", "/key/h/"+hex.EncodeToString(req.Mutation.Key), nil, nil)
+		contents, _, err := c.makeMapRequest(req.Map, "DELETE", "/key/h/"+hex.EncodeToString(req.Mutation.Key), nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -207,7 +216,7 @@ func (self *HTTPRESTClient) MapSetValue(ctx context.Context, req *pb.MapSetValue
 		if err != nil {
 			return nil, err
 		}
-		contents, _, err := self.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Mutation.Key)+"/extra", reqData, nil)
+		contents, _, err := c.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Mutation.Key)+"/extra", reqData, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -222,7 +231,7 @@ func (self *HTTPRESTClient) MapSetValue(ctx context.Context, req *pb.MapSetValue
 		if err != nil {
 			return nil, err
 		}
-		contents, _, err := self.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Mutation.Key)+"/extra", reqData, [][2]string{
+		contents, _, err := c.makeMapRequest(req.Map, "PUT", "/key/h/"+hex.EncodeToString(req.Mutation.Key)+"/extra", reqData, [][2]string{
 			[2]string{"X-Previous-LeafHash", hex.EncodeToString(req.Mutation.PreviousLeafHash)},
 		})
 		if err != nil {
@@ -265,8 +274,9 @@ func parseHeadersForProof(headers http.Header) ([][]byte, error) {
 	return prv, nil
 }
 
-func (self *HTTPRESTClient) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
-	value, headers, err := self.makeMapRequest(req.Map, "GET", fmt.Sprintf("/tree/%d/key/h/%s%s", req.TreeSize, hex.EncodeToString(req.Key), "/extra"), nil, nil)
+// MapGetValue gets the value from the map
+func (c *HTTPRESTClient) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
+	value, headers, err := c.makeMapRequest(req.Map, "GET", fmt.Sprintf("/tree/%d/key/h/%s%s", req.TreeSize, hex.EncodeToString(req.Key), "/extra"), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -293,8 +303,10 @@ func (self *HTTPRESTClient) MapGetValue(ctx context.Context, req *pb.MapGetValue
 		Value:     &rv,
 	}, nil
 }
-func (self *HTTPRESTClient) MapTreeHash(ctx context.Context, req *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {
-	contents, _, err := self.makeMapRequest(req.Map, "GET", fmt.Sprintf("/tree/%d", req.TreeSize), nil, nil)
+
+// MapTreeHash gets the tree hash from the map
+func (c *HTTPRESTClient) MapTreeHash(ctx context.Context, req *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {
+	contents, _, err := c.makeMapRequest(req.Map, "GET", fmt.Sprintf("/tree/%d", req.TreeSize), nil, nil)
 	if err != nil {
 		return nil, err
 	}
