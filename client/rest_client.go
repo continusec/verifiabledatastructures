@@ -69,7 +69,7 @@ func (self *HTTPRESTClient) makeRequest(account *pb.AccountRef, method, path str
 		return nil, nil, err
 	}
 	if account.ApiKey != "" {
-		req.Header.Set("Authorization", account.ApiKey)
+		req.Header.Set("Authorization", "Key "+account.ApiKey)
 	}
 	for _, h := range headers {
 		req.Header.Set(h[0], h[1])

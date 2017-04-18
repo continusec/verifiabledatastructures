@@ -211,8 +211,8 @@ func (self *proxyAndRecordHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		fmt.Println(self.Sequence, "From cache", canonReq.URL)
 	}
 	if !xavedPair.Request.Equals(canonReq) {
-		fmt.Println(self.Sequence, "Bad request, got", canonReq, "wanted", xavedPair.Request)
-
+		fmt.Println(self.Sequence, "Bad request, got ", canonReq)
+		fmt.Println(self.Sequence, "wanted           ", xavedPair.Request)
 		return
 	}
 

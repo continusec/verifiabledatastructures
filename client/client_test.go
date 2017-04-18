@@ -54,7 +54,7 @@ func TestStuff(t *testing.T) {
 	}
 	go runMockServer(":8080", mockServer)
 	localClient := &VerifiableDataStructuresClient{
-		Service: &HTTPRESTClient{BaseUrl: "http://localhost:8080/v1"},
+		Service: &HTTPRESTClient{BaseUrl: "http://localhost:8080"},
 	}
 
 	client := localClient.Account("7981306761429961588", "c9fc80d4e19ddbf01a4e6b5277a29e1bffa88fe047af9d0b9b36de536f85c2c6")
