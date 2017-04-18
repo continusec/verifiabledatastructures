@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"strings"
+
 	"github.com/continusec/verifiabledatastructures/api"
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/kvstore"
@@ -235,7 +237,7 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 }
 
-func createCleanEmptyService() pb.VerifiableDataStructuresServiceServer {
+func createCleanEmptyService() *api.LocalService {
 	db := &kvstore.TransientHashMapStorage{}
 	return &api.LocalService{
 		AccessPolicy: &api.AnythingGoesOracle{},
@@ -243,6 +245,85 @@ func createCleanEmptyService() pb.VerifiableDataStructuresServiceServer {
 			Writer: db,
 		},
 		Reader: db,
+	}
+}
+
+func expectErr(t *testing.T, exp, err error) {
+	if exp != err {
+		t.Fatalf("Wanted %s, got %s", exp, err)
+	}
+}
+
+func TestPermissions(t *testing.T) {
+	s := createCleanEmptyService()
+	s.AccessPolicy = &api.StaticOracle{
+		Policy: []*pb.Account{
+			{
+				Id: "0",
+				Policy: []*pb.AccessPolicy{
+					{
+						NameMatch:     "foo",
+						Permissions:   []pb.Permission{pb.Permission_PERM_ALL_PERMISSIONS},
+						ApiKey:        "secret",
+						AllowedFields: []string{"*"},
+					},
+					{
+						NameMatch:     "f*",
+						Permissions:   []pb.Permission{pb.Permission_PERM_LOG_READ_ENTRY},
+						ApiKey:        "*",
+						AllowedFields: []string{"name"},
+					},
+				},
+			},
+		},
+	}
+	c := &client.VerifiableDataStructuresClient{Service: s}
+	var err error
+	var v *pb.LeafData
+
+	_, err = c.Account("0", "secr3t").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	expectErr(t, api.ErrNotAuthorized, err)
+
+	_, err = c.Account("0", "secret").VerifiableLog("fofo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	expectErr(t, api.ErrNotAuthorized, err)
+
+	_, err = c.Account("1", "secret").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	expectErr(t, api.ErrNotAuthorized, err)
+
+	_, err = c.Account("0", "secret").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	expectErr(t, nil, err)
+
+	v, err = client.CreateRedactableJSONLeafData([]byte("{\"name\":\"adam\",\"dob\":\"100000\"}"))
+	expectErr(t, nil, err)
+	_, err = c.Account("0", "secret").VerifiableLog("foo").Add(v)
+	expectErr(t, nil, err)
+
+	// Test less fields
+	resp, err := c.Account("0", "").VerifiableLog("foo").Entry(1)
+	expectErr(t, nil, err)
+	st := string(resp.ExtraData)
+	if !strings.Contains(st, "\"dob\":\"***REDACTED***") {
+		t.Fatal("Expected redacted")
+	}
+	if !strings.Contains(st, "adam") {
+		t.Fatal("Expected name")
+	}
+	if strings.Contains(st, "100000") {
+		t.Fatal("Value should not appear (unless incredibly unlucky with random generator)")
+	}
+
+	// Test more fields
+	resp, err = c.Account("0", "secret").VerifiableLog("foo").Entry(1)
+	expectErr(t, nil, err)
+	st = string(resp.ExtraData)
+	if strings.Contains(st, "\"dob\":\"***REDACTED***") {
+		t.Fatal("Not expected redacted")
+	}
+	if !strings.Contains(st, "adam") {
+		t.Fatal("Expected name")
+	}
+	if !strings.Contains(st, "100000") {
+		t.Fatal("Value should appear")
 	}
 }
 

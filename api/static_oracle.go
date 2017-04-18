@@ -18,7 +18,12 @@ limitations under the License.
 
 package api
 
-import "github.com/continusec/verifiabledatastructures/pb"
+import (
+	"path"
+	"strings"
+
+	"github.com/continusec/verifiabledatastructures/pb"
+)
 
 // AnythingGoesOracle allows all operations on all fields, all the time
 type AnythingGoesOracle struct{}
@@ -36,8 +41,26 @@ type StaticOracle struct {
 }
 
 // VerifyAllowed returns value as specifed in the policy
-func (o *StaticOracle) VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) (*AccessModifier, error) {
-	return &AccessModifier{
-		FieldFilter: AllFields,
-	}, nil
+func (o *StaticOracle) VerifyAllowed(account, apiKey, objectName string, permission pb.Permission) (*AccessModifier, error) {
+	// TODO, optimize the following, which is currently a set of nested dumb loops, unsuitable for anything non-trivial
+	for _, acc := range o.Policy { // for each account in the policy
+		if acc.Id == account { // if it is the one we are accessing
+			for _, pol := range acc.Policy { // then for each line in that account policy
+				for _, perm := range pol.Permissions { // look at the permissions in that line
+					if perm == pb.Permission_PERM_ALL_PERMISSIONS || perm == permission { // if that includes our requested permission, or is a wildcard permission
+						if pol.ApiKey == "*" || (len(pol.ApiKey) != 0 && pol.ApiKey == apiKey) { // then if we have the API key matching this line, or if the line matches all API keys
+							matched, err := path.Match(pol.NameMatch, objectName) // then see if we glob match the name of the object being accessed
+							if matched && err == nil {                            // and then, if so,
+								return &AccessModifier{ // return the allowed field list!
+									FieldFilter: strings.Join(pol.AllowedFields, ","),
+								}, nil
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// Default deny
+	return nil, ErrNotAuthorized
 }

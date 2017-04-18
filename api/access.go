@@ -71,13 +71,12 @@ func (s *LocalService) verifyAccessForLogOperation(log *pb.LogRef, op int) (*Acc
 }
 
 func filterLeafData(ld *pb.LeafData, am *AccessModifier) (*pb.LeafData, error) {
-	switch ld.Format {
-	case pb.DataFormat_UNSPECIFIED:
+	if am.FieldFilter == AllFields {
 		return ld, nil
+	}
+	// Largely just for show, but saves us working on the wrong data type
+	switch ld.Format {
 	case pb.DataFormat_JSON:
-		if am.FieldFilter == AllFields {
-			return ld, nil
-		}
 		var o interface{}
 		err := json.Unmarshal(ld.ExtraData, &o)
 		if err != nil {
@@ -96,7 +95,6 @@ func filterLeafData(ld *pb.LeafData, am *AccessModifier) (*pb.LeafData, error) {
 			ExtraData: rv, // redacted form
 		}, nil
 	default:
-		return nil, ErrInvalidRequest
+		return nil, ErrNotImplemented
 	}
-
 }

@@ -104,11 +104,8 @@ func (g *VerifiableLog) TreeHead(treeSize int64) (*pb.LogTreeHashResponse, error
 // until it is sequenced.
 func (g *VerifiableLog) Add(e *pb.LeafData) (LogUpdatePromise, error) {
 	resp, err := g.Service.LogAddEntry(context.Background(), &pb.LogAddEntryRequest{
-		Log: g.Log,
-		Value: &pb.LeafData{
-			LeafInput: e.GetLeafInput(),
-			ExtraData: e.GetExtraData(),
-		},
+		Log:   g.Log,
+		Value: e,
 	})
 	if err != nil {
 		return nil, err
