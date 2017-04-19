@@ -357,6 +357,7 @@ func runSmokeTests(c pb.VerifiableDataStructuresServiceServer, t *testing.T) {
 
 func TestWithoutServers(t *testing.T) {
 	runSmokeTests(createCleanEmptyService(), t)
+	runSmokeTests(createCleanEmptyBatchMutatorService(), t)
 }
 
 func TestWithHTTPServerAndClient(t *testing.T) {
