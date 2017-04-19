@@ -18,6 +18,7 @@ limitations under the License.
 
 package verifiabledatastructures
 
+import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"encoding/json"
 
@@ -32,35 +33,35 @@ const (
 )
 
 var (
-	operationForLogType = map[LogType]map[int]Permission{
-		LogType_STRUCT_TYPE_LOG: map[int]Permission{
-			operationRawAdd:         Permission_PERM_LOG_RAW_ADD,
-			operationReadEntry:      Permission_PERM_LOG_READ_ENTRY,
-			operationReadHash:       Permission_PERM_LOG_READ_HASH,
-			operationProveInclusion: Permission_PERM_LOG_PROVE_INCLUSION,
+	operationForLogType = map[pb.LogType]map[int]pb.Permission{
+		pb.LogType_STRUCT_TYPE_LOG: map[int]pb.Permission{
+			operationRawAdd:         pb.Permission_PERM_LOG_RAW_ADD,
+			operationReadEntry:      pb.Permission_PERM_LOG_READ_ENTRY,
+			operationReadHash:       pb.Permission_PERM_LOG_READ_HASH,
+			operationProveInclusion: pb.Permission_PERM_LOG_PROVE_INCLUSION,
 		},
-		LogType_STRUCT_TYPE_MUTATION_LOG: map[int]Permission{ // This is not a typo, we deliberately consider read entries of mutation log as separate and sensitive.
-			operationReadEntry:      Permission_PERM_MAP_MUTATION_READ_ENTRY,
-			operationReadHash:       Permission_PERM_MAP_MUTATION_READ_HASH,
-			operationProveInclusion: Permission_PERM_MAP_MUTATION_READ_HASH,
+		pb.LogType_STRUCT_TYPE_MUTATION_LOG: map[int]pb.Permission{ // This is not a typo, we deliberately consider read entries of mutation log as separate and sensitive.
+			operationReadEntry:      pb.Permission_PERM_MAP_MUTATION_READ_ENTRY,
+			operationReadHash:       pb.Permission_PERM_MAP_MUTATION_READ_HASH,
+			operationProveInclusion: pb.Permission_PERM_MAP_MUTATION_READ_HASH,
 		},
-		LogType_STRUCT_TYPE_TREEHEAD_LOG: map[int]Permission{
-			operationReadEntry:      Permission_PERM_MAP_MUTATION_READ_HASH,
-			operationReadHash:       Permission_PERM_MAP_MUTATION_READ_HASH,
-			operationProveInclusion: Permission_PERM_MAP_MUTATION_READ_HASH,
+		pb.LogType_STRUCT_TYPE_TREEHEAD_LOG: map[int]pb.Permission{
+			operationReadEntry:      pb.Permission_PERM_MAP_MUTATION_READ_HASH,
+			operationReadHash:       pb.Permission_PERM_MAP_MUTATION_READ_HASH,
+			operationProveInclusion: pb.Permission_PERM_MAP_MUTATION_READ_HASH,
 		},
 	}
 )
 
-func (s *LocalService) verifyAccessForMap(vmap *MapRef, perm Permission) (*AccessModifier, error) {
+func (s *LocalService) verifyAccessForMap(vmap *pb.MapRef, perm pb.Permission) (*AccessModifier, error) {
 	return s.AccessPolicy.VerifyAllowed(vmap.Account.Id, vmap.Account.ApiKey, vmap.Name, perm)
 }
 
-func (s *LocalService) verifyAccessForLog(log *LogRef, perm Permission) (*AccessModifier, error) {
+func (s *LocalService) verifyAccessForLog(log *pb.LogRef, perm pb.Permission) (*AccessModifier, error) {
 	return s.AccessPolicy.VerifyAllowed(log.Account.Id, log.Account.ApiKey, log.Name, perm)
 }
 
-func (s *LocalService) verifyAccessForLogOperation(log *LogRef, op int) (*AccessModifier, error) {
+func (s *LocalService) verifyAccessForLogOperation(log *pb.LogRef, op int) (*AccessModifier, error) {
 	perm, ok := operationForLogType[log.LogType][op]
 	if !ok {
 		return nil, ErrNotAuthorized
@@ -69,13 +70,13 @@ func (s *LocalService) verifyAccessForLogOperation(log *LogRef, op int) (*Access
 	return s.verifyAccessForLog(log, perm)
 }
 
-func filterLeafData(ld *LeafData, am *AccessModifier) (*LeafData, error) {
+func filterLeafData(ld *pb.LeafData, am *AccessModifier) (*pb.LeafData, error) {
 	if am.FieldFilter == AllFields {
 		return ld, nil
 	}
 	// Largely just for show, but saves us working on the wrong data type
 	switch ld.Format {
-	case DataFormat_JSON:
+	case pb.DataFormat_JSON:
 		var o interface{}
 		err := json.Unmarshal(ld.ExtraData, &o)
 		if err != nil {
@@ -89,7 +90,7 @@ func filterLeafData(ld *LeafData, am *AccessModifier) (*LeafData, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &LeafData{
+		return &pb.LeafData{
 			LeafInput: ld.LeafInput,
 			ExtraData: rv, // redacted form
 		}, nil

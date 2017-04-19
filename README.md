@@ -23,7 +23,7 @@ The following commands are useful for those working with the source.
 go generate
 ```
 
-(will need `go get -u github.com/jteeuwen/go-bindata/...`)
+(will need `go get -u github.com/jteeuwen/go-bindata/... github.com/golang/protobuf/protoc-gen-go`)
 
 ## Rebuild server
 ```bash

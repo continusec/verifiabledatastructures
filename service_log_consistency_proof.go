@@ -18,6 +18,7 @@ limitations under the License.
 
 package verifiabledatastructures
 
+import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
 
@@ -25,7 +26,7 @@ import (
 )
 
 // LogConsistencyProof verifies the consisitency of a log
-func (s *LocalService) LogConsistencyProof(ctx context.Context, req *LogConsistencyProofRequest) (*LogConsistencyProofResponse, error) {
+func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func (s *LocalService) LogConsistencyProof(ctx context.Context, req *LogConsiste
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *LogConsistencyProofResponse
+	var rv *pb.LogConsistencyProofResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
 		return nil, ErrInvalidRequest
@@ -79,7 +80,7 @@ func (s *LocalService) LogConsistencyProof(ctx context.Context, req *LogConsiste
 				}
 			}
 		}
-		rv = &LogConsistencyProofResponse{
+		rv = &pb.LogConsistencyProofResponse{
 			FromSize:  req.FromSize,
 			TreeSize:  second,
 			AuditPath: path,
@@ -93,7 +94,7 @@ func (s *LocalService) LogConsistencyProof(ctx context.Context, req *LogConsiste
 }
 
 // VerifyLogConsistencyProof will verify that the consistency proof stored in this object can produce both the LogTreeHeads passed to this method.
-func VerifyLogConsistencyProof(self *LogConsistencyProofResponse, first, second *LogTreeHashResponse) error {
+func VerifyLogConsistencyProof(self *pb.LogConsistencyProofResponse, first, second *pb.LogTreeHashResponse) error {
 	if first.TreeSize != self.FromSize {
 		return ErrVerificationFailed
 	}

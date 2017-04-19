@@ -16,6 +16,7 @@
 
 package verifiabledatastructures
 
+import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
 	"encoding/json"
@@ -26,7 +27,7 @@ import (
 )
 
 // CreateJSONLeafData creates a JSON based objecthash for the given JSON bytes.
-func CreateJSONLeafData(data []byte) (*LeafData, error) {
+func CreateJSONLeafData(data []byte) (*pb.LeafData, error) {
 	var o interface{}
 	err := json.Unmarshal(data, &o)
 	if err != nil {
@@ -38,15 +39,15 @@ func CreateJSONLeafData(data []byte) (*LeafData, error) {
 		return nil, err
 	}
 
-	return &LeafData{
+	return &pb.LeafData{
 		LeafInput: bflh,
 		ExtraData: data,
-		Format:    DataFormat_JSON,
+		Format:    pb.DataFormat_JSON,
 	}, nil
 }
 
 // CreateJSONLeafDataFromProto creates a JSON based objecthash for the given proto.
-func CreateJSONLeafDataFromProto(m proto.Message) (*LeafData, error) {
+func CreateJSONLeafDataFromProto(m proto.Message) (*pb.LeafData, error) {
 	b, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func CreateJSONLeafDataFromProto(m proto.Message) (*LeafData, error) {
 
 // CreateJSONLeafDataFromObject creates a JSON based objecthash for the given object.
 // The object is first serialized then unmarshalled into a string map.
-func CreateJSONLeafDataFromObject(o interface{}) (*LeafData, error) {
+func CreateJSONLeafDataFromObject(o interface{}) (*pb.LeafData, error) {
 	data, err := json.Marshal(o)
 	if err != nil {
 		return nil, err
@@ -66,7 +67,7 @@ func CreateJSONLeafDataFromObject(o interface{}) (*LeafData, error) {
 
 // ValidateJSONLeafData verifies that the LeafInput is equal to the objecthash of the ExtraData.
 // It ignores the format field.
-func ValidateJSONLeafData(entry *LeafData) error {
+func ValidateJSONLeafData(entry *pb.LeafData) error {
 	var o interface{}
 	err := json.Unmarshal(entry.ExtraData, &o)
 	if err != nil {
@@ -99,9 +100,9 @@ func ShedRedactedJSONFields(b []byte) ([]byte, error) {
 	return json.Marshal(newContents)
 }
 
-// CreateRedactableJSONLeafData creates a LeafData node with fields suitable
+// CreateRedactableJSONLeafData creates a pb.LeafData node with fields suitable
 // for redaction, ie it replaces all values with a <nonce, value> tuple.
-func CreateRedactableJSONLeafData(data []byte) (*LeafData, error) {
+func CreateRedactableJSONLeafData(data []byte) (*pb.LeafData, error) {
 	var o interface{}
 	err := json.Unmarshal(data, &o)
 	if err != nil {
@@ -123,9 +124,9 @@ func CreateRedactableJSONLeafData(data []byte) (*LeafData, error) {
 		return nil, err
 	}
 
-	return &LeafData{
+	return &pb.LeafData{
 		LeafInput: bflh,
 		ExtraData: ojb,
-		Format:    DataFormat_JSON,
+		Format:    pb.DataFormat_JSON,
 	}, nil
 }

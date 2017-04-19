@@ -18,6 +18,7 @@ limitations under the License.
 
 package verifiabledatastructures
 
+import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"log"
 	"net"
@@ -28,7 +29,7 @@ import (
 
 // StartGRPCServer starts a gRPC server given a service. Normally this service is an instance
 // of LocalService.
-func StartGRPCServer(conf *ServerConfig, server VerifiableDataStructuresServiceServer) {
+func StartGRPCServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) {
 	lis, err := net.Listen(conf.GrpcListenProtocol, conf.GrpcListenBind)
 	if err != nil {
 		log.Fatalf("Error establishing server listener: %s\n", err)
@@ -45,7 +46,7 @@ func StartGRPCServer(conf *ServerConfig, server VerifiableDataStructuresServiceS
 		grpcServer = grpc.NewServer(grpc.Creds(tc))
 	}
 
-	RegisterVerifiableDataStructuresServiceServer(grpcServer, server)
+	pb.RegisterVerifiableDataStructuresServiceServer(grpcServer, server)
 
 	log.Printf("Listening grpc on %s...", conf.GrpcListenBind)
 

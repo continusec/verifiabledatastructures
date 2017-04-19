@@ -18,6 +18,7 @@ limitations under the License.
 
 package verifiabledatastructures
 
+import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"log"
 	"net/http"
@@ -25,7 +26,7 @@ import (
 
 // StartRESTServer starts an HTTP REST server given a service. Normally this service is an instance
 // of LocalService.
-func StartRESTServer(conf *ServerConfig, server VerifiableDataStructuresServiceServer) error {
+func StartRESTServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) error {
 	if conf.InsecureServerForTesting {
 		log.Println("WARNING: InsecureServerForTesting is set, your connections will not be encrypted")
 	}

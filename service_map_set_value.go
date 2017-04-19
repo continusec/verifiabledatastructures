@@ -18,6 +18,7 @@ limitations under the License.
 
 package verifiabledatastructures
 
+import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"time"
 
@@ -26,13 +27,13 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-func makeJSONMutationEntry(req *MapSetValueRequest) (*MapMutation, error) {
+func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) {
 	// is there a better way to clone?
 	b, err := proto.Marshal(req.Mutation)
 	if err != nil {
 		return nil, err
 	}
-	var rv MapMutation
+	var rv pb.MapMutation
 	err = proto.Unmarshal(b, &rv)
 	if err != nil {
 		return nil, err
@@ -42,8 +43,8 @@ func makeJSONMutationEntry(req *MapSetValueRequest) (*MapMutation, error) {
 }
 
 // MapSetValue sets a value in a map
-func (s *LocalService) MapSetValue(ctx context.Context, req *MapSetValueRequest) (*MapSetValueResponse, error) {
-	_, err := s.verifyAccessForMap(req.Map, Permission_PERM_MAP_SET_VALUE)
+func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
+	_, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_SET_VALUE)
 	if err != nil {
 		return nil, err
 	}
@@ -65,12 +66,12 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *MapSetValueRequest)
 		return nil, ErrInvalidRequest
 	}
 
-	err = s.Mutator.QueueMutation(ns, &Mutation{
-		LogAddEntry: &LogAddEntryRequest{
-			Log: &LogRef{
+	err = s.Mutator.QueueMutation(ns, &pb.Mutation{
+		LogAddEntry: &pb.LogAddEntryRequest{
+			Log: &pb.LogRef{
 				Account: req.Map.Account,
 				Name:    req.Map.Name,
-				LogType: LogType_STRUCT_TYPE_MUTATION_LOG,
+				LogType: pb.LogType_STRUCT_TYPE_MUTATION_LOG,
 			},
 			Value: mutData,
 		},
@@ -78,7 +79,7 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *MapSetValueRequest)
 	if err != nil {
 		return nil, err
 	}
-	return &MapSetValueResponse{
+	return &pb.MapSetValueResponse{
 		LeafHash: LeafMerkleTreeHash(mutData.LeafInput),
 	}, nil
 }

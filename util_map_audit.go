@@ -16,6 +16,7 @@
 
 package verifiabledatastructures
 
+import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
 	"encoding/json"
@@ -100,7 +101,7 @@ func (node *mapAuditNode) CalcHash() []byte {
 
 // Given a root node, update it with a given map mutation, returning the new
 // root hash.
-func addMutationToTree(root *mapAuditNode, mut *MapMutation) ([]byte, error) {
+func addMutationToTree(root *mapAuditNode, mut *pb.MapMutation) ([]byte, error) {
 	keyPath := ConstructMapKeyPath(mut.Key)
 	head := root
 
@@ -172,7 +173,7 @@ type auditState struct {
 	Map *VerifiableMap
 
 	// Current mutation log tree head
-	MutLogHead *LogTreeHashResponse
+	MutLogHead *pb.LogTreeHashResponse
 
 	// Audit function, called for each mutation that changes the map
 	MapAuditFunction MapAuditFunction
@@ -207,8 +208,8 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 
 		// Perform audit of the mutation log, providing a special function to apply mutations
 		// to our copy of the map
-		err = mutLog.VerifyEntries(ctx, a.MutLogHead, mutLogHead, func(ctx context.Context, idx int64, entry *LeafData) error {
-			// First, verify that the LeafData is in fact well formed objecthash
+		err = mutLog.VerifyEntries(ctx, a.MutLogHead, mutLogHead, func(ctx context.Context, idx int64, entry *pb.LeafData) error {
+			// First, verify that the pb.LeafData is in fact well formed objecthash
 			err := ValidateJSONLeafData(entry)
 			if err != nil {
 				return err
@@ -217,7 +218,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 			// At this point, we're satisfied that ExtraData is OK
 
 			// Decode it into standard structure
-			var mutation MapMutation
+			var mutation pb.MapMutation
 			err = json.Unmarshal(entry.ExtraData, &mutation)
 			if err != nil {
 				return err
@@ -288,7 +289,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 }
 
 // CheckTreeHeadEntry is the audit function that checks the actual tree head is correct
-func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry *LeafData) error {
+func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry *pb.LeafData) error {
 	// Step 0, are we a valid JSON hash?
 	err := ValidateJSONLeafData(entry)
 	if err != nil {
@@ -297,7 +298,7 @@ func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry *L
 
 	// Get the tree head data
 	// Decode it into standard structure
-	var mth MapTreeHashResponse
+	var mth pb.MapTreeHashResponse
 	err = json.Unmarshal(entry.ExtraData, &mth)
 	if err != nil {
 		return err

@@ -18,6 +18,8 @@ limitations under the License.
 
 package verifiabledatastructures
 
+import "github.com/continusec/verifiabledatastructures/pb"
+
 // InstantMutator will synchronously apply the mutation. This is suitable
 // for test and low-usage environments.
 type InstantMutator struct {
@@ -26,7 +28,7 @@ type InstantMutator struct {
 }
 
 // QueueMutation applies the mutation, normally asynchronously, but synchronously for the InstantMutator
-func (m *InstantMutator) QueueMutation(ns []byte, mut *Mutation) error {
+func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) error {
 	return m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
 		startSize, err := readObjectSize(kw)
 		if err != nil {

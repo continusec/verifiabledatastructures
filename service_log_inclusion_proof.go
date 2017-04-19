@@ -18,6 +18,7 @@ limitations under the License.
 
 package verifiabledatastructures
 
+import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
 
@@ -34,7 +35,7 @@ func wrapClientError(err error) error {
 }
 
 // LogInclusionProof returns an inclusion proof
-func (s *LocalService) LogInclusionProof(ctx context.Context, req *LogInclusionProofRequest) (*LogInclusionProofResponse, error) {
+func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationProveInclusion)
 	if err != nil {
 		return nil, err
@@ -44,7 +45,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *LogInclusionP
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *LogInclusionProofResponse
+	var rv *pb.LogInclusionProofResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
 		return nil, ErrInvalidRequest
@@ -106,7 +107,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *LogInclusionP
 			}
 		}
 
-		rv = &LogInclusionProofResponse{
+		rv = &pb.LogInclusionProofResponse{
 			LeafIndex: leafIndex,
 			TreeSize:  treeSize,
 			AuditPath: path,
@@ -120,7 +121,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *LogInclusionP
 }
 
 // VerifyLogInclusionProof verifies an inclusion proof against a LogTreeHead
-func VerifyLogInclusionProof(self *LogInclusionProofResponse, leafHash []byte, head *LogTreeHashResponse) error {
+func VerifyLogInclusionProof(self *pb.LogInclusionProofResponse, leafHash []byte, head *pb.LogTreeHashResponse) error {
 	if self.TreeSize != head.TreeSize {
 		return ErrVerificationFailed
 	}

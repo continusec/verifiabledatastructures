@@ -19,7 +19,7 @@ limitations under the License.
 syntax = "proto3";
 
 package com.continusec.verifiabledatastructures.configuration;
-option go_package = "verifiabledatastructures";
+option go_package = "pb";
 
 message ServerConfig {
     string server_cert_path = 1;

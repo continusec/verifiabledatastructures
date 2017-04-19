@@ -24,6 +24,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -54,7 +55,7 @@ func CreateBatchMutator(conf *BatchMutatorConfig) MutatorService {
 
 type chObject struct {
 	ns  []byte
-	mut *Mutation
+	mut *pb.Mutation
 }
 
 type op struct {
@@ -185,7 +186,7 @@ func (bm *batchMutatorImpl) consume() {
 }
 
 // QueueMutation applies the mutation, normally asynchronously, but synchronously for the InstantMutator
-func (bm *batchMutatorImpl) QueueMutation(ns []byte, mut *Mutation) error {
+func (bm *batchMutatorImpl) QueueMutation(ns []byte, mut *pb.Mutation) error {
 	bm.Ch <- &chObject{ns: ns, mut: mut}
 	return nil
 }

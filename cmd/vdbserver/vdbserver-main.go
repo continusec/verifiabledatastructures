@@ -18,6 +18,7 @@ limitations under the License.
 
 package main
 
+import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"io/ioutil"
 	"log"

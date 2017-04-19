@@ -18,12 +18,13 @@ limitations under the License.
 
 package verifiabledatastructures
 
+import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"golang.org/x/net/context"
 )
 
 // LogTreeHash returns the log tree hash
-func (s *LocalService) LogTreeHash(ctx context.Context, req *LogTreeHashRequest) (*LogTreeHashResponse, error) {
+func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {
 		return nil, err
@@ -33,7 +34,7 @@ func (s *LocalService) LogTreeHash(ctx context.Context, req *LogTreeHashRequest)
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *LogTreeHashResponse
+	var rv *pb.LogTreeHashResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
 		return nil, ErrInvalidRequest
@@ -60,7 +61,7 @@ func (s *LocalService) LogTreeHash(ctx context.Context, req *LogTreeHashRequest)
 			return err
 		}
 
-		rv = &LogTreeHashResponse{
+		rv = &pb.LogTreeHashResponse{
 			TreeSize: req.TreeSize,
 			RootHash: m.Mth,
 		}
