@@ -30,67 +30,129 @@
    limitations under the License.
 */
 
-// Package client provides golang client libraries for interacting with the
-// verifiable datastructures API provided by Continusec.
-//
-// Sample usage is as follows:
-//
-//
-//     // Construct a client
-//     client := continusec.DefaultClient.WithApiKey("<your API key>")
-//
-//     // If on Google App Engine:
-//     client = client.WithHttpClient(urlfetch.Client(ctx))
-//
-//     // Get a pointer to your account
-//     account := &continusec.Account{Account: "<your account number>", Client: client}
-//
-//     // Get a pointer to a log
-//     log := account.VerifiableLog("testlog")
-//
-//     // Create a log (only do this once)
-//     err := log.Create()
-//     if err != nil { ... }
-//
-//     // Add entry to log
-//     _, err = log.Add(&continusec.RawDataEntry{RawBytes: []byte("foo")})
-//     if err != nil { ... }
-//
-//     // Get latest verified tree head
-//     prev := ... load from storage ...
-//     head, err := log.VerifiedLatestTreeHead(prev)
-//     if err != nil { ... }
-//     if head.TreeSize > prev.TreeSize {
-//         ... save head to storage ...
-//     }
-//
-//     // Prove inclusion of item in tree head
-//     err = log.VerifyInclusion(head, &continusec.RawDataEntry{RawBytes: []byte("foo")})
-//     if err != nil { ... }
-//
-//     // Get a pointer to a map
-//     vmap := account.VerifiableMap("testmap")
-//
-//     // Create a map (only do this once)
-//     err := vmap.Create()
-//     if err != nil { ... }
-//
-//     // Set value in the map
-//     _, err = _, err = vmap.Set([]byte("foo"), &continusec.RawDataEntry{RawBytes: []byte("bar")})
-//     if err != nil { ... }
-//
-//     // Get latest verified map state
-//     prev := ... load from storage ...
-//     head, err := vmap.VerifiedLatestMapState(prev)
-//     if err != nil { ... }
-//     if head.TreeSize() > prev.TreeSize() {
-//         ... save head to storage ...
-//     }
-//
-//     // Get value and verify its inclusion in head
-//     entry, err := vmap.VerifiedGet([]byte("foo"), head, continusec.RawDataEntryFactory)
-//     if err != nil { ... }
-//
+/*
+This package provides append-only, verifiable logs and maps. Both a client, server and
+embedded options are provided, along with various data storage methods.
+
+This is an early release of the open-source offering, and APIs are subject to change.
+If you are using this library, please drop us a note at support@continusec.com so that we
+can work with you on any API changes.
+
+To interact with logs and maps, you will first need to get a reference to the low-level
+API which is the set of functions defined in pb.VerifiableDataStructuresServiceServer.
+
+There are 2 ways to get one of these:
+
+1. Run your own embedded instance:
+
+	// Create an in-memory, non-persistent database, suitable for tests
+	db := &TransientHashMapStorage{}
+
+	// Create a service object with no permission checking, and synchronous mutations
+	service := (&LocalService{
+		AccessPolicy: &AnythingGoesOracle{},
+		Mutator:      &InstantMutator{Writer: db},
+		Reader:       db,
+	}).MustCreate()
+
+or
+
+2. Connect to a remote server (example below uses GRPCClient, see also HTTPRestClient):
+
+	// Connect to remote GRPC server
+	service := (&GRPCClient{
+		Address: "verifiabledatastructures.example.com:8081",
+	}).MustDial()
+
+Once you have a service object, whether it is local or remote, we recommend that you wrap
+it using the higher level Client object:
+
+	client := &Client{
+		Service: service,
+	}
+
+Note that currently accounts, logs and maps are all created lazily, there is no need to
+explicitly create these.
+
+To add entries into a log:
+
+	promise, err := client.Account("0", "").VerifiableLog().Add(&pb.LeafData{
+		LeafInput: []byte("foo"),
+	})
+
+See the documentation for VerifiableLog and VerifiableMap for all operations.
+
+To run your own server, simply take a pb.VerifiableDataStructuresServiceServer as created
+by either method above, and expose like follows:
+
+	StartGRPCServer(&pb.ServerConfig{
+		InsecureServerForTesting: true,
+		GrpcListenBind:           ":8081",
+		GrpcListenProtocol:       "tcp4",
+	}, service)
+
+Other useful entrypoints include:
+
+BoltBackedService:
+
+	// Save logs and maps to data directory using embedded boltdb database
+	db := &BoltBackedService{
+		Path: "/path/to/database/dir","
+	}
+
+	// pass to LocalService in the same manner as above, e.g.
+	service := (&LocalService{
+		AccessPolicy: &AnythingGoesOracle{},
+		Mutator:      &InstantMutator{Writer: db},
+		Reader:       db,
+	}).MustCreate()
+
+BatchMutator:
+
+	// performs mutations asynchronously in batches - experimental
+	service := (&LocalService{
+		AccessPolicy: &AnythingGoesOracle{},
+		Mutator: (&BatchMutator{
+			Writer:     db,
+			BatchSize:  1000,
+			BufferSize: 100000,
+			Timeout:    time.Millisecond * 10,
+		}).MustCreate(),
+		Reader:       db,
+	}).MustCreate()
+
+StaticOracle:
+
+	// actually does permission checks, based on static config, e.g.
+	service := (&LocalService{
+		Mutator:      &InstantMutator{Writer: db},
+		Reader:       db,
+		AccessPolicy: &StaticOracle{
+			Policy: []*pb.ResourceAccount{
+				{
+					Id: "0",
+					Policy: []*pb.AccessPolicy{
+						{
+							NameMatch:     "foo",
+							Permissions:   []pb.Permission{pb.Permission_PERM_ALL_PERMISSIONS},
+							ApiKey:        "secret",
+							AllowedFields: []string{"*"},
+						},
+						{
+							NameMatch:     "f*",
+							Permissions:   []pb.Permission{pb.Permission_PERM_LOG_READ_ENTRY},
+							ApiKey:        "*",
+							AllowedFields: []string{"name"},
+						},
+					},
+				},
+			},
+		},
+	}).MustCreate()
+
+Each of these is interchangeable with others that implement the correct interface.
+
+*/
 package verifiabledatastructures
 
 import (
@@ -98,15 +160,15 @@ import (
 	"golang.org/x/net/context"
 )
 
-// VerifiableDataStructuresClient is the primary point to begin interaction with
+// Client is the primary point to begin interaction with
 // a verifiable data structures service. This client providers convenience wrappers around
 // an underlying lower-level API.
-type VerifiableDataStructuresClient struct {
+type Client struct {
 	Service pb.VerifiableDataStructuresServiceServer
 }
 
 // Account returns an object that can be used to access objects within that account
-func (v *VerifiableDataStructuresClient) Account(id string, apiKey string) *Account {
+func (v *Client) Account(id string, apiKey string) *Account {
 	return &Account{
 		Account: &pb.AccountRef{
 			Id:     id,

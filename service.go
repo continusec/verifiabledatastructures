@@ -18,7 +18,11 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
+import (
+	"log"
+
+	"github.com/continusec/verifiabledatastructures/pb"
+)
 
 // LocalService is the main object used to create an instance of the server or embedded
 // Verifiable Data Structures API. It may be wrapped by client directly, or used to
@@ -32,6 +36,22 @@ type LocalService struct {
 
 	// Reader points to the underlying data that we can read from
 	Reader StorageReader
+}
+
+type localServiceImpl LocalService
+
+// Create returns a low-level API object to interact with the specified service
+func (l *LocalService) Create() (pb.VerifiableDataStructuresServiceServer, error) {
+	return (*localServiceImpl)(l), nil
+}
+
+// MustCreate is a convenience method that exits with a fatal error if the operation fails
+func (l *LocalService) MustCreate() pb.VerifiableDataStructuresServiceServer {
+	rv, err := l.Create()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return rv
 }
 
 // ApplyMutation should be called by a MutatorService to apply the given mutation to a log/map

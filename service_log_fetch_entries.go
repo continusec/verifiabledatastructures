@@ -24,7 +24,7 @@ import (
 )
 
 // LogFetchEntries returns the log entries
-func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
+func (s *localServiceImpl) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
 	am, err := s.verifyAccessForLogOperation(req.Log, operationReadEntry)
 	if err != nil {
 		return nil, err

@@ -32,7 +32,7 @@ import (
 )
 
 func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
-	account := (&VerifiableDataStructuresClient{
+	account := (&Client{
 		Service: service,
 	}).Account("999", "secret")
 	vmap := account.VerifiableMap("testmap")
@@ -82,7 +82,7 @@ func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 }
 
 func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
-	account := (&VerifiableDataStructuresClient{
+	account := (&Client{
 		Service: service,
 	}).Account("999", "secret")
 	log := account.VerifiableLog("smoketest")
@@ -241,27 +241,27 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 }
 
-func createCleanEmptyBatchMutatorService() *LocalService {
+func createCleanEmptyBatchMutatorService() pb.VerifiableDataStructuresServiceServer {
 	db := &TransientHashMapStorage{}
-	return &LocalService{
+	return (&LocalService{
 		AccessPolicy: &AnythingGoesOracle{},
-		Mutator: CreateBatchMutator(&BatchMutatorConfig{
+		Mutator: (&BatchMutator{
 			Writer:     db,
 			BatchSize:  1000,
 			BufferSize: 100000,
 			Timeout:    time.Millisecond * 10,
-		}),
+		}).MustCreate(),
 		Reader: db,
-	}
+	}).MustCreate()
 }
 
-func createCleanEmptyService() *LocalService {
+func createCleanEmptyService() pb.VerifiableDataStructuresServiceServer {
 	db := &TransientHashMapStorage{}
-	return &LocalService{
+	return (&LocalService{
 		AccessPolicy: &AnythingGoesOracle{},
 		Mutator:      &InstantMutator{Writer: db},
 		Reader:       db,
-	}
+	}).MustCreate()
 }
 
 func expectErr(t *testing.T, exp, err error) {
@@ -271,29 +271,33 @@ func expectErr(t *testing.T, exp, err error) {
 }
 
 func TestPermissions(t *testing.T) {
-	s := createCleanEmptyService()
-	s.AccessPolicy = &StaticOracle{
-		Policy: []*pb.ResourceAccount{
-			{
-				Id: "0",
-				Policy: []*pb.AccessPolicy{
-					{
-						NameMatch:     "foo",
-						Permissions:   []pb.Permission{pb.Permission_PERM_ALL_PERMISSIONS},
-						ApiKey:        "secret",
-						AllowedFields: []string{"*"},
-					},
-					{
-						NameMatch:     "f*",
-						Permissions:   []pb.Permission{pb.Permission_PERM_LOG_READ_ENTRY},
-						ApiKey:        "*",
-						AllowedFields: []string{"name"},
+	db := &TransientHashMapStorage{}
+	c := &Client{Service: (&LocalService{
+		Mutator: &InstantMutator{Writer: db},
+		Reader:  db,
+		AccessPolicy: &StaticOracle{
+			Policy: []*pb.ResourceAccount{
+				{
+					Id: "0",
+					Policy: []*pb.AccessPolicy{
+						{
+							NameMatch:     "foo",
+							Permissions:   []pb.Permission{pb.Permission_PERM_ALL_PERMISSIONS},
+							ApiKey:        "secret",
+							AllowedFields: []string{"*"},
+						},
+						{
+							NameMatch:     "f*",
+							Permissions:   []pb.Permission{pb.Permission_PERM_LOG_READ_ENTRY},
+							ApiKey:        "*",
+							AllowedFields: []string{"name"},
+						},
 					},
 				},
 			},
 		},
-	}
-	c := &VerifiableDataStructuresClient{Service: s}
+	}).MustCreate()}
+
 	var err error
 	var v *pb.LeafData
 
@@ -362,9 +366,9 @@ func TestWithHTTPServerAndClient(t *testing.T) {
 		RestListenBind:           ":8092",
 	}, createCleanEmptyService())
 	time.Sleep(time.Millisecond * 50) // let the server startup...
-	runSmokeTests(&HTTPRESTClient{
+	runSmokeTests((&HTTPRESTClient{
 		BaseURL: "http://localhost:8092",
-	}, t)
+	}).MustDial(), t)
 }
 
 func TestWithGRPCerverAndClient(t *testing.T) {
@@ -374,14 +378,10 @@ func TestWithGRPCerverAndClient(t *testing.T) {
 		GrpcListenProtocol:       "tcp4",
 	}, createCleanEmptyService())
 	time.Sleep(time.Millisecond * 50) // let the server startup...
-	cli, err := (&GRPCClient{
+	runSmokeTests((&GRPCClient{
 		Address:        "localhost:8081",
 		NoGrpcSecurity: true,
-	}).Dial()
-	if err != nil {
-		t.Fatal(err)
-	}
-	runSmokeTests(cli, t)
+	}).MustDial(), t)
 }
 
 // GenerateRootHashes is a utility function that emits a channel of root hashes

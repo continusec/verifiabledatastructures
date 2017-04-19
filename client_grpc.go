@@ -77,6 +77,15 @@ func (g *GRPCClient) Dial() (pb.VerifiableDataStructuresServiceServer, error) {
 	}, nil
 }
 
+// MustDial is a convenience method that exits with a fatal error if the operation fails
+func (g *GRPCClient) MustDial() pb.VerifiableDataStructuresServiceServer {
+	rv, err := g.Dial()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return rv
+}
+
 type wrapSillyClientAsServer struct {
 	Client pb.VerifiableDataStructuresServiceClient
 }

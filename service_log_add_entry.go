@@ -24,7 +24,7 @@ import (
 )
 
 // LogAddEntry adds an entry to a log
-func (s *LocalService) LogAddEntry(ctx context.Context, req *pb.LogAddEntryRequest) (*pb.LogAddEntryResponse, error) {
+func (s *localServiceImpl) LogAddEntry(ctx context.Context, req *pb.LogAddEntryRequest) (*pb.LogAddEntryResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationRawAdd)
 	if err != nil {
 		return nil, err

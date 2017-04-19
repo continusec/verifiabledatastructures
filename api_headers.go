@@ -21,10 +21,10 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"errors"
 
+	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
 )
 

@@ -2,9 +2,9 @@
 
 This repository contains a server implementation of the Continusec Verifiable Data Structures API.
 
-It was originally written by Adam Eijdenberg (<adam@continusec.com>) and is released under the Apache 2.0 License.
+It was written by Adam Eijdenberg (<adam@continusec.com>) and is released under the Apache 2.0 License.
 
-Enjoy.
+Please see the godoc for information on how to use the libraries: <https://godoc.org/github.com/continusec/verifiabledatastructures>
 
 # Quickstart
 

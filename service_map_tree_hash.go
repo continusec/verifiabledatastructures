@@ -24,7 +24,7 @@ import (
 )
 
 // MapTreeHash returns the tree hash for a map
-func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {
+func (s *localServiceImpl) MapTreeHash(ctx context.Context, req *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {
 	_, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
 	if err != nil {
 		return nil, err

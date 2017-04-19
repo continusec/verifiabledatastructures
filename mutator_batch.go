@@ -28,8 +28,8 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// BatchMutatorConfig has configuration data for a batch mutator service
-type BatchMutatorConfig struct {
+// BatchMutator has configuration data for a batch mutator service
+type BatchMutator struct {
 	// Writer is the underlying database to write to
 	Writer StorageWriter
 
@@ -43,13 +43,22 @@ type BatchMutatorConfig struct {
 	BufferSize int
 }
 
-// CreateBatchMutator creates a mutator for the given database that batches stuff up and periodically writes it
-func CreateBatchMutator(conf *BatchMutatorConfig) MutatorService {
+// Create creates a mutator for the given database that batches stuff up and periodically writes it
+func (bm *BatchMutator) Create() (MutatorService, error) {
 	rv := &batchMutatorImpl{
-		Conf: conf,
-		Ch:   make(chan *chObject, conf.BufferSize),
+		Conf: bm,
+		Ch:   make(chan *chObject, bm.BufferSize),
 	}
 	go rv.consume()
+	return rv, nil
+}
+
+// MustCreate is a convenience method that exits on error
+func (bm *BatchMutator) MustCreate() MutatorService {
+	rv, err := bm.Create()
+	if err != nil {
+		log.Fatal(err)
+	}
 	return rv
 }
 
@@ -70,7 +79,7 @@ type mapNoLockDB struct {
 }
 
 type batchMutatorImpl struct {
-	Conf *BatchMutatorConfig
+	Conf *BatchMutator
 	Ch   chan *chObject
 }
 

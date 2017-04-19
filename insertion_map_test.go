@@ -128,7 +128,7 @@ func doInclusionProofCheck(t *testing.T, vmap *VerifiableMap, key, val, rootHash
 }
 
 func processListOfMutations(t *testing.T, mutations []*mutRes, doAfter func(t *testing.T, vmap *VerifiableMap)) {
-	vmap := (&VerifiableDataStructuresClient{Service: createCleanEmptyService()}).Account("999", "secret").VerifiableMap("foo")
+	vmap := (&Client{Service: createCleanEmptyService()}).Account("999", "secret").VerifiableMap("foo")
 	ctx := context.Background()
 	var err error
 	var last *pb.MapSetValueResponse

@@ -156,7 +156,7 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 
 func staticHandler(mime, name string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data, err := assets.Asset("static/" + name)
+		data, err := assets.Asset("assets/static/" + name)
 		if err != nil {
 			writeResponseHeader(w, err)
 			return
@@ -177,7 +177,7 @@ func apiKeyFromRequest(r *http.Request) string {
 	return ""
 }
 
-func AccountRefFromRequest(r *http.Request) (map[string]string, *pb.AccountRef) {
+func accountRefFromRequest(r *http.Request) (map[string]string, *pb.AccountRef) {
 	vars := mux.Vars(r)
 	return vars, &pb.AccountRef{
 		ApiKey: apiKeyFromRequest(r),
@@ -185,8 +185,8 @@ func AccountRefFromRequest(r *http.Request) (map[string]string, *pb.AccountRef) 
 	}
 }
 
-func LogRefFromRequest(r *http.Request, lt pb.LogType) (map[string]string, *pb.LogRef) {
-	vars, account := AccountRefFromRequest(r)
+func logRefFromRequest(r *http.Request, lt pb.LogType) (map[string]string, *pb.LogRef) {
+	vars, account := accountRefFromRequest(r)
 	return vars, &pb.LogRef{
 		Account: account,
 		Name:    vars["log"],
@@ -194,8 +194,8 @@ func LogRefFromRequest(r *http.Request, lt pb.LogType) (map[string]string, *pb.L
 	}
 }
 
-func MapRefFromRequest(r *http.Request) (map[string]string, *pb.MapRef) {
-	vars, account := AccountRefFromRequest(r)
+func mapRefFromRequest(r *http.Request) (map[string]string, *pb.MapRef) {
+	vars, account := accountRefFromRequest(r)
 	return vars, &pb.MapRef{
 		Account: account,
 		Name:    vars["map"],
@@ -204,14 +204,14 @@ func MapRefFromRequest(r *http.Request) (map[string]string, *pb.MapRef) {
 
 func wrapMapFunction(f func(*pb.MapRef, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars, mapRef := MapRefFromRequest(r)
+		vars, mapRef := mapRefFromRequest(r)
 		f(mapRef, vars, w, r)
 	}
 }
 
 func wrapLogFunction(logType pb.LogType, f func(*pb.LogRef, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars, logRef := LogRefFromRequest(r, logType)
+		vars, logRef := logRefFromRequest(r, logType)
 		f(logRef, vars, w, r)
 	}
 }

@@ -24,7 +24,7 @@ import (
 )
 
 // LogTreeHash returns the log tree hash
-func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
+func (s *localServiceImpl) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {
 		return nil, err

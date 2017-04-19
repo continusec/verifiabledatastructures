@@ -18,10 +18,11 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"log"
 	"net/http"
+
+	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 // StartRESTServer starts an HTTP REST server given a service. Normally this service is an instance

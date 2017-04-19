@@ -53,15 +53,15 @@ var (
 	}
 )
 
-func (s *LocalService) verifyAccessForMap(vmap *pb.MapRef, perm pb.Permission) (*AccessModifier, error) {
+func (s *localServiceImpl) verifyAccessForMap(vmap *pb.MapRef, perm pb.Permission) (*AccessModifier, error) {
 	return s.AccessPolicy.VerifyAllowed(vmap.Account.Id, vmap.Account.ApiKey, vmap.Name, perm)
 }
 
-func (s *LocalService) verifyAccessForLog(log *pb.LogRef, perm pb.Permission) (*AccessModifier, error) {
+func (s *localServiceImpl) verifyAccessForLog(log *pb.LogRef, perm pb.Permission) (*AccessModifier, error) {
 	return s.AccessPolicy.VerifyAllowed(log.Account.Id, log.Account.ApiKey, log.Name, perm)
 }
 
-func (s *LocalService) verifyAccessForLogOperation(log *pb.LogRef, op int) (*AccessModifier, error) {
+func (s *localServiceImpl) verifyAccessForLogOperation(log *pb.LogRef, op int) (*AccessModifier, error) {
 	perm, ok := operationForLogType[log.LogType][op]
 	if !ok {
 		return nil, ErrNotAuthorized

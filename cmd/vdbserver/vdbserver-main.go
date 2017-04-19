@@ -18,17 +18,15 @@ limitations under the License.
 
 package main
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"io/ioutil"
 	"log"
 	"os"
 	"time"
 
-	"github.com/continusec/verifiabledatastructures/api"
-	"github.com/continusec/verifiabledatastructures/kvstore"
-	
-	"github.com/continusec/verifiabledatastructures/server"
+	"github.com/continusec/verifiabledatastructures"
+	"github.com/continusec/verifiabledatastructures/pb"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/browser"
 )
@@ -37,20 +35,19 @@ func demoMode() {
 	log.Println("No configuration file specifed. We'll launch a non-persistent server and load browser on the launch page.")
 	log.Println("Any account / API key / log / map name combination is allowed on this server.")
 
-	db := &kvstore.TransientHashMapStorage{}
-	service := &api.LocalService{
-		AccessPolicy: &api.AnythingGoesOracle{},
-		Mutator: &api.InstantMutator{
+	bind := ":8092"
+
+	db := &verifiabledatastructures.TransientHashMapStorage{}
+	go verifiabledatastructures.StartRESTServer(&pb.ServerConfig{
+		RestListenBind:           bind,
+		InsecureServerForTesting: true,
+	}, (&verifiabledatastructures.LocalService{
+		AccessPolicy: &verifiabledatastructures.AnythingGoesOracle{},
+		Mutator: &verifiabledatastructures.InstantMutator{
 			Writer: db,
 		},
 		Reader: db,
-	}
-
-	bind := ":8092"
-	go server.StartRESTServer(&ServerConfig{
-		RestListenBind:           bind,
-		InsecureServerForTesting: true,
-	}, service)
+	}).MustCreate())
 
 	url := "http://localhost" + bind
 	log.Println("Navigate to: " + url)
@@ -70,30 +67,30 @@ func realMode(confPath string) {
 		log.Fatalf("Error reading server configuration: %s\n", err)
 	}
 
-	conf := &ServerConfig{}
+	conf := &pb.ServerConfig{}
 	err = proto.UnmarshalText(string(confData), conf)
 	if err != nil {
 		log.Fatalf("Error parsing server configuration: %s\n", err)
 	}
 
-	db := &kvstore.BoltBackedService{
+	db := &verifiabledatastructures.BoltBackedService{
 		Path: conf.BoltDbPath,
 	}
-	service := &api.LocalService{
-		AccessPolicy: &api.StaticOracle{
+	service := (&verifiabledatastructures.LocalService{
+		AccessPolicy: &verifiabledatastructures.StaticOracle{
 			Policy: conf.Accounts,
 		},
-		Mutator: &api.InstantMutator{
+		Mutator: &verifiabledatastructures.InstantMutator{
 			Writer: db,
 		},
 		Reader: db,
-	}
+	}).MustCreate()
 
 	if conf.GrpcServer {
-		go server.StartGRPCServer(conf, service)
+		go verifiabledatastructures.StartGRPCServer(conf, service)
 	}
 	if conf.RestServer {
-		go server.StartRESTServer(conf, service)
+		go verifiabledatastructures.StartRESTServer(conf, service)
 	}
 	select {} // wait forever
 }
