@@ -587,7 +587,7 @@ func createLeafData(body []byte, ef int) (*pb.LeafData, error) {
 		if err != nil {
 			return nil, api.ErrInvalidRequest
 		}
-		return &pb.LeafData{LeafInput: oh, ExtraData: body}, nil
+		return &pb.LeafData{LeafInput: oh, ExtraData: body, Format: pb.DataFormat_JSON}, nil
 	case redactedEntry:
 		var obj interface{}
 		err := json.Unmarshal(body, &obj)
@@ -606,14 +606,14 @@ func createLeafData(body []byte, ef int) (*pb.LeafData, error) {
 		if err != nil {
 			return nil, api.ErrInvalidRequest
 		}
-		return &pb.LeafData{LeafInput: oh, ExtraData: rb}, nil
+		return &pb.LeafData{LeafInput: oh, ExtraData: rb, Format: pb.DataFormat_JSON}, nil
 	case extraEntry:
 		var req pb.LeafData
 		err := json.Unmarshal(body, &req)
 		if err != nil {
 			return nil, err
 		}
-		return &pb.LeafData{LeafInput: req.LeafInput, ExtraData: req.ExtraData}, nil
+		return &req, nil
 	default:
 		return nil, api.ErrInvalidRequest
 	}
