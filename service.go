@@ -18,8 +18,6 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
-
 // LocalService is the main object used to create an instance of the server or embedded
 // Verifiable Data Structures API. It may be wrapped by client directly, or used to
 // start a gRPC and/or HTTP REST server
@@ -35,7 +33,7 @@ type LocalService struct {
 }
 
 // ApplyMutation should be called by a MutatorService to apply the given mutation to a log/map
-func ApplyMutation(db KeyWriter, sizeBefore int64, mut *pb.Mutation) (int64, error) {
+func ApplyMutation(db KeyWriter, sizeBefore int64, mut *Mutation) (int64, error) {
 	switch {
 	case mut.LogAddEntry != nil:
 		return applyLogAddEntry(db, sizeBefore, mut.LogAddEntry)

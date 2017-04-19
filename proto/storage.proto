@@ -18,8 +18,9 @@ limitations under the License.
 
 syntax = "proto3";
 
-package continusec.verifiabledatastructures.server.store;
-option go_package = "pb";
+package com.continusec.verifiabledatastructures.storage;
+option go_package = "verifiabledatastructures";
+
 
 import "api.proto";
 
@@ -27,7 +28,7 @@ message Mutation {
     bytes namespace = 1;
 
     // one of the following
-    continusec.verifiabledatastructures.api.LogAddEntryRequest log_add_entry = 2;
+    com.continusec.verifiabledatastructures.api.LogAddEntryRequest log_add_entry = 2;
     // we don't have map set value, as that generates a LogAddEntryRequest to the underlying mutation log
 }
 

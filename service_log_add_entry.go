@@ -20,18 +20,16 @@ package verifiabledatastructures
 
 import (
 	"golang.org/x/net/context"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 // LogAddEntry adds an entry to a log
-func (s *LocalService) LogAddEntry(ctx context.Context, req *pb.LogAddEntryRequest) (*pb.LogAddEntryResponse, error) {
+func (s *LocalService) LogAddEntry(ctx context.Context, req *LogAddEntryRequest) (*LogAddEntryResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationRawAdd)
 	if err != nil {
 		return nil, err
 	}
 
-	if req.Log.LogType != pb.LogType_STRUCT_TYPE_LOG {
+	if req.Log.LogType != LogType_STRUCT_TYPE_LOG {
 		return nil, ErrInvalidRequest
 	}
 
@@ -40,14 +38,14 @@ func (s *LocalService) LogAddEntry(ctx context.Context, req *pb.LogAddEntryReque
 		return nil, ErrInvalidRequest
 	}
 
-	err = s.Mutator.QueueMutation(ns, &pb.Mutation{
+	err = s.Mutator.QueueMutation(ns, &Mutation{
 		LogAddEntry: req,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.LogAddEntryResponse{
+	return &LogAddEntryResponse{
 		LeafHash: LeafMerkleTreeHash(req.Value.LeafInput),
 	}, nil
 }

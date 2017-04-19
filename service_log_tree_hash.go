@@ -20,12 +20,10 @@ package verifiabledatastructures
 
 import (
 	"golang.org/x/net/context"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 // LogTreeHash returns the log tree hash
-func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
+func (s *LocalService) LogTreeHash(ctx context.Context, req *LogTreeHashRequest) (*LogTreeHashResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {
 		return nil, err
@@ -35,7 +33,7 @@ func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashReque
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *pb.LogTreeHashResponse
+	var rv *LogTreeHashResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
 		return nil, ErrInvalidRequest
@@ -62,7 +60,7 @@ func (s *LocalService) LogTreeHash(ctx context.Context, req *pb.LogTreeHashReque
 			return err
 		}
 
-		rv = &pb.LogTreeHashResponse{
+		rv = &LogTreeHashResponse{
 			TreeSize: req.TreeSize,
 			RootHash: m.Mth,
 		}

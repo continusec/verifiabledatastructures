@@ -20,13 +20,11 @@ package verifiabledatastructures
 
 import (
 	"golang.org/x/net/context"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 // MapTreeHash returns the tree hash for a map
-func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {
-	_, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
+func (s *LocalService) MapTreeHash(ctx context.Context, req *MapTreeHashRequest) (*MapTreeHashResponse, error) {
+	_, err := s.verifyAccessForMap(req.Map, Permission_PERM_MAP_GET_VALUE)
 	if err != nil {
 		return nil, err
 	}
@@ -35,13 +33,13 @@ func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashReque
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *pb.MapTreeHashResponse
+	var rv *MapTreeHashResponse
 	ns, err := mapBucket(req.Map)
 	if err != nil {
 		return nil, ErrInvalidRequest
 	}
 	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
-		th, err := lookupLogTreeHead(kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
+		th, err := lookupLogTreeHead(kr, LogType_STRUCT_TYPE_TREEHEAD_LOG)
 		if err != nil {
 			return err
 		}
@@ -56,7 +54,7 @@ func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashReque
 		}
 
 		// Need this for response
-		mutHead, err := lookupLogRootHashBySize(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, treeSize)
+		mutHead, err := lookupLogRootHashBySize(kr, LogType_STRUCT_TYPE_MUTATION_LOG, treeSize)
 		if err != nil {
 			return err
 		}
@@ -72,9 +70,9 @@ func (s *LocalService) MapTreeHash(ctx context.Context, req *pb.MapTreeHashReque
 			return err
 		}
 
-		rv = &pb.MapTreeHashResponse{
+		rv = &MapTreeHashResponse{
 			RootHash: rh,
-			MutationLog: &pb.LogTreeHashResponse{
+			MutationLog: &LogTreeHashResponse{
 				RootHash: mutHead.Mth,
 				TreeSize: treeSize,
 			},

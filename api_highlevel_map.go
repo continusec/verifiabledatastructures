@@ -19,14 +19,12 @@ package verifiabledatastructures
 import (
 	"time"
 
-	"github.com/continusec/verifiabledatastructures/pb"
-
 	"golang.org/x/net/context"
 )
 
 // VerifiedGet gets the value for the given key in the specified MapTreeState, and verifies that it is
 // included in the MapTreeHead (wrapped by the MapTreeState) before returning.
-func (vmap *VerifiableMap) VerifiedGet(key []byte, mapHead *MapTreeState) (*pb.LeafData, error) {
+func (vmap *VerifiableMap) VerifiedGet(key []byte, mapHead *MapTreeState) (*LeafData, error) {
 	proof, err := vmap.Get(key, mapHead.TreeSize())
 	if err != nil {
 		return nil, err
@@ -43,7 +41,7 @@ func (vmap *VerifiableMap) VerifiedGet(key []byte, mapHead *MapTreeState) (*pb.L
 // size.
 //
 // This is intended for test use.
-func (vmap *VerifiableMap) BlockUntilSize(treeSize int64) (*pb.MapTreeHashResponse, error) {
+func (vmap *VerifiableMap) BlockUntilSize(treeSize int64) (*MapTreeHashResponse, error) {
 	lastHead := int64(-1)
 	timeToSleep := time.Second
 	for {
@@ -121,7 +119,7 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 	}
 
 	// Get the latest tree head for the tree head log
-	var prevThlth, thlth *pb.LogTreeHashResponse
+	var prevThlth, thlth *LogTreeHashResponse
 	if prev != nil {
 		prevThlth = prev.TreeHeadLogTreeHead
 	}
@@ -202,7 +200,7 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 // While suitable for small to medium maps, this requires the entire map be built in-memory
 // which may not be suitable for larger systems that will have more complex requirements.
 func (vmap *VerifiableMap) VerifyMap(ctx context.Context, prev *MapTreeState, head *MapTreeState, leafFunc LeafDataAuditFunction, auditFunc MapAuditFunction) error {
-	var prevLth *pb.LogTreeHashResponse
+	var prevLth *LogTreeHashResponse
 	if prev != nil {
 		prevLth = prev.TreeHeadLogTreeHead
 	}

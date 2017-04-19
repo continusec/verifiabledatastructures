@@ -23,17 +23,16 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
 
-func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) {
+func makeJSONMutationEntry(req *MapSetValueRequest) (*MapMutation, error) {
 	// is there a better way to clone?
 	b, err := proto.Marshal(req.Mutation)
 	if err != nil {
 		return nil, err
 	}
-	var rv pb.MapMutation
+	var rv MapMutation
 	err = proto.Unmarshal(b, &rv)
 	if err != nil {
 		return nil, err
@@ -43,8 +42,8 @@ func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) 
 }
 
 // MapSetValue sets a value in a map
-func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
-	_, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_SET_VALUE)
+func (s *LocalService) MapSetValue(ctx context.Context, req *MapSetValueRequest) (*MapSetValueResponse, error) {
+	_, err := s.verifyAccessForMap(req.Map, Permission_PERM_MAP_SET_VALUE)
 	if err != nil {
 		return nil, err
 	}
@@ -66,12 +65,12 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 		return nil, ErrInvalidRequest
 	}
 
-	err = s.Mutator.QueueMutation(ns, &pb.Mutation{
-		LogAddEntry: &pb.LogAddEntryRequest{
-			Log: &pb.LogRef{
+	err = s.Mutator.QueueMutation(ns, &Mutation{
+		LogAddEntry: &LogAddEntryRequest{
+			Log: &LogRef{
 				Account: req.Map.Account,
 				Name:    req.Map.Name,
-				LogType: pb.LogType_STRUCT_TYPE_MUTATION_LOG,
+				LogType: LogType_STRUCT_TYPE_MUTATION_LOG,
 			},
 			Value: mutData,
 		},
@@ -79,7 +78,7 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 	if err != nil {
 		return nil, err
 	}
-	return &pb.MapSetValueResponse{
+	return &MapSetValueResponse{
 		LeafHash: LeafMerkleTreeHash(mutData.LeafInput),
 	}, nil
 }

@@ -18,15 +18,15 @@ limitations under the License.
 
 syntax = "proto3";
 
-package continusec.verifiabledatastructures.server;
-option go_package = "pb";
+package com.continusec.verifiabledatastructures.configuration;
+option go_package = "verifiabledatastructures";
 
 message ServerConfig {
     string server_cert_path = 1;
     string server_key_path = 2;
     string rest_listen_bind = 3; // e.g. ":8080"
     bool insecure_server_for_testing = 4;
-    repeated Account accounts = 5;
+    repeated ResourceAccount accounts = 5;
     string bolt_db_path = 6;
     string grpc_listen_protocol = 7;
     string grpc_listen_bind = 8;
@@ -67,7 +67,7 @@ message AccessPolicy {
     repeated Permission permissions = 4; // permissions granted
 }
 
-message Account {
+message ResourceAccount {
     string id = 1;
     repeated AccessPolicy policy = 2;
 }

@@ -22,12 +22,10 @@ import (
 	"bytes"
 
 	"golang.org/x/net/context"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 // LogConsistencyProof verifies the consisitency of a log
-func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
+func (s *LocalService) LogConsistencyProof(ctx context.Context, req *LogConsistencyProofRequest) (*LogConsistencyProofResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {
 		return nil, err
@@ -41,7 +39,7 @@ func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsi
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *pb.LogConsistencyProofResponse
+	var rv *LogConsistencyProofResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
 		return nil, ErrInvalidRequest
@@ -81,7 +79,7 @@ func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsi
 				}
 			}
 		}
-		rv = &pb.LogConsistencyProofResponse{
+		rv = &LogConsistencyProofResponse{
 			FromSize:  req.FromSize,
 			TreeSize:  second,
 			AuditPath: path,
@@ -95,7 +93,7 @@ func (s *LocalService) LogConsistencyProof(ctx context.Context, req *pb.LogConsi
 }
 
 // VerifyLogConsistencyProof will verify that the consistency proof stored in this object can produce both the LogTreeHeads passed to this method.
-func VerifyLogConsistencyProof(self *pb.LogConsistencyProofResponse, first, second *pb.LogTreeHashResponse) error {
+func VerifyLogConsistencyProof(self *LogConsistencyProofResponse, first, second *LogTreeHashResponse) error {
 	if first.TreeSize != self.FromSize {
 		return ErrVerificationFailed
 	}

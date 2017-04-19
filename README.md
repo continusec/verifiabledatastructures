@@ -17,20 +17,13 @@ vdbserver
 
 The following commands are useful for those working with the source.
 
-## Re-generate proto
+## Re-generate proto and asset files
 
 ```bash
-rm -rf pb
-mkdir pb
 go generate
 ```
 
-## Re-generate assets
-
-```bash
-cd assets
-go generate
-```
+(will need `go get -u github.com/jteeuwen/go-bindata/...`)
 
 ## Rebuild server
 ```bash
@@ -39,7 +32,7 @@ go install github.com/continusec/verifiabledatastructures/cmd/vdbserver
 
 ## Run tests
 ```bash
-go test github.com/continusec/verifiabledatastructures/tests
+go test
 ```
 
 ## Sample config file for server

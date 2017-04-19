@@ -27,11 +27,10 @@ import (
 
 	"strings"
 
-	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
 )
 
-func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
+func testMap(t *testing.T, service VerifiableDataStructuresServiceServer) {
 	account := (&VerifiableDataStructuresClient{
 		Service: service,
 	}).Account("999", "secret")
@@ -41,7 +40,7 @@ func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	var lastP MapUpdatePromise
 	var err error
 	for i := 0; i < numToDo; i++ {
-		lastP, err = vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &pb.LeafData{LeafInput: []byte(fmt.Sprintf("fooval%d", i))})
+		lastP, err = vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &LeafData{LeafInput: []byte(fmt.Sprintf("fooval%d", i))})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -81,7 +80,7 @@ func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 }
 
-func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
+func testLog(t *testing.T, service VerifiableDataStructuresServiceServer) {
 	account := (&VerifiableDataStructuresClient{
 		Service: service,
 	}).Account("999", "secret")
@@ -92,7 +91,7 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 		t.Fatal("Expecting log to not exist.")
 	}
 
-	aer, err := log.Add(&pb.LeafData{LeafInput: []byte("foo")})
+	aer, err := log.Add(&LeafData{LeafInput: []byte("foo")})
 	if err != nil {
 		t.Fatal("Failed adding item", err)
 	}
@@ -113,22 +112,22 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 		t.Fatal("Failed calculating tree root")
 	}
 
-	_, err = log.Add(&pb.LeafData{LeafInput: []byte("fooz")})
+	_, err = log.Add(&LeafData{LeafInput: []byte("fooz")})
 	if err != nil {
 		t.Fatal("Failed adding item")
 	}
 
-	_, err = log.Add(&pb.LeafData{LeafInput: []byte("bar")})
+	_, err = log.Add(&LeafData{LeafInput: []byte("bar")})
 	if err != nil {
 		t.Fatal("Failed adding item")
 	}
 
-	_, err = log.Add(&pb.LeafData{LeafInput: []byte("baz")})
+	_, err = log.Add(&LeafData{LeafInput: []byte("baz")})
 	if err != nil {
 		t.Fatal("Failed adding item")
 	}
 
-	p, err := log.Add(&pb.LeafData{LeafInput: []byte("smez")})
+	p, err := log.Add(&LeafData{LeafInput: []byte("smez")})
 	if err != nil {
 		t.Fatal("Failed adding item")
 	}
@@ -142,7 +141,7 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 		t.Fatal("Failure getting root hash")
 	}
 
-	entries := make([]*pb.LeafData, treeRoot.TreeSize)
+	entries := make([]*LeafData, treeRoot.TreeSize)
 	for i := int64(0); i < treeRoot.TreeSize; i++ {
 		entries[i], err = log.Entry(i)
 		if err != nil {
@@ -155,7 +154,7 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 
 	for i := 0; i < 200; i++ {
-		p, err = log.Add(&pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
+		p, err = log.Add(&LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
 		if err != nil {
 			t.Fatal("Failed adding item")
 		}
@@ -212,7 +211,7 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 
 	for i := 0; i < 200; i++ {
-		p, err = log.Add(&pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
+		p, err = log.Add(&LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
 		if err != nil {
 			t.Fatal("Failed adding item")
 		}
@@ -273,19 +272,19 @@ func expectErr(t *testing.T, exp, err error) {
 func TestPermissions(t *testing.T) {
 	s := createCleanEmptyService()
 	s.AccessPolicy = &StaticOracle{
-		Policy: []*pb.Account{
+		Policy: []*ResourceAccount{
 			{
 				Id: "0",
-				Policy: []*pb.AccessPolicy{
+				Policy: []*AccessPolicy{
 					{
 						NameMatch:     "foo",
-						Permissions:   []pb.Permission{pb.Permission_PERM_ALL_PERMISSIONS},
+						Permissions:   []Permission{Permission_PERM_ALL_PERMISSIONS},
 						ApiKey:        "secret",
 						AllowedFields: []string{"*"},
 					},
 					{
 						NameMatch:     "f*",
-						Permissions:   []pb.Permission{pb.Permission_PERM_LOG_READ_ENTRY},
+						Permissions:   []Permission{Permission_PERM_LOG_READ_ENTRY},
 						ApiKey:        "*",
 						AllowedFields: []string{"name"},
 					},
@@ -295,18 +294,18 @@ func TestPermissions(t *testing.T) {
 	}
 	c := &VerifiableDataStructuresClient{Service: s}
 	var err error
-	var v *pb.LeafData
+	var v *LeafData
 
-	_, err = c.Account("0", "secr3t").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	_, err = c.Account("0", "secr3t").VerifiableLog("foo").Add(&LeafData{LeafInput: []byte("bar")})
 	expectErr(t, ErrNotAuthorized, err)
 
-	_, err = c.Account("0", "secret").VerifiableLog("fofo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	_, err = c.Account("0", "secret").VerifiableLog("fofo").Add(&LeafData{LeafInput: []byte("bar")})
 	expectErr(t, ErrNotAuthorized, err)
 
-	_, err = c.Account("1", "secret").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	_, err = c.Account("1", "secret").VerifiableLog("foo").Add(&LeafData{LeafInput: []byte("bar")})
 	expectErr(t, ErrNotAuthorized, err)
 
-	_, err = c.Account("0", "secret").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	_, err = c.Account("0", "secret").VerifiableLog("foo").Add(&LeafData{LeafInput: []byte("bar")})
 	expectErr(t, nil, err)
 
 	v, err = CreateRedactableJSONLeafData([]byte("{\"name\":\"adam\",\"dob\":\"100000\"}"))
@@ -346,7 +345,7 @@ func TestPermissions(t *testing.T) {
 	}
 }
 
-func runSmokeTests(c pb.VerifiableDataStructuresServiceServer, t *testing.T) {
+func runSmokeTests(c VerifiableDataStructuresServiceServer, t *testing.T) {
 	testLog(t, c)
 	testMap(t, c)
 }
@@ -357,7 +356,7 @@ func TestWithoutServers(t *testing.T) {
 }
 
 func TestWithHTTPServerAndClient(t *testing.T) {
-	go StartRESTServer(&pb.ServerConfig{
+	go StartRESTServer(&ServerConfig{
 		InsecureServerForTesting: true,
 		RestListenBind:           ":8092",
 	}, createCleanEmptyService())
@@ -368,7 +367,7 @@ func TestWithHTTPServerAndClient(t *testing.T) {
 }
 
 func TestWithGRPCerverAndClient(t *testing.T) {
-	go StartGRPCServer(&pb.ServerConfig{
+	go StartGRPCServer(&ServerConfig{
 		InsecureServerForTesting: true,
 		GrpcListenBind:           ":8081",
 		GrpcListenProtocol:       "tcp4",
@@ -386,7 +385,7 @@ func TestWithGRPCerverAndClient(t *testing.T) {
 
 // GenerateRootHashes is a utility function that emits a channel of root hashes
 // given a channel of input values. This is useful for some unit tests.
-func generateRootHashes(ctx context.Context, input <-chan *pb.LeafData) <-chan []byte {
+func generateRootHashes(ctx context.Context, input <-chan *LeafData) <-chan []byte {
 	rv := make(chan []byte)
 	go func() {
 		defer close(rv)
@@ -423,7 +422,7 @@ func generateRootHashes(ctx context.Context, input <-chan *pb.LeafData) <-chan [
 	return rv
 }
 
-func verifyRootHash(entries []*pb.LeafData, answer []byte) bool {
+func verifyRootHash(entries []*LeafData, answer []byte) bool {
 	stack := make([][]byte, 0)
 	for i, b := range entries {
 		stack = append(stack, LeafMerkleTreeHash(b.LeafInput))

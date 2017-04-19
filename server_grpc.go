@@ -24,13 +24,11 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 // StartGRPCServer starts a gRPC server given a service. Normally this service is an instance
 // of LocalService.
-func StartGRPCServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresServiceServer) {
+func StartGRPCServer(conf *ServerConfig, server VerifiableDataStructuresServiceServer) {
 	lis, err := net.Listen(conf.GrpcListenProtocol, conf.GrpcListenBind)
 	if err != nil {
 		log.Fatalf("Error establishing server listener: %s\n", err)
@@ -47,7 +45,7 @@ func StartGRPCServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresSe
 		grpcServer = grpc.NewServer(grpc.Creds(tc))
 	}
 
-	pb.RegisterVerifiableDataStructuresServiceServer(grpcServer, server)
+	RegisterVerifiableDataStructuresServiceServer(grpcServer, server)
 
 	log.Printf("Listening grpc on %s...", conf.GrpcListenBind)
 

@@ -18,13 +18,11 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
-
 // AnythingGoesOracle allows all operations on all fields, all the time
 type AnythingGoesOracle struct{}
 
 // VerifyAllowed always returns nil, and allows access to all fields
-func (o *AnythingGoesOracle) VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) (*AccessModifier, error) {
+func (o *AnythingGoesOracle) VerifyAllowed(account, apiKey, objectName string, permisson Permission) (*AccessModifier, error) {
 	return &AccessModifier{
 		FieldFilter: AllFields,
 	}, nil

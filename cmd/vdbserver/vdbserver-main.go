@@ -26,7 +26,7 @@ import (
 
 	"github.com/continusec/verifiabledatastructures/api"
 	"github.com/continusec/verifiabledatastructures/kvstore"
-	"github.com/continusec/verifiabledatastructures/pb"
+	
 	"github.com/continusec/verifiabledatastructures/server"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/browser"
@@ -46,7 +46,7 @@ func demoMode() {
 	}
 
 	bind := ":8092"
-	go server.StartRESTServer(&pb.ServerConfig{
+	go server.StartRESTServer(&ServerConfig{
 		RestListenBind:           bind,
 		InsecureServerForTesting: true,
 	}, service)
@@ -69,7 +69,7 @@ func realMode(confPath string) {
 		log.Fatalf("Error reading server configuration: %s\n", err)
 	}
 
-	conf := &pb.ServerConfig{}
+	conf := &ServerConfig{}
 	err = proto.UnmarshalText(string(confData), conf)
 	if err != nil {
 		log.Fatalf("Error parsing server configuration: %s\n", err)

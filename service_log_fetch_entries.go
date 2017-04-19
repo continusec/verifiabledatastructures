@@ -20,12 +20,10 @@ package verifiabledatastructures
 
 import (
 	"golang.org/x/net/context"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 // LogFetchEntries returns the log entries
-func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
+func (s *LocalService) LogFetchEntries(ctx context.Context, req *LogFetchEntriesRequest) (*LogFetchEntriesResponse, error) {
 	am, err := s.verifyAccessForLogOperation(req.Log, operationReadEntry)
 	if err != nil {
 		return nil, err
@@ -35,7 +33,7 @@ func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntr
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *pb.LogFetchEntriesResponse
+	var rv *LogFetchEntriesResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
 		return nil, ErrInvalidRequest
@@ -63,7 +61,7 @@ func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntr
 			return err
 		}
 
-		vals := make([]*pb.LeafData, len(hashes))
+		vals := make([]*LeafData, len(hashes))
 		for i, h := range hashes {
 			v, err := lookupDataByLeafHash(kr, req.Log.LogType, h)
 			if err != nil {
@@ -71,21 +69,21 @@ func (s *LocalService) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntr
 			}
 
 			switch req.Log.LogType {
-			case pb.LogType_STRUCT_TYPE_LOG:
+			case LogType_STRUCT_TYPE_LOG:
 				vals[i], err = filterLeafData(v, am)
 				if err != nil {
 					return err
 				}
-			case pb.LogType_STRUCT_TYPE_TREEHEAD_LOG:
+			case LogType_STRUCT_TYPE_TREEHEAD_LOG:
 				vals[i] = v
-			case pb.LogType_STRUCT_TYPE_MUTATION_LOG:
+			case LogType_STRUCT_TYPE_MUTATION_LOG:
 				vals[i] = v // TODO
 			default:
 				return ErrInvalidRequest
 			}
 		}
 
-		rv = &pb.LogFetchEntriesResponse{
+		rv = &LogFetchEntriesResponse{
 			Values: vals,
 		}
 		return nil

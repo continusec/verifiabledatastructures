@@ -18,10 +18,8 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
-
 // MutatorService receives requested mutations
 type MutatorService interface {
 	// QueueMutation requests an asynchronous mutation in a namespace.
-	QueueMutation(namespace []byte, mut *pb.Mutation) error
+	QueueMutation(namespace []byte, mut *Mutation) error
 }

@@ -22,8 +22,6 @@ import (
 	"bytes"
 
 	"golang.org/x/net/context"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 func wrapClientError(err error) error {
@@ -36,7 +34,7 @@ func wrapClientError(err error) error {
 }
 
 // LogInclusionProof returns an inclusion proof
-func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
+func (s *LocalService) LogInclusionProof(ctx context.Context, req *LogInclusionProofRequest) (*LogInclusionProofResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationProveInclusion)
 	if err != nil {
 		return nil, err
@@ -46,7 +44,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *pb.LogInclusionProofResponse
+	var rv *LogInclusionProofResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
 		return nil, ErrInvalidRequest
@@ -108,7 +106,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 			}
 		}
 
-		rv = &pb.LogInclusionProofResponse{
+		rv = &LogInclusionProofResponse{
 			LeafIndex: leafIndex,
 			TreeSize:  treeSize,
 			AuditPath: path,
@@ -122,7 +120,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 }
 
 // VerifyLogInclusionProof verifies an inclusion proof against a LogTreeHead
-func VerifyLogInclusionProof(self *pb.LogInclusionProofResponse, leafHash []byte, head *pb.LogTreeHashResponse) error {
+func VerifyLogInclusionProof(self *LogInclusionProofResponse, leafHash []byte, head *LogTreeHashResponse) error {
 	if self.TreeSize != head.TreeSize {
 		return ErrVerificationFailed
 	}

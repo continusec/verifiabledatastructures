@@ -20,16 +20,14 @@ package verifiabledatastructures
 
 import (
 	"encoding/json"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-func writeOutLogTreeNodes(db KeyWriter, log *pb.LogRef, entryIndex int64, mtl []byte, stack [][]byte) ([]byte, error) {
+func writeOutLogTreeNodes(db KeyWriter, log *LogRef, entryIndex int64, mtl []byte, stack [][]byte) ([]byte, error) {
 	stack = append(stack, mtl)
 	for zz, width := entryIndex, int64(2); (zz & 1) == 1; zz, width = zz>>1, width<<1 {
 		parN := NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1])
 		stack = append(stack[:len(stack)-2], parN)
-		err := writeTreeNodeByRange(db, log.LogType, entryIndex+1-width, entryIndex+1, &pb.TreeNode{Mth: parN})
+		err := writeTreeNodeByRange(db, log.LogType, entryIndex+1-width, entryIndex+1, &TreeNode{Mth: parN})
 		if err != nil {
 			return nil, err
 		}
@@ -44,7 +42,7 @@ func writeOutLogTreeNodes(db KeyWriter, log *pb.LogRef, entryIndex int64, mtl []
 
 // Must be idempotent, ie call it many times with same result.
 // return nil, nil if already exists
-func addEntryToLog(db KeyWriter, sizeBefore int64, log *pb.LogRef, data *pb.LeafData) (*pb.LogTreeHashResponse, error) {
+func addEntryToLog(db KeyWriter, sizeBefore int64, log *LogRef, data *LeafData) (*LogTreeHashResponse, error) {
 	// First, calc our hash
 	mtl := LeafMerkleTreeHash(data.LeafInput)
 
@@ -70,13 +68,13 @@ func addEntryToLog(db KeyWriter, sizeBefore int64, log *pb.LogRef, data *pb.Leaf
 	}
 
 	// Then write us at the index
-	err = writeLeafNodeByIndex(db, log.LogType, sizeBefore, &pb.LeafNode{Mth: mtl})
+	err = writeLeafNodeByIndex(db, log.LogType, sizeBefore, &LeafNode{Mth: mtl})
 	if err != nil {
 		return nil, err
 	}
 
 	// And our index by leaf hash
-	err = writeIndexByLeafHash(db, log.LogType, mtl, &pb.EntryIndex{Index: sizeBefore})
+	err = writeIndexByLeafHash(db, log.LogType, mtl, &EntryIndex{Index: sizeBefore})
 	if err != nil {
 		return nil, err
 	}
@@ -92,18 +90,18 @@ func addEntryToLog(db KeyWriter, sizeBefore int64, log *pb.LogRef, data *pb.Leaf
 	}
 
 	// Write log root hash
-	err = writeLogRootHashBySize(db, log.LogType, sizeBefore+1, &pb.LogTreeHash{Mth: rootHash})
+	err = writeLogRootHashBySize(db, log.LogType, sizeBefore+1, &LogTreeHash{Mth: rootHash})
 	if err != nil {
 		return nil, err
 	}
 	// Done!
-	return &pb.LogTreeHashResponse{
+	return &LogTreeHashResponse{
 		RootHash: rootHash,
 		TreeSize: sizeBefore + 1,
 	}, nil
 }
 
-func applyLogAddEntry(db KeyWriter, sizeBefore int64, req *pb.LogAddEntryRequest) (int64, error) {
+func applyLogAddEntry(db KeyWriter, sizeBefore int64, req *LogAddEntryRequest) (int64, error) {
 	// Step 1 - add entry to log as request
 	mutLogHead, err := addEntryToLog(db, sizeBefore, req.Log, req.Value)
 	if err != nil {
@@ -116,9 +114,9 @@ func applyLogAddEntry(db KeyWriter, sizeBefore int64, req *pb.LogAddEntryRequest
 	}
 
 	// Special case mutation log for maps
-	if req.Log.LogType == pb.LogType_STRUCT_TYPE_MUTATION_LOG {
+	if req.Log.LogType == LogType_STRUCT_TYPE_MUTATION_LOG {
 		// Step 2 - add entries to map if needed
-		var mut pb.MapMutation
+		var mut MapMutation
 		err = json.Unmarshal(req.Value.ExtraData, &mut)
 		if err != nil {
 			return 0, err
@@ -129,7 +127,7 @@ func applyLogAddEntry(db KeyWriter, sizeBefore int64, req *pb.LogAddEntryRequest
 		}
 
 		// Step 3 - add entries to treehead log if neeed
-		thld, err := CreateJSONLeafDataFromProto(&pb.MapTreeHashResponse{
+		thld, err := CreateJSONLeafDataFromProto(&MapTreeHashResponse{
 			RootHash:    mrh,
 			MutationLog: mutLogHead,
 		})

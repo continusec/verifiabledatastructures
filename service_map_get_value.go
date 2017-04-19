@@ -22,13 +22,11 @@ import (
 	"bytes"
 
 	"golang.org/x/net/context"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 // MapGetValue returns a value from a map
-func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
-	am, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
+func (s *LocalService) MapGetValue(ctx context.Context, req *MapGetValueRequest) (*MapGetValueResponse, error) {
+	am, err := s.verifyAccessForMap(req.Map, Permission_PERM_MAP_GET_VALUE)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +35,7 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 		return nil, ErrInvalidTreeRange
 	}
 
-	var rv *pb.MapGetValueResponse
+	var rv *MapGetValueResponse
 	ns, err := mapBucket(req.Map)
 	if err != nil {
 		return nil, ErrInvalidRequest
@@ -45,7 +43,7 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
 		kp := BPathFromKey(req.Key)
 
-		th, err := lookupLogTreeHead(kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
+		th, err := lookupLogTreeHead(kr, LogType_STRUCT_TYPE_TREEHEAD_LOG)
 		if err != nil {
 			return err
 		}
@@ -81,10 +79,10 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			ptr++
 		}
 
-		var dataRv *pb.LeafData
+		var dataRv *LeafData
 		if len(cur.LeafHash) == 0 { // we're a node
-			dataRv = &pb.LeafData{} // empty value
-			if kp.At(ptr) {         // right
+			dataRv = &LeafData{} // empty value
+			if kp.At(ptr) {      // right
 				proof[ptr] = cur.LeftHash
 			} else {
 				proof[ptr] = cur.RightHash
@@ -93,15 +91,15 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			// Check value is actually us, else we need to manufacture a proof
 			if bytes.Equal(kp, cur.Path) {
 				if bytes.Equal(cur.LeafHash, nullLeafHash) {
-					dataRv = &pb.LeafData{} // empty value
+					dataRv = &LeafData{} // empty value
 				} else {
-					dataRv, err = lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
+					dataRv, err = lookupDataByLeafHash(kr, LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
 					if err != nil {
 						return err
 					}
 				}
 			} else {
-				dataRv = &pb.LeafData{} // empty value
+				dataRv = &LeafData{} // empty value
 
 				// Add empty proof paths for common ancestors
 				for kp.At(ptr) == BPath(cur.Path).At(ptr) {
@@ -123,7 +121,7 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 			return err
 		}
 
-		rv = &pb.MapGetValueResponse{
+		rv = &MapGetValueResponse{
 			AuditPath: proof,
 			TreeSize:  treeSize,
 			Value:     dataRv,
@@ -139,7 +137,7 @@ func (s *LocalService) MapGetValue(ctx context.Context, req *pb.MapGetValueReque
 }
 
 // VerifyMapInclusionProof verifies an inclusion proof against a MapTreeHead
-func VerifyMapInclusionProof(self *pb.MapGetValueResponse, key []byte, head *pb.MapTreeHashResponse) error {
+func VerifyMapInclusionProof(self *MapGetValueResponse, key []byte, head *MapTreeHashResponse) error {
 	if self.TreeSize != head.MutationLog.TreeSize {
 		return ErrVerificationFailed
 	}

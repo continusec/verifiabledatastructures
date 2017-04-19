@@ -9,7 +9,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/api"
 	"github.com/continusec/verifiabledatastructures/client"
 	"github.com/continusec/verifiabledatastructures/kvstore"
-	"github.com/continusec/verifiabledatastructures/pb"
+	
 )
 
 func loadLog(acc *client.Account) {
@@ -21,7 +21,7 @@ func loadLog(acc *client.Account) {
 	var err error
 	var lastLeaf client.LogUpdatePromise
 	for i := 0; i < count; i++ {
-		lastLeaf, err = vlog.Add(&pb.LeafData{LeafInput: []byte("v" + strconv.Itoa(i))})
+		lastLeaf, err = vlog.Add(&LeafData{LeafInput: []byte("v" + strconv.Itoa(i))})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -52,7 +52,7 @@ func loadMap(acc *client.Account) {
 	start := time.Now()
 	var err error
 	for i := 0; i < count; i++ {
-		_, err = vmap.Set([]byte("k"+strconv.Itoa(i)), &pb.LeafData{LeafInput: []byte("v" + strconv.Itoa(i))})
+		_, err = vmap.Set([]byte("k"+strconv.Itoa(i)), &LeafData{LeafInput: []byte("v" + strconv.Itoa(i))})
 		if err != nil {
 			log.Fatal(err)
 		}

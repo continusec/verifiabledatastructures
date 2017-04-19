@@ -18,8 +18,8 @@ limitations under the License.
 
 syntax = "proto3";
 
-package continusec.verifiabledatastructures.api;
-option go_package = "pb";
+package com.continusec.verifiabledatastructures.api;
+option go_package = "verifiabledatastructures";
 
 service VerifiableDataStructuresService {
     rpc LogAddEntry (LogAddEntryRequest) returns (LogAddEntryResponse) {}

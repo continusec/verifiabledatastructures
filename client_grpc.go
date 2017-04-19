@@ -26,8 +26,6 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 var (
@@ -52,7 +50,7 @@ type GRPCClient struct {
 
 // Dial connects to the server and returns an object to communicate with it.
 // Most users will wrap this with the higher-level API.
-func (g *GRPCClient) Dial() (pb.VerifiableDataStructuresServiceServer, error) {
+func (g *GRPCClient) Dial() (VerifiableDataStructuresServiceServer, error) {
 	var dialOptions []grpc.DialOption
 	if g.NoGrpcSecurity {
 		log.Println("WARNING: Disabling TLS  when connecting to gRPC server")
@@ -74,42 +72,42 @@ func (g *GRPCClient) Dial() (pb.VerifiableDataStructuresServiceServer, error) {
 	}
 
 	return &wrapSillyClientAsServer{
-		Client: pb.NewVerifiableDataStructuresServiceClient(conn),
+		Client: NewVerifiableDataStructuresServiceClient(conn),
 	}, nil
 }
 
 type wrapSillyClientAsServer struct {
-	Client pb.VerifiableDataStructuresServiceClient
+	Client VerifiableDataStructuresServiceClient
 }
 
-func (w *wrapSillyClientAsServer) LogAddEntry(ctx context.Context, r *pb.LogAddEntryRequest) (*pb.LogAddEntryResponse, error) {
+func (w *wrapSillyClientAsServer) LogAddEntry(ctx context.Context, r *LogAddEntryRequest) (*LogAddEntryResponse, error) {
 	return w.Client.LogAddEntry(ctx, r)
 }
 
-func (w *wrapSillyClientAsServer) LogFetchEntries(ctx context.Context, r *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
+func (w *wrapSillyClientAsServer) LogFetchEntries(ctx context.Context, r *LogFetchEntriesRequest) (*LogFetchEntriesResponse, error) {
 	return w.Client.LogFetchEntries(ctx, r)
 }
 
-func (w *wrapSillyClientAsServer) LogTreeHash(ctx context.Context, r *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
+func (w *wrapSillyClientAsServer) LogTreeHash(ctx context.Context, r *LogTreeHashRequest) (*LogTreeHashResponse, error) {
 	return w.Client.LogTreeHash(ctx, r)
 }
 
-func (w *wrapSillyClientAsServer) LogInclusionProof(ctx context.Context, r *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
+func (w *wrapSillyClientAsServer) LogInclusionProof(ctx context.Context, r *LogInclusionProofRequest) (*LogInclusionProofResponse, error) {
 	return w.Client.LogInclusionProof(ctx, r)
 }
 
-func (w *wrapSillyClientAsServer) LogConsistencyProof(ctx context.Context, r *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
+func (w *wrapSillyClientAsServer) LogConsistencyProof(ctx context.Context, r *LogConsistencyProofRequest) (*LogConsistencyProofResponse, error) {
 	return w.Client.LogConsistencyProof(ctx, r)
 }
 
-func (w *wrapSillyClientAsServer) MapSetValue(ctx context.Context, r *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
+func (w *wrapSillyClientAsServer) MapSetValue(ctx context.Context, r *MapSetValueRequest) (*MapSetValueResponse, error) {
 	return w.Client.MapSetValue(ctx, r)
 }
 
-func (w *wrapSillyClientAsServer) MapGetValue(ctx context.Context, r *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
+func (w *wrapSillyClientAsServer) MapGetValue(ctx context.Context, r *MapGetValueRequest) (*MapGetValueResponse, error) {
 	return w.Client.MapGetValue(ctx, r)
 }
 
-func (w *wrapSillyClientAsServer) MapTreeHash(ctx context.Context, r *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {
+func (w *wrapSillyClientAsServer) MapTreeHash(ctx context.Context, r *MapTreeHashRequest) (*MapTreeHashResponse, error) {
 	return w.Client.MapTreeHash(ctx, r)
 }

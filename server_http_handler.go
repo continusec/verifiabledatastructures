@@ -28,8 +28,6 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/continusec/objecthash"
-	"github.com/continusec/verifiabledatastructures/assets"
-	"github.com/continusec/verifiabledatastructures/pb"
 
 	"net/http"
 	"strings"
@@ -68,11 +66,11 @@ var (
 )
 
 type apiServer struct {
-	service pb.VerifiableDataStructuresServiceServer
+	service VerifiableDataStructuresServiceServer
 }
 
 // CreateRESTHandler creates handlers for the API
-func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler {
+func CreateRESTHandler(s VerifiableDataStructuresServiceServer) http.Handler {
 	as := &apiServer{service: s}
 
 	r := mux.NewRouter()
@@ -80,12 +78,12 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 	// Remaining log operations, including those on Mutation and Treehead logs
 	for _, t := range []struct {
 		Prefix            string
-		LogType           pb.LogType
+		LogType           LogType
 		Addable, Mutation bool
 	}{
-		{Prefix: version + "/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}", LogType: pb.LogType_STRUCT_TYPE_LOG, Addable: true},
-		{Prefix: version + "/account/{account:[0-9]+}/map/{log:[0-9a-z-_]+}/log/mutation", LogType: pb.LogType_STRUCT_TYPE_MUTATION_LOG, Mutation: true},
-		{Prefix: version + "/account/{account:[0-9]+}/map/{log:[0-9a-z-_]+}/log/treehead", LogType: pb.LogType_STRUCT_TYPE_TREEHEAD_LOG},
+		{Prefix: version + "/account/{account:[0-9]+}/log/{log:[0-9a-z-_]+}", LogType: LogType_STRUCT_TYPE_LOG, Addable: true},
+		{Prefix: version + "/account/{account:[0-9]+}/map/{log:[0-9a-z-_]+}/log/mutation", LogType: LogType_STRUCT_TYPE_MUTATION_LOG, Mutation: true},
+		{Prefix: version + "/account/{account:[0-9]+}/map/{log:[0-9a-z-_]+}/log/treehead", LogType: LogType_STRUCT_TYPE_TREEHEAD_LOG},
 	} {
 		for _, f := range commonSuffixes {
 			// Insert a log entry
@@ -159,7 +157,7 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler 
 
 func staticHandler(mime, name string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data, err := assets.Asset("www/" + name)
+		data, err := Asset("static/" + name)
 		if err != nil {
 			writeResponseHeader(w, err)
 			return
@@ -180,53 +178,53 @@ func apiKeyFromRequest(r *http.Request) string {
 	return ""
 }
 
-func accountRefFromRequest(r *http.Request) (map[string]string, *pb.AccountRef) {
+func accountRefFromRequest(r *http.Request) (map[string]string, *AccountRef) {
 	vars := mux.Vars(r)
-	return vars, &pb.AccountRef{
+	return vars, &AccountRef{
 		ApiKey: apiKeyFromRequest(r),
 		Id:     vars["account"],
 	}
 }
 
-func logRefFromRequest(r *http.Request, lt pb.LogType) (map[string]string, *pb.LogRef) {
+func logRefFromRequest(r *http.Request, lt LogType) (map[string]string, *LogRef) {
 	vars, account := accountRefFromRequest(r)
-	return vars, &pb.LogRef{
+	return vars, &LogRef{
 		Account: account,
 		Name:    vars["log"],
 		LogType: lt,
 	}
 }
 
-func mapRefFromRequest(r *http.Request) (map[string]string, *pb.MapRef) {
+func mapRefFromRequest(r *http.Request) (map[string]string, *MapRef) {
 	vars, account := accountRefFromRequest(r)
-	return vars, &pb.MapRef{
+	return vars, &MapRef{
 		Account: account,
 		Name:    vars["map"],
 	}
 }
 
-func wrapMapFunction(f func(*pb.MapRef, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func wrapMapFunction(f func(*MapRef, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars, mapRef := mapRefFromRequest(r)
 		f(mapRef, vars, w, r)
 	}
 }
 
-func wrapLogFunction(logType pb.LogType, f func(*pb.LogRef, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func wrapLogFunction(logType LogType, f func(*LogRef, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars, logRef := logRefFromRequest(r, logType)
 		f(logRef, vars, w, r)
 	}
 }
 
-func wrapLogFunctionWithFormat(logType pb.LogType, ef *formatMetadata, f func(*pb.LogRef, *formatMetadata, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
-	return wrapLogFunction(logType, func(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func wrapLogFunctionWithFormat(logType LogType, ef *formatMetadata, f func(*LogRef, *formatMetadata, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return wrapLogFunction(logType, func(log *LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		f(log, ef, vars, w, r)
 	})
 }
 
-func wrapMapFunctionWithKey(keyType int, f func(*pb.MapRef, []byte, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
-	return wrapMapFunction(func(vmap *pb.MapRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func wrapMapFunctionWithKey(keyType int, f func(*MapRef, []byte, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return wrapMapFunction(func(vmap *MapRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		var k []byte
 		switch keyType {
 		case stdFormat:
@@ -246,8 +244,8 @@ func wrapMapFunctionWithKey(keyType int, f func(*pb.MapRef, []byte, map[string]s
 	})
 }
 
-func wrapMapFunctionWithKeyAndFormat(keyType int, ef int, f func(*pb.MapRef, []byte, int, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
-	return wrapMapFunctionWithKey(keyType, func(vmap *pb.MapRef, k []byte, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func wrapMapFunctionWithKeyAndFormat(keyType int, ef int, f func(*MapRef, []byte, int, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return wrapMapFunctionWithKey(keyType, func(vmap *MapRef, k []byte, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		f(vmap, k, ef, vars, w, r)
 	})
 }
@@ -292,7 +290,7 @@ func writeSuccessContent(w http.ResponseWriter, val []byte) {
 	w.Write(val)
 }
 
-func (as *apiServer) getLogTreeHashHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) getLogTreeHashHandler(log *LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	var treeSize int64
 	if vars["treesize"] == headStr {
 		treeSize = 0
@@ -305,7 +303,7 @@ func (as *apiServer) getLogTreeHashHandler(log *pb.LogRef, vars map[string]strin
 		treeSize = int64(ts)
 	}
 
-	resp, err := as.service.LogTreeHash(requestContext(r), &pb.LogTreeHashRequest{
+	resp, err := as.service.LogTreeHash(requestContext(r), &LogTreeHashRequest{
 		Log:      log,
 		TreeSize: treeSize,
 	})
@@ -317,7 +315,7 @@ func (as *apiServer) getLogTreeHashHandler(log *pb.LogRef, vars map[string]strin
 	writeSuccessJSON(w, resp)
 }
 
-func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) getConsistencyProofHandler(log *LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	var treeSize int
 	if vars["treesize"] == headStr {
 		treeSize = 0
@@ -335,7 +333,7 @@ func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]
 		return
 	}
 
-	resp, err := as.service.LogConsistencyProof(requestContext(r), &pb.LogConsistencyProofRequest{
+	resp, err := as.service.LogConsistencyProof(requestContext(r), &LogConsistencyProofRequest{
 		Log:      log,
 		FromSize: int64(oldSize),
 		TreeSize: int64(treeSize),
@@ -348,7 +346,7 @@ func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]
 	writeSuccessJSON(w, resp)
 }
 
-func (as *apiServer) inclusionProofHandler(log *pb.LogRef, vars map[string]string, partial *pb.LogInclusionProofRequest, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) inclusionProofHandler(log *LogRef, vars map[string]string, partial *LogInclusionProofRequest, w http.ResponseWriter, r *http.Request) {
 	treeSize, err := strconv.Atoi(vars["treesize"])
 	if err != nil {
 		writeResponseHeader(w, ErrInvalidRequest)
@@ -367,37 +365,37 @@ func (as *apiServer) inclusionProofHandler(log *pb.LogRef, vars map[string]strin
 	writeSuccessJSON(w, resp)
 }
 
-func (as *apiServer) inclusionByIndexProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) inclusionByIndexProofHandler(log *LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	number, err := strconv.Atoi(vars["number"])
 	if err != nil {
 		writeResponseHeader(w, ErrInvalidRequest)
 		return
 	}
 
-	as.inclusionProofHandler(log, vars, &pb.LogInclusionProofRequest{
+	as.inclusionProofHandler(log, vars, &LogInclusionProofRequest{
 		LeafIndex: int64(number),
 	}, w, r)
 }
 
-func (as *apiServer) inclusionByStringProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	as.inclusionProofHandler(log, vars, &pb.LogInclusionProofRequest{
+func (as *apiServer) inclusionByStringProofHandler(log *LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+	as.inclusionProofHandler(log, vars, &LogInclusionProofRequest{
 		MtlHash: LeafMerkleTreeHash([]byte(vars["strentry"])),
 	}, w, r)
 }
 
-func (as *apiServer) inclusionByHashProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) inclusionByHashProofHandler(log *LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	mtlHash, err := hex.DecodeString(vars["hash"])
 	if err != nil {
 		writeResponseHeader(w, ErrInvalidRequest)
 		return
 	}
 
-	as.inclusionProofHandler(log, vars, &pb.LogInclusionProofRequest{
+	as.inclusionProofHandler(log, vars, &LogInclusionProofRequest{
 		MtlHash: mtlHash,
 	}, w, r)
 }
 
-func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) insertEntryHandler(log *LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
@@ -411,7 +409,7 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 		return
 	}
 
-	resp, err := as.service.LogAddEntry(requestContext(r), &pb.LogAddEntryRequest{
+	resp, err := as.service.LogAddEntry(requestContext(r), &LogAddEntryRequest{
 		Log:   log,
 		Value: ld,
 	})
@@ -424,14 +422,14 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 
 }
 
-func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) getEntryHandler(log *LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	number, err := strconv.Atoi(vars["number"])
 	if err != nil {
 		writeResponseHeader(w, ErrInvalidRequest)
 		return
 	}
 
-	resp, err := as.service.LogFetchEntries(requestContext(r), &pb.LogFetchEntriesRequest{
+	resp, err := as.service.LogFetchEntries(requestContext(r), &LogFetchEntriesRequest{
 		Log:   log,
 		First: int64(number),
 		Last:  int64(number + 1),
@@ -450,7 +448,7 @@ func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars ma
 	writeResponseData(w, resp.Values[0], ef.EntryFormat)
 }
 
-func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) getEntriesHandler(log *LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	first, err := strconv.Atoi(vars["first"])
 	if err != nil {
 		writeResponseHeader(w, ErrInvalidRequest)
@@ -463,7 +461,7 @@ func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars 
 		return
 	}
 
-	resp, err := as.service.LogFetchEntries(requestContext(r), &pb.LogFetchEntriesRequest{
+	resp, err := as.service.LogFetchEntries(requestContext(r), &LogFetchEntriesRequest{
 		Log:   log,
 		First: int64(first),
 		Last:  int64(last),
@@ -476,7 +474,7 @@ func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars 
 	writeSuccessJSON(w, resp)
 }
 
-func (as *apiServer) getMapRootHashHandler(vmap *pb.MapRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) getMapRootHashHandler(vmap *MapRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	var treeSize int
 	if vars["treesize"] == headStr {
 		treeSize = 0
@@ -489,7 +487,7 @@ func (as *apiServer) getMapRootHashHandler(vmap *pb.MapRef, vars map[string]stri
 		}
 	}
 
-	resp, err := as.service.MapTreeHash(requestContext(r), &pb.MapTreeHashRequest{
+	resp, err := as.service.MapTreeHash(requestContext(r), &MapTreeHashRequest{
 		Map:      vmap,
 		TreeSize: int64(treeSize),
 	})
@@ -502,8 +500,8 @@ func (as *apiServer) getMapRootHashHandler(vmap *pb.MapRef, vars map[string]stri
 
 }
 
-func (as *apiServer) queueMapMutation(vmap *pb.MapRef, mut *pb.MapMutation, w http.ResponseWriter, r *http.Request) {
-	resp, err := as.service.MapSetValue(requestContext(r), &pb.MapSetValueRequest{
+func (as *apiServer) queueMapMutation(vmap *MapRef, mut *MapMutation, w http.ResponseWriter, r *http.Request) {
+	resp, err := as.service.MapSetValue(requestContext(r), &MapSetValueRequest{
 		Map:      vmap,
 		Mutation: mut,
 	})
@@ -514,14 +512,14 @@ func (as *apiServer) queueMapMutation(vmap *pb.MapRef, mut *pb.MapMutation, w ht
 	writeSuccessJSON(w, resp)
 }
 
-func (as *apiServer) deleteMapEntryHandler(vmap *pb.MapRef, key []byte, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	as.queueMapMutation(vmap, &pb.MapMutation{
+func (as *apiServer) deleteMapEntryHandler(vmap *MapRef, key []byte, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+	as.queueMapMutation(vmap, &MapMutation{
 		Action: "delete",
 		Key:    key,
 	}, w, r)
 }
 
-func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) getMapEntry(vmap *MapRef, key []byte, ef int, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	var treeSize int
 	if vars["treesize"] == headStr {
 		treeSize = 0
@@ -534,7 +532,7 @@ func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 		}
 	}
 
-	resp, err := as.service.MapGetValue(requestContext(r), &pb.MapGetValueRequest{
+	resp, err := as.service.MapGetValue(requestContext(r), &MapGetValueRequest{
 		Map:      vmap,
 		TreeSize: int64(treeSize),
 		Key:      key,
@@ -554,7 +552,7 @@ func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 	writeResponseData(w, resp.Value, ef)
 }
 
-func getResponseData(ld *pb.LeafData, ef int) ([]byte, error) {
+func getResponseData(ld *LeafData, ef int) ([]byte, error) {
 	switch ef {
 	case rawEntry:
 		return ld.LeafInput, nil
@@ -567,7 +565,7 @@ func getResponseData(ld *pb.LeafData, ef int) ([]byte, error) {
 	}
 }
 
-func writeResponseData(w http.ResponseWriter, ld *pb.LeafData, ef int) {
+func writeResponseData(w http.ResponseWriter, ld *LeafData, ef int) {
 	data, err := getResponseData(ld, ef)
 	if err != nil {
 		writeResponseHeader(w, ErrInvalidRequest)
@@ -576,16 +574,16 @@ func writeResponseData(w http.ResponseWriter, ld *pb.LeafData, ef int) {
 	writeSuccessContent(w, data)
 }
 
-func createLeafData(body []byte, ef int) (*pb.LeafData, error) {
+func createLeafData(body []byte, ef int) (*LeafData, error) {
 	switch ef {
 	case rawEntry:
-		return &pb.LeafData{LeafInput: body}, nil
+		return &LeafData{LeafInput: body}, nil
 	case jsonEntry:
 		oh, err := objecthash.CommonJSONHash(body)
 		if err != nil {
 			return nil, ErrInvalidRequest
 		}
-		return &pb.LeafData{LeafInput: oh, ExtraData: body, Format: pb.DataFormat_JSON}, nil
+		return &LeafData{LeafInput: oh, ExtraData: body, Format: DataFormat_JSON}, nil
 	case redactedEntry:
 		var obj interface{}
 		err := json.Unmarshal(body, &obj)
@@ -604,9 +602,9 @@ func createLeafData(body []byte, ef int) (*pb.LeafData, error) {
 		if err != nil {
 			return nil, ErrInvalidRequest
 		}
-		return &pb.LeafData{LeafInput: oh, ExtraData: rb, Format: pb.DataFormat_JSON}, nil
+		return &LeafData{LeafInput: oh, ExtraData: rb, Format: DataFormat_JSON}, nil
 	case extraEntry:
-		var req pb.LeafData
+		var req LeafData
 		err := json.Unmarshal(body, &req)
 		if err != nil {
 			return nil, err
@@ -617,7 +615,7 @@ func createLeafData(body []byte, ef int) (*pb.LeafData, error) {
 	}
 }
 
-func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func (as *apiServer) setMapEntry(vmap *MapRef, key []byte, ef int, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	prevLeafHashString := strings.TrimSpace(r.Header.Get("X-Previous-LeafHash"))
 	var prevLeafHash []byte
 	if len(prevLeafHashString) > 0 {
@@ -643,13 +641,13 @@ func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 	}
 
 	if len(prevLeafHash) == 0 {
-		as.queueMapMutation(vmap, &pb.MapMutation{
+		as.queueMapMutation(vmap, &MapMutation{
 			Action: "set",
 			Key:    key,
 			Value:  ld,
 		}, w, r)
 	} else { // must be an update
-		as.queueMapMutation(vmap, &pb.MapMutation{
+		as.queueMapMutation(vmap, &MapMutation{
 			Action:           "update",
 			Key:              key,
 			Value:            ld,

@@ -16,7 +16,8 @@ limitations under the License.
 
 */
 
-//go:generate protoc --go_out=plugins=grpc:pb -Iproto proto/server-config.proto proto/mutation.proto proto/api.proto
+//go:generate protoc --go_out=plugins=grpc:. -Iproto proto/api.proto proto/configuration.proto proto/storage.proto
+//go:generate go-bindata -pkg $GOPACKAGE -o assets.go static/
 
 package verifiabledatastructures
 
@@ -24,8 +25,6 @@ import (
 	"errors"
 
 	"golang.org/x/net/context"
-
-	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 var (
@@ -97,12 +96,12 @@ const Head = int64(0)
 
 // LogAuditFunction is a function that is called for all matching log entries.
 // Return non-nil to stop the audit.
-type LogAuditFunction func(ctx context.Context, idx int64, entry *pb.LeafData) error
+type LogAuditFunction func(ctx context.Context, idx int64, entry *LeafData) error
 
 // MapUpdatePromise is returned by operations that change a map.
 type MapUpdatePromise interface {
 	// Wait will wait for the mutation to apply to the map, generally this is done by polling the map.
-	Wait() (*pb.MapTreeHashResponse, error)
+	Wait() (*MapTreeHashResponse, error)
 
 	// LeafHash returns the hash of the queued mutation log entry. This can be used to poll the mutation log.
 	LeafHash() []byte
@@ -111,7 +110,7 @@ type MapUpdatePromise interface {
 // LogUpdatePromise is returned by operations that change a log.
 type LogUpdatePromise interface {
 	// Wait will wait for the add to apply to the log, generally this is done by polling the log.
-	Wait() (*pb.LogTreeHashResponse, error)
+	Wait() (*LogTreeHashResponse, error)
 
 	// LeafHash returns the hash of the queued log entry. This can be used to poll the log.
 	LeafHash() []byte
@@ -119,7 +118,7 @@ type LogUpdatePromise interface {
 
 // LeafDataAuditFunction validates that a LeafData object is correctly constructed.
 // Generally this means to verify that the LeafInput is correctly derived from the other fields.
-type LeafDataAuditFunction func(*pb.LeafData) error
+type LeafDataAuditFunction func(*LeafData) error
 
 // MapAuditFunction is a function called by a map auditor after a MapMutation has been to
 // an audited map, and verified to have been processsed correctly by the map. This function
@@ -134,4 +133,4 @@ type LeafDataAuditFunction func(*pb.LeafData) error
 // key is the key that is being changed
 // value (produced by VerifiableEntryFactory specified when creating the auditor) is the
 //  value being set/deleted/modified.
-type MapAuditFunction func(ctx context.Context, idx int64, key []byte, value *pb.LeafData) error
+type MapAuditFunction func(ctx context.Context, idx int64, key []byte, value *LeafData) error
