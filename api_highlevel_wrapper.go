@@ -31,7 +31,7 @@
 */
 
 /*
-This package provides append-only, verifiable logs and maps. Both a client, server and
+Package verifiabledatastructures provides append-only, verifiable logs and maps. Both a client, server and
 embedded options are provided, along with various data storage methods.
 
 This is an early release of the open-source offering, and APIs are subject to change.

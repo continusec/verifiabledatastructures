@@ -1,10 +1,13 @@
 **This is pre-release, not ready for real use yet, feedback and bug reports welcome though!**
 
-This repository contains a server implementation of the Continusec Verifiable Data Structures API.
+This repository contains a client, server, and embeddable library implementation of the Continusec Verifiable Data Structures API.
 
 It was written by Adam Eijdenberg (<adam@continusec.com>) and is released under the Apache 2.0 License.
 
 Please see the godoc for information on how to use the libraries: <https://godoc.org/github.com/continusec/verifiabledatastructures>
+
+See the [HTTP REST API doc](./doc/REST-API.md), for examples using the REST API.
+
 
 # Quickstart
 
