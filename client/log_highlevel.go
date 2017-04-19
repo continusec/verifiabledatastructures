@@ -86,7 +86,7 @@ func (log *VerifiableLog) BlockUntilPresent(leaf []byte) (*pb.LogTreeHashRespons
 	lastHead := int64(-1)
 	timeToSleep := time.Second
 	for {
-		lth, err := log.TreeHead(Head)
+		lth, err := log.TreeHead(0)
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +99,8 @@ func (log *VerifiableLog) BlockUntilPresent(leaf []byte) (*pb.LogTreeHashRespons
 			case ErrNotFound:
 				// no good, continue
 			default:
-				return nil, err
+				// Should return error, but we're struggling to differentiate not found vs other errors
+				//return nil, err
 			}
 			// since we got a new tree head, reset sleep time
 			timeToSleep = time.Second

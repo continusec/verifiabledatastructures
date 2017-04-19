@@ -25,6 +25,15 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 )
 
+func wrapClientError(err error) error {
+	switch err {
+	case ErrNoSuchKey:
+		return client.ErrNotFound
+	default:
+		return err
+	}
+}
+
 // LogInclusionProof returns an inclusion proof
 func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationProveInclusion)
@@ -71,7 +80,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 		// We technically shouldn't have found it (it may not be completely written yet)
 		if leafIndex < 0 || leafIndex >= head.TreeSize {
 			// we use the NotFound error code so that normal usage of GetInclusionProof, that calls this, returns a uniform error.
-			return ErrNoSuchKey
+			return client.ErrNotFound
 		}
 
 		// Client needs a new STH
@@ -89,7 +98,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 			if len(path[i]) == 0 {
 				if client.IsPow2(rr[1] - rr[0]) {
 					// Would have been nice if GetSubTreeHashes could better handle these
-					return ErrNoSuchKey
+					return client.ErrNotFound
 				}
 				path[i], err = calcSubTreeHash(kr, req.Log.LogType, rr[0], rr[1])
 				if err != nil {
@@ -106,7 +115,7 @@ func (s *LocalService) LogInclusionProof(ctx context.Context, req *pb.LogInclusi
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, wrapClientError(err)
 	}
 	return rv, nil
 }

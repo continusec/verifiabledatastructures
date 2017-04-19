@@ -47,6 +47,10 @@ message EntryIndex {
     int64 index = 1;
 }
 
+message ObjectSize {
+    int64 size = 1;
+}
+
 message MapNode {
     // A map node is either and parent, or it is considered a leaf.
 

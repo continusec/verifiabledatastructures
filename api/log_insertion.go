@@ -43,25 +43,24 @@ func writeOutLogTreeNodes(db KeyWriter, log *pb.LogRef, entryIndex int64, mtl []
 	return headHash, nil
 }
 
+// Must be idempotent, ie call it many times with same result.
 // return nil, nil if already exists
-func addEntryToLog(db KeyWriter, log *pb.LogRef, data *pb.LeafData) (*pb.LogTreeHashResponse, error) {
+func addEntryToLog(db KeyWriter, sizeBefore int64, log *pb.LogRef, data *pb.LeafData) (*pb.LogTreeHashResponse, error) {
 	// First, calc our hash
 	mtl := client.LeafMerkleTreeHash(data.LeafInput)
 
 	// Now, see if we already have it stored
-	_, err := lookupIndexByLeafHash(db, log.LogType, mtl)
+	ei, err := lookupIndexByLeafHash(db, log.LogType, mtl)
 	switch err {
 	case nil:
-		// we already have it
-		return nil, nil
+		if ei.Index < sizeBefore {
+			// we already have it
+			return nil, nil
+		}
+		// else, we don't technically have it yet, so continue
 	case ErrNoSuchKey:
 		// good, continue
 	default:
-		return nil, err
-	}
-
-	ltr, err := lookupLogTreeHead(db, log.LogType)
-	if err != nil {
 		return nil, err
 	}
 
@@ -72,57 +71,49 @@ func addEntryToLog(db KeyWriter, log *pb.LogRef, data *pb.LeafData) (*pb.LogTree
 	}
 
 	// Then write us at the index
-	err = writeLeafNodeByIndex(db, log.LogType, ltr.TreeSize, &pb.LeafNode{Mth: mtl})
+	err = writeLeafNodeByIndex(db, log.LogType, sizeBefore, &pb.LeafNode{Mth: mtl})
 	if err != nil {
 		return nil, err
 	}
 
 	// And our index by leaf hash
-	err = writeIndexByLeafHash(db, log.LogType, mtl, &pb.EntryIndex{Index: ltr.TreeSize})
+	err = writeIndexByLeafHash(db, log.LogType, mtl, &pb.EntryIndex{Index: sizeBefore})
 	if err != nil {
 		return nil, err
 	}
 
 	// Write out needed hashes
-	stack, err := fetchSubTreeHashes(db, log.LogType, createNeededStack(ltr.TreeSize), true)
+	stack, err := fetchSubTreeHashes(db, log.LogType, createNeededStack(sizeBefore), true)
 	if err != nil {
 		return nil, err
 	}
-	rootHash, err := writeOutLogTreeNodes(db, log, ltr.TreeSize, mtl, stack)
+	rootHash, err := writeOutLogTreeNodes(db, log, sizeBefore, mtl, stack)
 	if err != nil {
 		return nil, err
 	}
 
 	// Write log root hash
-	err = writeLogRootHashBySize(db, log.LogType, ltr.TreeSize+1, &pb.LogTreeHash{Mth: rootHash})
+	err = writeLogRootHashBySize(db, log.LogType, sizeBefore+1, &pb.LogTreeHash{Mth: rootHash})
 	if err != nil {
 		return nil, err
 	}
-
-	// Update head
-	rv := &pb.LogTreeHashResponse{
-		RootHash: rootHash,
-		TreeSize: ltr.TreeSize + 1,
-	}
-	err = writeLogTreeHead(db, log.LogType, rv)
-	if err != nil {
-		return nil, err
-	}
-
 	// Done!
-	return rv, nil
+	return &pb.LogTreeHashResponse{
+		RootHash: rootHash,
+		TreeSize: sizeBefore + 1,
+	}, nil
 }
 
-func applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
+func applyLogAddEntry(db KeyWriter, sizeBefore int64, req *pb.LogAddEntryRequest) (int64, error) {
 	// Step 1 - add entry to log as request
-	mutLogHead, err := addEntryToLog(db, req.Log, req.Value)
+	mutLogHead, err := addEntryToLog(db, sizeBefore, req.Log, req.Value)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Was it already in the log? If so, we were called in error so quit early
 	if mutLogHead == nil {
-		return nil
+		return sizeBefore, nil
 	}
 
 	// Special case mutation log for maps
@@ -131,11 +122,11 @@ func applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
 		var mut pb.MapMutation
 		err = json.Unmarshal(req.Value.ExtraData, &mut)
 		if err != nil {
-			return err
+			return 0, err
 		}
-		mrh, err := setMapValue(db, mapForMutationLog(req.Log), mutLogHead.TreeSize-1, &mut)
+		mrh, err := setMapValue(db, mapForMutationLog(req.Log), sizeBefore, &mut)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		// Step 3 - add entries to treehead log if neeed
@@ -144,13 +135,13 @@ func applyLogAddEntry(db KeyWriter, req *pb.LogAddEntryRequest) error {
 			MutationLog: mutLogHead,
 		})
 		if err != nil {
-			return err
+			return 0, err
 		}
-		_, err = addEntryToLog(db, treeHeadLogForMutationLog(req.Log), thld)
+		_, err = addEntryToLog(db, sizeBefore, treeHeadLogForMutationLog(req.Log), thld)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 
-	return nil
+	return sizeBefore + 1, nil
 }

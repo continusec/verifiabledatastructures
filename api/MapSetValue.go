@@ -67,7 +67,7 @@ func (s *LocalService) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 		return nil, ErrInvalidRequest
 	}
 
-	_, err = s.Mutator.QueueMutation(ns, &pb.Mutation{
+	err = s.Mutator.QueueMutation(ns, &pb.Mutation{
 		LogAddEntry: &pb.LogAddEntryRequest{
 			Log: &pb.LogRef{
 				Account: req.Map.Account,

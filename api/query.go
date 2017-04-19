@@ -31,7 +31,6 @@ const (
 	treeNodeByRange = 2
 	rootHashBySize  = 3
 	indexByLeafHash = 4
-	metadata        = 5
 )
 
 func generateBucketNames() map[int]map[pb.LogType][]byte {
@@ -45,7 +44,6 @@ func generateBucketNames() map[int]map[pb.LogType][]byte {
 		{BucketType: treeNodeByRange, Suffix: "node"},
 		{BucketType: rootHashBySize, Suffix: "tree"},
 		{BucketType: indexByLeafHash, Suffix: "index"},
-		{BucketType: metadata, Suffix: "metadata"},
 	} {
 		rv[b.BucketType] = make(map[pb.LogType][]byte)
 		for _, lt := range []struct {
@@ -65,8 +63,9 @@ func generateBucketNames() map[int]map[pb.LogType][]byte {
 var (
 	buckets = generateBucketNames()
 
-	headKey       = []byte("head")
+	objSizeKey    = []byte("size")
 	mapNodeBucket = []byte("map_node")
+	metadata      = []byte("metadata")
 )
 
 // Start pair
@@ -147,22 +146,41 @@ func lookupIndexByLeafHash(kr KeyReader, lt pb.LogType, lh []byte) (*pb.EntryInd
 
 // Start pair
 
-func writeLogTreeHead(kr KeyWriter, lt pb.LogType, data *pb.LogTreeHashResponse) error {
-	return kr.Set(buckets[metadata][lt], headKey, data)
+func writeObjectSize(kr KeyWriter, size int64) error {
+	return kr.Set(metadata, objSizeKey, &pb.ObjectSize{Size: size})
+}
+
+func readObjectSize(kr KeyReader) (int64, error) {
+	var lth pb.ObjectSize
+	err := kr.Get(metadata, objSizeKey, &lth)
+	switch err {
+	case nil:
+		return lth.Size, nil
+	case ErrNoSuchKey:
+		return 0, nil
+	default:
+		return 0, err
+	}
 }
 
 func lookupLogTreeHead(kr KeyReader, lt pb.LogType) (*pb.LogTreeHashResponse, error) {
-	var lth pb.LogTreeHashResponse
-	err := kr.Get(buckets[metadata][lt], headKey, &lth)
-	switch err {
-	case nil:
-		return &lth, nil
-	case ErrNoSuchKey:
-		lth.Reset() // 0, nil
-		return &lth, nil
-	default:
+	objectSize, err := readObjectSize(kr)
+	if err != nil {
 		return nil, err
 	}
+	if objectSize == 0 {
+		return &pb.LogTreeHashResponse{}, nil // zero-ed out
+	}
+
+	lth, err := lookupLogRootHashBySize(kr, lt, objectSize)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.LogTreeHashResponse{
+		RootHash: lth.Mth,
+		TreeSize: objectSize,
+	}, nil
 }
 
 // Start pair

@@ -66,13 +66,7 @@ var (
 // MutatorService receives requested mutations
 type MutatorService interface {
 	// QueueMutation requests an asynchronous mutation in a namespace.
-	QueueMutation(namespace []byte, mut *pb.Mutation) (MutatorPromise, error)
-}
-
-// MutatorPromise is a promise that a mutation will complete.
-type MutatorPromise interface {
-	// Wait waits for the mutation to apply
-	Wait() error
+	QueueMutation(namespace []byte, mut *pb.Mutation) error
 }
 
 const (
@@ -100,6 +94,8 @@ type StorageReader interface {
 
 // StorageWriter can execute write transcations on a given namespace
 type StorageWriter interface {
+	StorageReader
+
 	// ExecuteUpdate performs an update on a given namespace. For now it is required
 	// that only one update takes place at a time, ie all updates are sequential.
 	ExecuteUpdate(namespace []byte, f func(db KeyWriter) error) error

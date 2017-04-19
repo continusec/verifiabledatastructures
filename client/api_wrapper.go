@@ -344,7 +344,11 @@ func (p *mapSetPromise) LeafHash() []byte {
 }
 
 func (p *mapSetPromise) Wait() (*pb.MapTreeHashResponse, error) {
-	return nil, ErrObjectConflict
+	lth, err := p.Map.MutationLog().BlockUntilPresent(p.MTL)
+	if err != nil {
+		return nil, err
+	}
+	return p.Map.TreeHead(lth.TreeSize)
 }
 
 type logAddPromise struct {
@@ -357,5 +361,5 @@ func (p *logAddPromise) LeafHash() []byte {
 }
 
 func (p *logAddPromise) Wait() (*pb.LogTreeHashResponse, error) {
-	return nil, ErrObjectConflict
+	return p.Log.BlockUntilPresent(p.MTL)
 }

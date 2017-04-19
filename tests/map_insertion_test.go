@@ -137,8 +137,10 @@ func doInclusionProofCheck(t *testing.T, vmap *client.VerifiableMap, key, val, r
 func processListOfMutations(t *testing.T, mutations []*mutRes, doAfter func(t *testing.T, vmap *client.VerifiableMap)) {
 	vmap := (&client.VerifiableDataStructuresClient{Service: createCleanEmptyService()}).Account("999", "secret").VerifiableMap("foo")
 	ctx := context.Background()
+	var err error
+	var last *pb.MapSetValueResponse
 	for _, mr := range mutations {
-		_, err := vmap.Service.MapSetValue(ctx, &pb.MapSetValueRequest{
+		last, err = vmap.Service.MapSetValue(ctx, &pb.MapSetValueRequest{
 			Map:      vmap.Map,
 			Mutation: mr.Mutation,
 		})
@@ -146,8 +148,11 @@ func processListOfMutations(t *testing.T, mutations []*mutRes, doAfter func(t *t
 			t.Fatal(err)
 		}
 	}
-
-	_, err := vmap.BlockUntilSize(int64(len(mutations)))
+	lth, err := vmap.MutationLog().BlockUntilPresent(last.LeafHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = vmap.BlockUntilSize(lth.TreeSize)
 	if err != nil {
 		t.Fatal(err)
 	}

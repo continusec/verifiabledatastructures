@@ -35,11 +35,11 @@ type LocalService struct {
 }
 
 // ApplyMutation should be called by a MutatorService to apply the given mutation to a log/map
-func ApplyMutation(db KeyWriter, mut *pb.Mutation) error {
+func ApplyMutation(db KeyWriter, sizeBefore int64, mut *pb.Mutation) (int64, error) {
 	switch {
 	case mut.LogAddEntry != nil:
-		return applyLogAddEntry(db, mut.LogAddEntry)
+		return applyLogAddEntry(db, sizeBefore, mut.LogAddEntry)
 	default:
-		return ErrNotImplemented
+		return 0, ErrNotImplemented
 	}
 }

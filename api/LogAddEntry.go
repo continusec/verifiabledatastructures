@@ -41,7 +41,7 @@ func (s *LocalService) LogAddEntry(ctx context.Context, req *pb.LogAddEntryReque
 		return nil, ErrInvalidRequest
 	}
 
-	_, err = s.Mutator.QueueMutation(ns, &pb.Mutation{
+	err = s.Mutator.QueueMutation(ns, &pb.Mutation{
 		LogAddEntry: req,
 	})
 	if err != nil {

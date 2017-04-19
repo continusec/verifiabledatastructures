@@ -42,14 +42,16 @@ func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	vmap := account.VerifiableMap("testmap")
 	numToDo := 1000
 
+	var lastP client.MapUpdatePromise
+	var err error
 	for i := 0; i < numToDo; i++ {
-		_, err := vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &pb.LeafData{LeafInput: []byte(fmt.Sprintf("fooval%d", i))})
+		lastP, err = vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &pb.LeafData{LeafInput: []byte(fmt.Sprintf("fooval%d", i))})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	_, err := vmap.BlockUntilSize(int64(numToDo))
+	_, err = lastP.Wait()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,16 +132,18 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 		t.Fatal("Failed adding item")
 	}
 
-	_, err = log.Add(&pb.LeafData{LeafInput: []byte("smez")})
+	p, err := log.Add(&pb.LeafData{LeafInput: []byte("smez")})
 	if err != nil {
 		t.Fatal("Failed adding item")
 	}
 
-	for treeRoot.TreeSize != 5 {
-		treeRoot, err = log.TreeHead(0)
-		if err != nil {
-			t.Fatal("Failure getting root hash")
-		}
+	treeRoot, err = p.Wait()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if treeRoot.TreeSize != 5 {
+		t.Fatal("Failure getting root hash")
 	}
 
 	entries := make([]*pb.LeafData, treeRoot.TreeSize)
@@ -155,17 +159,19 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 
 	for i := 0; i < 200; i++ {
-		_, err := log.Add(&pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
+		p, err = log.Add(&pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
 		if err != nil {
 			t.Fatal("Failed adding item")
 		}
 	}
 
-	for treeRoot.TreeSize != 205 {
-		treeRoot, err = log.TreeHead(client.Head)
-		if err != nil {
-			t.Fatal("Failure getting root hash")
-		}
+	treeRoot, err = p.Wait()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if treeRoot.TreeSize != 205 {
+		t.Fatal("Failure getting root hash")
 	}
 
 	cnt := 0
@@ -210,17 +216,19 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 
 	for i := 0; i < 200; i++ {
-		_, err := log.Add(&pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
+		p, err = log.Add(&pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
 		if err != nil {
 			t.Fatal("Failed adding item")
 		}
 	}
 
-	for treeRoot.TreeSize != 405 {
-		treeRoot, err = log.TreeHead(client.Head)
-		if err != nil {
-			t.Fatal("Failure getting root hash")
-		}
+	treeRoot, err = p.Wait()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if treeRoot.TreeSize != 405 {
+		t.Fatal("Failure getting root hash")
 	}
 
 	rootHashes = generateRootHashes(context.Background(), log.Entries(context.Background(), 0, treeRoot.TreeSize))
@@ -237,14 +245,26 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 }
 
+func createCleanEmptyBatchMutatorService() *api.LocalService {
+	db := &kvstore.TransientHashMapStorage{}
+	return &api.LocalService{
+		AccessPolicy: &api.AnythingGoesOracle{},
+		Mutator: api.CreateBatchMutator(&api.BatchMutatorConfig{
+			Writer:     db,
+			BatchSize:  1000,
+			BufferSize: 100000,
+			Timeout:    time.Millisecond * 10,
+		}),
+		Reader: db,
+	}
+}
+
 func createCleanEmptyService() *api.LocalService {
 	db := &kvstore.TransientHashMapStorage{}
 	return &api.LocalService{
 		AccessPolicy: &api.AnythingGoesOracle{},
-		Mutator: &api.InstantMutator{
-			Writer: db,
-		},
-		Reader: db,
+		Mutator:      &api.InstantMutator{Writer: db},
+		Reader:       db,
 	}
 }
 
@@ -295,7 +315,10 @@ func TestPermissions(t *testing.T) {
 
 	v, err = client.CreateRedactableJSONLeafData([]byte("{\"name\":\"adam\",\"dob\":\"100000\"}"))
 	expectErr(t, nil, err)
-	_, err = c.Account("0", "secret").VerifiableLog("foo").Add(v)
+	p, err := c.Account("0", "secret").VerifiableLog("foo").Add(v)
+	expectErr(t, nil, err)
+
+	_, err = p.Wait()
 	expectErr(t, nil, err)
 
 	// Test less fields

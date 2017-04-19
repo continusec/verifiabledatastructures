@@ -28,16 +28,22 @@ type InstantMutator struct {
 }
 
 // QueueMutation applies the mutation, normally asynchronously, but synchronously for the InstantMutator
-func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) (MutatorPromise, error) {
-	return &instancePromise{Err: m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
-		return ApplyMutation(kw, mut)
-	})}, nil
-}
-
-type instancePromise struct {
-	Err error
-}
-
-func (i *instancePromise) Wait() error {
-	return i.Err
+func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) error {
+	return m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
+		startSize, err := readObjectSize(kw)
+		if err != nil {
+			return err
+		}
+		nextSize, err := ApplyMutation(kw, startSize, mut)
+		if err != nil {
+			return err
+		}
+		if nextSize != startSize {
+			err = writeObjectSize(kw, nextSize)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
