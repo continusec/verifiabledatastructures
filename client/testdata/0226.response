@@ -1,1 +1,0 @@
-{"Request":{"URL":"https://api.continusec.com/v2/account/7981306761429961588/map/nnewtestmap/key/h/666f6f3835","Method":"PUT","Headers":{"Authorization":["Key allseeing"]},"Body":"Zm9vdmFsODU="},"Response":{"StatusCode":200,"Headers":{"Content-Type":["text/json"]},"Body":"eyJsZWFmX2hhc2giOiJoaUhySFJzNzczN0lGbko0Ujl3c0JaczVLMkV2b1ZwYUJIb2JTNGZwd1VFPSJ9Cg=="}}
