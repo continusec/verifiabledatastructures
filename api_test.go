@@ -366,37 +366,44 @@ func TestPermissions(t *testing.T) {
 }
 
 func runSmokeTests(c pb.VerifiableDataStructuresServiceServer, t *testing.T) {
-	testLog(t, c)
-	testMap(t, c)
-}
-
-func TestWithoutServers(t *testing.T) {
-	runSmokeTests(createCleanEmptyService(), t)
-	runSmokeTests(createCleanEmptyBatchMutatorService(), t)
-}
-
-func TestWithHTTPServerAndClient(t *testing.T) {
+	// First wrap it in REST
 	go StartRESTServer(&pb.ServerConfig{
 		InsecureServerForTesting: true,
 		RestListenBind:           ":8092",
-	}, createCleanEmptyService())
-	time.Sleep(time.Millisecond * 50) // let the server startup...
-	runSmokeTests((&HTTPRESTClient{
-		BaseURL: "http://localhost:8092",
-	}).MustDial(), t)
-}
+	}, c)
+	time.Sleep(50 * time.Millisecond)
 
-func TestWithGRPCerverAndClient(t *testing.T) {
+	// Get client to it
+	restClient := (&HTTPRESTClient{
+		BaseURL: "http://localhost:8092",
+	}).MustDial()
+
+	// Now wrap that in a gRPC server
 	go StartGRPCServer(&pb.ServerConfig{
 		InsecureServerForTesting: true,
 		GrpcListenBind:           ":8081",
 		GrpcListenProtocol:       "tcp4",
-	}, createCleanEmptyService())
-	time.Sleep(time.Millisecond * 50) // let the server startup...
-	runSmokeTests((&GRPCClient{
+	}, restClient)
+	time.Sleep(50 * time.Millisecond)
+
+	// And grab a client for that
+	d := (&GRPCClient{
 		Address:        "localhost:8081",
 		NoGrpcSecurity: true,
-	}).MustDial(), t)
+	}).MustDial()
+
+	testLog(t, d)
+	testMap(t, d)
+}
+
+func TestClientComms(t *testing.T) {
+	runSmokeTests(createCleanEmptyService(), t)
+}
+
+func TestBatchMutator(t *testing.T) {
+	d := createCleanEmptyBatchMutatorService()
+	testLog(t, d)
+	testMap(t, d)
 }
 
 // GenerateRootHashes is a utility function that emits a channel of root hashes
