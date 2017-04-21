@@ -1,4 +1,4 @@
-**This is pre-release, not ready for real use yet, feedback and bug reports welcome though!**
+**This implementation is for early stage use, feedback and bug reports welcome!**
 
 This repository contains a client, server, and embeddable library implementation of the Continusec Verifiable Data Structures API.
 
@@ -8,11 +8,18 @@ Please see the godoc for information on how to use the libraries: <https://godoc
 
 See the [HTTP REST API doc](./doc/REST-API.md), for examples using the REST API.
 
+For more information about how Verifiable Logs and Verifiable Maps work, please see this paper: <https://www.continusec.com/static/VerifiableDataStructures.pdf>
+
+Please drop us a note (<adam@continusec.com>) if you find this useful.
+
 
 # Quickstart
 
 ```bash
-go get -u github.com/continusec/verifiabledatastructures/cmd/vdbserver
+go get github.com/continusec/verifiabledatastructures/cmd/vdbserver
+```
+
+```bash
 vdbserver
 ```
 
