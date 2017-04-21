@@ -106,7 +106,7 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 
 	// Short-cut: If prev is nil, and we have no size yet, then we are nil too
 	// since while a map head may be valid, the logs can't be.
-	if prev == nil && mapHead.MutationLog.TreeSize == 0 {
+	if prev == nil && mapHead.GetMutationLog().GetTreeSize() == 0 {
 		return nil, nil
 	}
 

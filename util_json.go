@@ -16,15 +16,60 @@
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
 	"encoding/json"
 
 	"github.com/continusec/objecthash"
-
+	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
+
+// CreateJSONLeafDataFromMutation serializes the map mutation to JSON,
+// then deletes the Value.ExtraData before taking the object hash.
+// This allows redaction to take place over that value if desired.
+func CreateJSONLeafDataFromMutation(mm *pb.MapMutation) (*pb.LeafData, error) {
+	data, err := proto.Marshal(mm)
+	if err != nil {
+		return nil, err
+	}
+	var m pb.MapMutation
+	err = proto.Unmarshal(data, &m)
+	if err != nil {
+		return nil, err
+	}
+
+	if m.Value != nil {
+		m.Value.ExtraData = nil // we don't need this - TODO, think about some more
+		m.Value.Format = 0
+	}
+
+	data, err = json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+
+	var o interface{}
+	err = json.Unmarshal(data, &o)
+	if err != nil {
+		return nil, ErrInvalidJSON
+	}
+	bflh, err := objecthash.ObjectHashWithStdRedaction(o)
+	if err != nil {
+		return nil, err
+	}
+
+	bfed, err := json.Marshal(mm)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.LeafData{
+		LeafInput: bflh,
+		ExtraData: bfed,
+		Format:    pb.DataFormat_JSON,
+	}, nil
+}
 
 // CreateJSONLeafData creates a JSON based objecthash for the given JSON bytes.
 func CreateJSONLeafData(data []byte) (*pb.LeafData, error) {
@@ -129,4 +174,39 @@ func CreateRedactableJSONLeafData(data []byte) (*pb.LeafData, error) {
 		ExtraData: ojb,
 		Format:    pb.DataFormat_JSON,
 	}, nil
+}
+
+// ValidateJSONLeafDataFromMutation verifies that the LeafInput is equal to the objecthash of the ExtraData.
+// It does not valid the underlying leaf node extra data derives the leaf input.
+// It ignores the format field.
+func ValidateJSONLeafDataFromMutation(entry *pb.LeafData) error {
+	var o *pb.MapMutation
+	err := json.Unmarshal(entry.ExtraData, &o)
+	if err != nil {
+		return ErrVerificationFailed
+	}
+	if o.Value != nil {
+		o.Value.ExtraData = nil
+		o.Value.Format = 0
+	}
+
+	data, err := json.Marshal(o)
+	if err != nil {
+		return err
+	}
+	var o2 interface{}
+	err = json.Unmarshal(data, &o2)
+	if err != nil {
+		return err
+	}
+
+	h, err := objecthash.ObjectHashWithStdRedaction(o2)
+	if err != nil {
+		return ErrVerificationFailed
+	}
+	if !bytes.Equal(entry.LeafInput, h) {
+		return ErrVerificationFailed
+	}
+
+	return nil
 }

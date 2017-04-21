@@ -57,7 +57,7 @@ func (s *localServiceImpl) MapSetValue(ctx context.Context, req *pb.MapSetValueR
 		return nil, status.Errorf(codes.Internal, "bad mutation creation: %s", err)
 	}
 
-	mutData, err := CreateJSONLeafDataFromProto(mm)
+	mutData, err := CreateJSONLeafDataFromMutation(mm)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "bad leaf data creation: %s", err)
 	}

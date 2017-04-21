@@ -16,13 +16,13 @@
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
 
+	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
 )
 
@@ -210,12 +210,12 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 		// to our copy of the map
 		err = mutLog.VerifyEntries(ctx, a.MutLogHead, mutLogHead, func(ctx context.Context, idx int64, entry *pb.LeafData) error {
 			// First, verify that the pb.LeafData is in fact well formed objecthash
-			err := ValidateJSONLeafData(entry)
+			err := ValidateJSONLeafDataFromMutation(entry)
 			if err != nil {
 				return err
 			}
 
-			// At this point, we're satisfied that ExtraData is OK
+			// At this point, we're satisfied that mutation log entry extra data is OK
 
 			// Decode it into standard structure
 			var mutation pb.MapMutation
