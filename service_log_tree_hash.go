@@ -18,26 +18,28 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
+	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // LogTreeHash returns the log tree hash
 func (s *localServiceImpl) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
 
 	if req.TreeSize < 0 {
-		return nil, ErrInvalidTreeRange
+		return nil, status.Errorf(codes.InvalidArgument, "bad tree size")
 	}
 
 	var rv *pb.LogTreeHashResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
-		return nil, ErrInvalidRequest
+		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
 	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
 		head, err := lookupLogTreeHead(kr, req.Log.LogType)
@@ -53,7 +55,7 @@ func (s *localServiceImpl) LogTreeHash(ctx context.Context, req *pb.LogTreeHashR
 
 		// Are we asking for something silly?
 		if req.TreeSize > head.TreeSize {
-			return ErrInvalidTreeRange
+			return status.Errorf(codes.InvalidArgument, "bad tree size")
 		}
 
 		m, err := lookupLogRootHashBySize(kr, req.Log.LogType, req.TreeSize)
@@ -68,6 +70,10 @@ func (s *localServiceImpl) LogTreeHash(ctx context.Context, req *pb.LogTreeHashR
 		return nil
 	})
 	if err != nil {
+		_, ok := status.FromError(err)
+		if !ok {
+			err = status.Errorf(codes.Internal, "unknown err: %s", err)
+		}
 		return nil, err
 	}
 

@@ -18,28 +18,30 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
 
+	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // MapGetValue returns a value from a map
 func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
 	am, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
 
 	if req.TreeSize < 0 {
-		return nil, ErrInvalidTreeRange
+		return nil, status.Errorf(codes.InvalidArgument, "bad tree size")
 	}
 
 	var rv *pb.MapGetValueResponse
 	ns, err := mapBucket(req.Map)
 	if err != nil {
-		return nil, ErrInvalidRequest
+		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
 	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
 		kp := BPathFromKey(req.Key)
@@ -55,7 +57,7 @@ func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueR
 
 		// Are we asking for something silly?
 		if treeSize > th.TreeSize {
-			return ErrInvalidTreeRange
+			return status.Errorf(codes.InvalidArgument, "bad tree size")
 		}
 
 		root, err := lookupMapHash(kr, treeSize, BPathEmpty)
@@ -131,6 +133,10 @@ func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueR
 	})
 
 	if err != nil {
+		_, ok := status.FromError(err)
+		if !ok {
+			err = status.Errorf(codes.Internal, "unknown err: %s", err)
+		}
 		return nil, err
 	}
 

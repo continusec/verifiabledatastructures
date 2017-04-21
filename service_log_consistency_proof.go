@@ -18,32 +18,34 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
 
+	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // LogConsistencyProof verifies the consisitency of a log
 func (s *localServiceImpl) LogConsistencyProof(ctx context.Context, req *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
 
 	if req.FromSize <= 0 {
-		return nil, ErrInvalidTreeRange
+		return nil, status.Errorf(codes.InvalidArgument, "from size too small")
 	}
 
 	if req.TreeSize < 0 { // we allow zero for second param
-		return nil, ErrInvalidTreeRange
+		return nil, status.Errorf(codes.InvalidArgument, "tree size too small")
 	}
 
 	var rv *pb.LogConsistencyProofResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
-		return nil, ErrInvalidRequest
+		return nil, status.Errorf(codes.InvalidArgument, "extra getting bucket: %s", err)
 	}
 	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
 		head, err := lookupLogTreeHead(kr, req.Log.LogType)
@@ -56,10 +58,10 @@ func (s *localServiceImpl) LogConsistencyProof(ctx context.Context, req *pb.LogC
 		}
 
 		if second <= 0 || second > head.TreeSize {
-			return ErrInvalidTreeRange
+			return status.Errorf(codes.InvalidArgument, "tree size out of range")
 		}
 		if req.FromSize >= second {
-			return ErrInvalidTreeRange
+			return status.Errorf(codes.InvalidArgument, "tree size out of range")
 		}
 
 		// Ranges are good
@@ -88,6 +90,10 @@ func (s *localServiceImpl) LogConsistencyProof(ctx context.Context, req *pb.LogC
 		return nil
 	})
 	if err != nil {
+		_, ok := status.FromError(err)
+		if !ok {
+			err = status.Errorf(codes.Internal, "unknown err: %s", err)
+		}
 		return nil, err
 	}
 	return rv, nil

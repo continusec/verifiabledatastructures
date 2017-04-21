@@ -18,26 +18,30 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
+	"encoding/json"
+
+	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // LogFetchEntries returns the log entries
 func (s *localServiceImpl) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
 	am, err := s.verifyAccessForLogOperation(req.Log, operationReadEntry)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
 
 	if req.First < 0 || req.Last < 0 {
-		return nil, ErrInvalidTreeRange
+		return nil, status.Errorf(codes.InvalidArgument, "tree size out of range")
 	}
 
 	var rv *pb.LogFetchEntriesResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
-		return nil, ErrInvalidRequest
+		return nil, status.Errorf(codes.InvalidArgument, "extra getting bucket: %s", err)
 	}
 	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
 		head, err := lookupLogTreeHead(kr, req.Log.LogType)
@@ -54,7 +58,7 @@ func (s *localServiceImpl) LogFetchEntries(ctx context.Context, req *pb.LogFetch
 
 		// Are we asking for something silly?
 		if last > head.TreeSize || req.First >= last {
-			return ErrInvalidTreeRange
+			return status.Errorf(codes.InvalidArgument, "tree size out of range")
 		}
 
 		hashes, err := lookupLogEntryHashes(kr, req.Log.LogType, req.First, last)
@@ -78,9 +82,28 @@ func (s *localServiceImpl) LogFetchEntries(ctx context.Context, req *pb.LogFetch
 			case pb.LogType_STRUCT_TYPE_TREEHEAD_LOG:
 				vals[i] = v
 			case pb.LogType_STRUCT_TYPE_MUTATION_LOG:
-				vals[i] = v // TODO
+				var mm pb.MapMutation
+				err = json.Unmarshal(v.ExtraData, &mm)
+				if err != nil {
+					return err
+				}
+				mm.Value, err = filterLeafData(mm.Value, am)
+				if err != nil {
+					return err
+				}
+
+				newVal, err := json.Marshal(&mm)
+				if err != nil {
+					return err
+				}
+
+				vals[i] = &pb.LeafData{
+					LeafInput: v.LeafInput,
+					Format:    v.Format,
+					ExtraData: newVal,
+				}
 			default:
-				return ErrInvalidRequest
+				return status.Errorf(codes.InvalidArgument, "bad log type")
 			}
 		}
 
@@ -90,6 +113,10 @@ func (s *localServiceImpl) LogFetchEntries(ctx context.Context, req *pb.LogFetch
 		return nil
 	})
 	if err != nil {
+		_, ok := status.FromError(err)
+		if !ok {
+			err = status.Errorf(codes.Internal, "unknown err: %s", err)
+		}
 		return nil, err
 	}
 

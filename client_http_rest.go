@@ -29,6 +29,8 @@ import (
 
 	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -111,18 +113,16 @@ func (c *httpRestImpl) makeRequest(account *pb.AccountRef, method, path string, 
 	}
 
 	switch resp.StatusCode {
-	case 200:
+	case http.StatusOK:
 		return contents, resp.Header, nil
-	case 403:
-		return nil, nil, ErrNotAuthorized
-	case 400:
-		return nil, nil, ErrInvalidRange
-	case 404:
-		return nil, nil, ErrNotFound
-	case 409:
-		return nil, nil, ErrObjectConflict
+	case http.StatusUnauthorized:
+		return nil, nil, status.Error(codes.PermissionDenied, "")
+	case http.StatusBadRequest:
+		return nil, nil, status.Error(codes.InvalidArgument, "")
+	case http.StatusNotFound:
+		return nil, nil, status.Error(codes.NotFound, "")
 	default:
-		return nil, nil, ErrInternalError
+		return nil, nil, status.Error(codes.Internal, "")
 	}
 }
 

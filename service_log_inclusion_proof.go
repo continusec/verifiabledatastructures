@@ -18,11 +18,13 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
 
+	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func wrapClientError(err error) error {
@@ -38,17 +40,17 @@ func wrapClientError(err error) error {
 func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationProveInclusion)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
 
 	if req.TreeSize < 0 {
-		return nil, ErrInvalidTreeRange
+		return nil, status.Errorf(codes.InvalidArgument, "extra getting bucket: %s", err)
 	}
 
 	var rv *pb.LogInclusionProofResponse
 	ns, err := logBucket(req.Log)
 	if err != nil {
-		return nil, ErrInvalidRequest
+		return nil, status.Errorf(codes.InvalidArgument, "extra getting bucket: %s", err)
 	}
 	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
 		head, err := lookupLogTreeHead(kr, req.Log.LogType)
@@ -62,7 +64,7 @@ func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInc
 		}
 
 		if treeSize > head.TreeSize {
-			return ErrInvalidTreeRange
+			return status.Errorf(codes.InvalidArgument, "bad tree size")
 		}
 
 		var leafIndex int64
@@ -80,12 +82,12 @@ func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInc
 		// We technically shouldn't have found it (it may not be completely written yet)
 		if leafIndex < 0 || leafIndex >= head.TreeSize {
 			// we use the NotFound error code so that normal usage of GetInclusionProof, that calls this, returns a uniform error.
-			return ErrNotFound
+			return status.Errorf(codes.NotFound, "cannot find it")
 		}
 
 		// Client needs a new STH
 		if leafIndex >= treeSize {
-			return ErrInvalidTreeRange
+			return status.Errorf(codes.InvalidArgument, "bad tree size")
 		}
 
 		// Ranges are good
@@ -115,7 +117,11 @@ func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInc
 		return nil
 	})
 	if err != nil {
-		return nil, wrapClientError(err)
+		_, ok := status.FromError(err)
+		if !ok {
+			err = status.Errorf(codes.Internal, "unknown err: %s", err)
+		}
+		return nil, err
 	}
 	return rv, nil
 }

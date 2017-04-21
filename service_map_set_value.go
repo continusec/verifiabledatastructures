@@ -18,13 +18,14 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"time"
 
-	"golang.org/x/net/context"
-
+	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) {
@@ -46,24 +47,24 @@ func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) 
 func (s *localServiceImpl) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
 	_, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_SET_VALUE)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
 
 	// Since this whacks in timestamp (deliberately, so that mutation log receives unique mutations),
 	// we must keep this rather than regenerate another object.
 	mm, err := makeJSONMutationEntry(req)
 	if err != nil {
-		return nil, ErrInvalidRequest
+		return nil, status.Errorf(codes.Internal, "bad mutation creation: %s", err)
 	}
 
 	mutData, err := CreateJSONLeafDataFromProto(mm)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "bad leaf data creation: %s", err)
 	}
 
 	ns, err := mapBucket(req.Map)
 	if err != nil {
-		return nil, ErrInvalidRequest
+		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
 
 	err = s.Mutator.QueueMutation(ns, &pb.Mutation{
@@ -77,7 +78,7 @@ func (s *localServiceImpl) MapSetValue(ctx context.Context, req *pb.MapSetValueR
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
 	return &pb.MapSetValueResponse{
 		LeafHash: LeafMerkleTreeHash(mutData.LeafInput),

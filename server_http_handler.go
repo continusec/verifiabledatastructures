@@ -22,10 +22,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"google.golang.org/grpc/status"
 
 	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/assets"
@@ -33,6 +34,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
 )
 
 const (
@@ -254,25 +256,25 @@ func requestContext(r *http.Request) context.Context {
 }
 
 func writeResponseHeader(w http.ResponseWriter, err error) {
-	switch err {
-	case nil:
+	if err == nil {
 		w.WriteHeader(http.StatusOK)
-	case ErrNotAuthorized:
+		return
+	}
+
+	s, ok := status.FromError(err)
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	switch s.Code() {
+	case codes.PermissionDenied:
 		w.WriteHeader(http.StatusUnauthorized)
-	case ErrInvalidTreeRange:
+	case codes.InvalidArgument:
 		w.WriteHeader(http.StatusBadRequest)
-	case ErrInvalidJSON:
-		w.WriteHeader(http.StatusBadRequest)
-	case ErrLogUnsafeForAccess:
+	case codes.NotFound:
 		w.WriteHeader(http.StatusNotFound)
-	case ErrNotFound:
-		w.WriteHeader(http.StatusNotFound)
-	case ErrLogAlreadyExists:
-		w.WriteHeader(http.StatusConflict)
-	case ErrAlreadyNotActive: // no deleting a log twice thanks
-		w.WriteHeader(http.StatusConflict)
 	default:
-		log.Printf("Error: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }

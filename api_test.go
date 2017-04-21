@@ -18,17 +18,18 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
-	"strings"
-
+	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
@@ -270,6 +271,20 @@ func expectErr(t *testing.T, exp, err error) {
 	}
 }
 
+func expectErrCode(t *testing.T, c codes.Code, err error) {
+	if err == nil {
+		t.Fatalf("Wanting bad code")
+	}
+	s, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("Bad error type")
+	}
+	if s.Code() != c {
+		t.Fatalf("Bad error ")
+
+	}
+}
+
 func TestPermissions(t *testing.T) {
 	db := &TransientHashMapStorage{}
 	c := &Client{Service: (&LocalService{
@@ -302,13 +317,13 @@ func TestPermissions(t *testing.T) {
 	var v *pb.LeafData
 
 	_, err = c.Account("0", "secr3t").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
-	expectErr(t, ErrNotAuthorized, err)
+	expectErrCode(t, codes.PermissionDenied, err)
 
 	_, err = c.Account("0", "secret").VerifiableLog("fofo").Add(&pb.LeafData{LeafInput: []byte("bar")})
-	expectErr(t, ErrNotAuthorized, err)
+	expectErrCode(t, codes.PermissionDenied, err)
 
 	_, err = c.Account("1", "secret").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
-	expectErr(t, ErrNotAuthorized, err)
+	expectErrCode(t, codes.PermissionDenied, err)
 
 	_, err = c.Account("0", "secret").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
 	expectErr(t, nil, err)

@@ -18,32 +18,34 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
+	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // LogAddEntry adds an entry to a log
 func (s *localServiceImpl) LogAddEntry(ctx context.Context, req *pb.LogAddEntryRequest) (*pb.LogAddEntryResponse, error) {
 	_, err := s.verifyAccessForLogOperation(req.Log, operationRawAdd)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
 
 	if req.Log.LogType != pb.LogType_STRUCT_TYPE_LOG {
-		return nil, ErrInvalidRequest
+		return nil, status.Errorf(codes.InvalidArgument, "wrong log type")
 	}
 
 	ns, err := logBucket(req.Log)
 	if err != nil {
-		return nil, ErrInvalidRequest
+		return nil, status.Errorf(codes.InvalidArgument, "extra getting bucket: %s", err)
 	}
 
 	err = s.Mutator.QueueMutation(ns, &pb.Mutation{
 		LogAddEntry: req,
 	})
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "error queuing mutation: %s", err)
 	}
 
 	return &pb.LogAddEntryResponse{
