@@ -25,9 +25,9 @@ can work with you on any API changes.
 To interact with logs and maps, you will first need to get a reference to the low-level
 API which is the set of functions defined in pb.VerifiableDataStructuresServiceServer.
 
-There are 2 ways to get one of these:
+Running as embedded instance
 
-1. Run your own embedded instance:
+Run your own embedded instance:
 
 	// Create an in-memory, non-persistent database, suitable for tests
 	db := &TransientHashMapStorage{}
@@ -39,14 +39,27 @@ There are 2 ways to get one of these:
 		Reader:       db,
 	}).MustCreate()
 
-or
+Connecting to a server
 
-2. Connect to a remote server (example below uses GRPCClient, see also HTTPRestClient):
+Connect to a remote server (example below uses GRPCClient, see also HTTPRestClient):
 
 	// Connect to remote GRPC server
 	service := (&GRPCClient{
 		Address: "verifiabledatastructures.example.com:8081",
 	}).MustDial()
+
+Running your own server
+
+To run your own server, simply take a pb.VerifiableDataStructuresServiceServer as created
+by LocalService above, and expose like follows:
+
+	StartGRPCServer(&pb.ServerConfig{
+		InsecureServerForTesting: true,
+		GrpcListenBind:           ":8081",
+		GrpcListenProtocol:       "tcp4",
+	}, service)
+
+Using the service
 
 Once you have a service object, whether it is local or remote, we recommend that you wrap
 it using the higher level Client object:
@@ -66,16 +79,7 @@ To add entries into a log (ctx can be any valid context, e.g. context.TODO() if 
 
 See the documentation for VerifiableLog and VerifiableMap for all operations.
 
-To run your own server, simply take a pb.VerifiableDataStructuresServiceServer as created
-by either method above, and expose like follows:
-
-	StartGRPCServer(&pb.ServerConfig{
-		InsecureServerForTesting: true,
-		GrpcListenBind:           ":8081",
-		GrpcListenProtocol:       "tcp4",
-	}, service)
-
-Other useful entrypoints include:
+Other storage mechanisms
 
 BoltBackedService:
 
@@ -91,6 +95,8 @@ BoltBackedService:
 		Reader:       db,
 	}).MustCreate()
 
+Other mutation mechanisms
+
 BatchMutator:
 
 	// performs mutations asynchronously in batches - experimental
@@ -104,6 +110,8 @@ BatchMutator:
 		}).MustCreate(),
 		Reader:       db,
 	}).MustCreate()
+
+Other authorization policies
 
 StaticOracle:
 
@@ -134,7 +142,69 @@ StaticOracle:
 		},
 	}).MustCreate()
 
-Each of these is interchangeable with others that implement the correct interface.
+Each of the above is interchangeable with others that implement the correct interface.
+
+Examples
+
+Here is a full example of using verifiabledatastructures as an embedded storage layer in your application:
+
+	package main
+
+	import (
+		"context"
+		"log"
+
+		"github.com/continusec/verifiabledatastructures"
+		"github.com/continusec/verifiabledatastructures/pb"
+		"github.com/golang/protobuf/proto"
+	)
+
+	func main() {
+		// Create a pointer to a data storage layer, here we persist to disk using Bolt
+		db := &verifiabledatastructures.BoltBackedService{
+			Path: "/path/to/directory/to/store/data",
+		}
+
+		// Create an instance of the service
+		service := (&verifiabledatastructures.LocalService{
+			// Allow access to everything
+			AccessPolicy: &verifiabledatastructures.AnythingGoesOracle{},
+
+			// Read data from our database
+			Reader: db,
+
+			// Apply mutations synchronously
+			Mutator: &verifiabledatastructures.InstantMutator{
+				Writer: db,
+			},
+		}).MustCreate()
+
+		// Create a client to directly call the service, no need to stand up a server
+		client := &verifiabledatastructures.Client{
+			Service: service,
+		}
+
+		// Get a pointer to a log
+		vlog := client.Account("0", "").VerifiableLog("foo")
+
+		// Create a context (not currently used)
+		ctx := context.Background()
+
+		// Add something to it
+		_, err := vlog.Add(ctx, &pb.LeafData{
+			LeafInput: []byte("bar"),
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Print tree head
+		th, err := vlog.TreeHead(ctx, verifiabledatastructures.Head)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(proto.CompactTextString(th))
+	}
 
 */
 package verifiabledatastructures
