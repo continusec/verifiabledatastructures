@@ -41,7 +41,7 @@ func (s *localServiceImpl) MapTreeHash(ctx context.Context, req *pb.MapTreeHashR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
-	err = s.Reader.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
+	err = s.Reader.ExecuteReadOnly(ctx, ns, func(ctx context.Context, kr KeyReader) error {
 		th, err := lookupLogTreeHead(ctx, kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
 		if err != nil {
 			return err

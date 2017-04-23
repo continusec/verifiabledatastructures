@@ -41,7 +41,7 @@ func (s *localServiceImpl) LogTreeHash(ctx context.Context, req *pb.LogTreeHashR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
-	err = s.Reader.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
+	err = s.Reader.ExecuteReadOnly(ctx, ns, func(ctx context.Context, kr KeyReader) error {
 		head, err := lookupLogTreeHead(ctx, kr, req.Log.LogType)
 		if err != nil {
 			return err

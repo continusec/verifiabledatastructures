@@ -33,7 +33,7 @@ type InstantMutator struct {
 
 // QueueMutation applies the mutation, normally asynchronously, but synchronously for the InstantMutator
 func (m *InstantMutator) QueueMutation(ctx context.Context, ns []byte, mut *pb.Mutation) error {
-	return m.Writer.ExecuteUpdate(ctx, ns, func(kw KeyWriter) error {
+	return m.Writer.ExecuteUpdate(ctx, ns, func(ctx context.Context, kw KeyWriter) error {
 		startSize, err := readObjectSize(ctx, kw)
 		if err != nil {
 			return err

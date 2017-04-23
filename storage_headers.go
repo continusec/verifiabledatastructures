@@ -27,7 +27,7 @@ import (
 // StorageReader can execute read-only transactions on a given namespace
 type StorageReader interface {
 	// ExecuteReadOnly safely reads that from a namespace
-	ExecuteReadOnly(ctx context.Context, namespace []byte, f func(db KeyReader) error) error
+	ExecuteReadOnly(ctx context.Context, namespace []byte, f func(ctx context.Context, db KeyReader) error) error
 }
 
 // StorageWriter can execute write transcations on a given namespace
@@ -36,7 +36,7 @@ type StorageWriter interface {
 
 	// ExecuteUpdate performs an update on a given namespace. For now it is required
 	// that only one update takes place at a time, ie all updates are sequential.
-	ExecuteUpdate(ctx context.Context, namespace []byte, f func(db KeyWriter) error) error
+	ExecuteUpdate(ctx context.Context, namespace []byte, f func(ctx context.Context, db KeyWriter) error) error
 }
 
 // KeyReader allows read access to a namespace

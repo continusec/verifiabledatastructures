@@ -162,7 +162,7 @@ func (bm *batchMutatorImpl) consume() {
 		var startSize, nextSize int64
 
 		ns := seed.ns
-		err := bm.Conf.Writer.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
+		err := bm.Conf.Writer.ExecuteReadOnly(ctx, ns, func(ctx context.Context, kr KeyReader) error {
 			wrapper.Parent = kr
 
 			startSize, err = readObjectSize(ctx, kr)
@@ -182,7 +182,7 @@ func (bm *batchMutatorImpl) consume() {
 		}
 
 		if nextSize > startSize { // save it out
-			err = bm.Conf.Writer.ExecuteUpdate(ctx, ns, func(kw KeyWriter) error {
+			err = bm.Conf.Writer.ExecuteUpdate(ctx, ns, func(ctx context.Context, kw KeyWriter) error {
 				for _, o := range wrapper.L {
 					err := kw.Set(ctx, o.Bucket, o.Key, o.Value)
 					if err != nil {

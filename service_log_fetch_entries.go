@@ -43,7 +43,7 @@ func (s *localServiceImpl) LogFetchEntries(ctx context.Context, req *pb.LogFetch
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "extra getting bucket: %s", err)
 	}
-	err = s.Reader.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
+	err = s.Reader.ExecuteReadOnly(ctx, ns, func(ctx context.Context, kr KeyReader) error {
 		head, err := lookupLogTreeHead(ctx, kr, req.Log.LogType)
 		if err != nil {
 			return err

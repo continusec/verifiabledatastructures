@@ -35,7 +35,7 @@ type TransientHashMapStorage struct {
 }
 
 // ExecuteReadOnly executes a read only query
-func (bbs *TransientHashMapStorage) ExecuteReadOnly(ctx context.Context, namespace []byte, f func(db KeyReader) error) error {
+func (bbs *TransientHashMapStorage) ExecuteReadOnly(ctx context.Context, namespace []byte, f func(ctx context.Context, db KeyReader) error) error {
 	key := hex.EncodeToString(namespace)
 
 	bbs.dbLock.RLock()
@@ -49,11 +49,11 @@ func (bbs *TransientHashMapStorage) ExecuteReadOnly(ctx context.Context, namespa
 		}
 	}
 
-	return f(&memoryThing{Data: db})
+	return f(ctx, &memoryThing{Data: db})
 }
 
 // ExecuteUpdate executes an update query
-func (bbs *TransientHashMapStorage) ExecuteUpdate(ctx context.Context, namespace []byte, f func(db KeyWriter) error) error {
+func (bbs *TransientHashMapStorage) ExecuteUpdate(ctx context.Context, namespace []byte, f func(ctx context.Context, db KeyWriter) error) error {
 	key := hex.EncodeToString(namespace)
 
 	bbs.dbLock.Lock()
@@ -67,7 +67,7 @@ func (bbs *TransientHashMapStorage) ExecuteUpdate(ctx context.Context, namespace
 		db = make(map[string][]byte)
 		bbs.data[key] = db
 	}
-	return f(&memoryThing{Data: db})
+	return f(ctx, &memoryThing{Data: db})
 }
 
 type memoryThing struct {

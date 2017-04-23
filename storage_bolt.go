@@ -91,24 +91,24 @@ func (bbs *BoltBackedService) getOrCreateDB(ns []byte) (*bolt.DB, error) {
 }
 
 // ExecuteReadOnly executes a read only query
-func (bbs *BoltBackedService) ExecuteReadOnly(ctx context.Context, namespace []byte, f func(db KeyReader) error) error {
+func (bbs *BoltBackedService) ExecuteReadOnly(ctx context.Context, namespace []byte, f func(ctx context.Context, db KeyReader) error) error {
 	db, err := bbs.getOrCreateDB(namespace)
 	if err != nil {
 		return err
 	}
 	return db.View(func(tx *bolt.Tx) error {
-		return f(&boltReaderWriter{Tx: tx})
+		return f(ctx, &boltReaderWriter{Tx: tx})
 	})
 }
 
 // ExecuteUpdate executes an update query
-func (bbs *BoltBackedService) ExecuteUpdate(ctx context.Context, namespace []byte, f func(db KeyWriter) error) error {
+func (bbs *BoltBackedService) ExecuteUpdate(ctx context.Context, namespace []byte, f func(ctx context.Context, db KeyWriter) error) error {
 	db, err := bbs.getOrCreateDB(namespace)
 	if err != nil {
 		return err
 	}
 	return db.Update(func(tx *bolt.Tx) error {
-		return f(&boltReaderWriter{Tx: tx})
+		return f(ctx, &boltReaderWriter{Tx: tx})
 	})
 }
 

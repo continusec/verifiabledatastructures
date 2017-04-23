@@ -43,7 +43,7 @@ func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
-	err = s.Reader.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
+	err = s.Reader.ExecuteReadOnly(ctx, ns, func(ctx context.Context, kr KeyReader) error {
 		kp := BPathFromKey(req.Key)
 
 		th, err := lookupLogTreeHead(ctx, kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
