@@ -19,6 +19,7 @@ limitations under the License.
 package verifiabledatastructures
 
 import (
+	"context"
 	"log"
 
 	"github.com/continusec/verifiabledatastructures/pb"
@@ -55,10 +56,10 @@ func (l *LocalService) MustCreate() pb.VerifiableDataStructuresServiceServer {
 }
 
 // ApplyMutation should be called by a MutatorService to apply the given mutation to a log/map
-func ApplyMutation(db KeyWriter, sizeBefore int64, mut *pb.Mutation) (int64, error) {
+func ApplyMutation(ctx context.Context, db KeyWriter, sizeBefore int64, mut *pb.Mutation) (int64, error) {
 	switch {
 	case mut.LogAddEntry != nil:
-		return applyLogAddEntry(db, sizeBefore, mut.LogAddEntry)
+		return applyLogAddEntry(ctx, db, sizeBefore, mut.LogAddEntry)
 	default:
 		return 0, ErrNotImplemented
 	}

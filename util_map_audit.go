@@ -198,7 +198,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 		mutLog := a.Map.MutationLog()
 
 		// Get the lastest tree head for the mutation log
-		mutLogHead, err := mutLog.VerifiedLatestTreeHead(a.MutLogHead)
+		mutLogHead, err := mutLog.VerifiedLatestTreeHead(ctx, a.MutLogHead)
 		if err != nil {
 			return err
 		}
@@ -225,7 +225,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 			}
 
 			if a.LeafDataAuditFunction != nil {
-				err = a.LeafDataAuditFunction(mutation.Value)
+				err = a.LeafDataAuditFunction(ctx, mutation.Value)
 				if err != nil {
 					return err
 				}

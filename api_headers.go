@@ -102,7 +102,7 @@ type LogAuditFunction func(ctx context.Context, idx int64, entry *pb.LeafData) e
 // MapUpdatePromise is returned by operations that change a map.
 type MapUpdatePromise interface {
 	// Wait will wait for the mutation to apply to the map, generally this is done by polling the map.
-	Wait() (*pb.MapTreeHashResponse, error)
+	Wait(ctx context.Context) (*pb.MapTreeHashResponse, error)
 
 	// LeafHash returns the hash of the queued mutation log entry. This can be used to poll the mutation log.
 	LeafHash() []byte
@@ -111,7 +111,7 @@ type MapUpdatePromise interface {
 // LogUpdatePromise is returned by operations that change a log.
 type LogUpdatePromise interface {
 	// Wait will wait for the add to apply to the log, generally this is done by polling the log.
-	Wait() (*pb.LogTreeHashResponse, error)
+	Wait(ctx context.Context) (*pb.LogTreeHashResponse, error)
 
 	// LeafHash returns the hash of the queued log entry. This can be used to poll the log.
 	LeafHash() []byte
@@ -119,7 +119,7 @@ type LogUpdatePromise interface {
 
 // LeafDataAuditFunction validates that a pb.LeafData object is correctly constructed.
 // Generally this means to verify that the LeafInput is correctly derived from the other fields.
-type LeafDataAuditFunction func(*pb.LeafData) error
+type LeafDataAuditFunction func(context.Context, *pb.LeafData) error
 
 // MapAuditFunction is a function called by a map auditor after a MapMutation has been to
 // an audited map, and verified to have been processsed correctly by the map. This function

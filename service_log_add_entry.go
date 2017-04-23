@@ -27,7 +27,7 @@ import (
 
 // LogAddEntry adds an entry to a log
 func (s *localServiceImpl) LogAddEntry(ctx context.Context, req *pb.LogAddEntryRequest) (*pb.LogAddEntryResponse, error) {
-	_, err := s.verifyAccessForLogOperation(req.Log, operationRawAdd)
+	_, err := s.verifyAccessForLogOperation(ctx, req.Log, operationRawAdd)
 	if err != nil {
 		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
@@ -41,7 +41,7 @@ func (s *localServiceImpl) LogAddEntry(ctx context.Context, req *pb.LogAddEntryR
 		return nil, status.Errorf(codes.InvalidArgument, "extra getting bucket: %s", err)
 	}
 
-	err = s.Mutator.QueueMutation(ns, &pb.Mutation{
+	err = s.Mutator.QueueMutation(ctx, ns, &pb.Mutation{
 		LogAddEntry: req,
 	})
 	if err != nil {

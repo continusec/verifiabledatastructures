@@ -45,7 +45,7 @@ func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) 
 
 // MapSetValue sets a value in a map
 func (s *localServiceImpl) MapSetValue(ctx context.Context, req *pb.MapSetValueRequest) (*pb.MapSetValueResponse, error) {
-	_, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_SET_VALUE)
+	_, err := s.verifyAccessForMap(ctx, req.Map, pb.Permission_PERM_MAP_SET_VALUE)
 	if err != nil {
 		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
@@ -67,7 +67,7 @@ func (s *localServiceImpl) MapSetValue(ctx context.Context, req *pb.MapSetValueR
 		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
 
-	err = s.Mutator.QueueMutation(ns, &pb.Mutation{
+	err = s.Mutator.QueueMutation(ctx, ns, &pb.Mutation{
 		LogAddEntry: &pb.LogAddEntryRequest{
 			Log: &pb.LogRef{
 				Account: req.Map.Account,

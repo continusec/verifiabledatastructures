@@ -15,22 +15,6 @@
 */
 
 /*
-   Copyright 2017 Continusec Pty Ltd
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
-
-/*
 Package verifiabledatastructures provides append-only, verifiable logs and maps. Both a client, server and
 embedded options are provided, along with various data storage methods.
 
@@ -74,9 +58,9 @@ it using the higher level Client object:
 Note that currently accounts, logs and maps are all created lazily, there is no need to
 explicitly create these.
 
-To add entries into a log:
+To add entries into a log (ctx can be any valid context, e.g. context.TODO() if unsure):
 
-	promise, err := client.Account("0", "").VerifiableLog().Add(&pb.LeafData{
+	promise, err := client.Account("0", "").VerifiableLog().Add(ctx, &pb.LeafData{
 		LeafInput: []byte("foo"),
 	})
 
@@ -227,8 +211,8 @@ type VerifiableLog struct {
 
 // TreeHead returns tree root hash for the log at the given tree size. Specify continusec.Head
 // to receive a root hash for the latest tree size.
-func (g *VerifiableLog) TreeHead(treeSize int64) (*pb.LogTreeHashResponse, error) {
-	return g.Service.LogTreeHash(context.Background(), &pb.LogTreeHashRequest{
+func (g *VerifiableLog) TreeHead(ctx context.Context, treeSize int64) (*pb.LogTreeHashResponse, error) {
+	return g.Service.LogTreeHash(ctx, &pb.LogTreeHashRequest{
 		Log:      g.Log,
 		TreeSize: treeSize,
 	})
@@ -240,8 +224,8 @@ func (g *VerifiableLog) TreeHead(treeSize int64) (*pb.LogTreeHashResponse, error
 // entry is sequenced in the underlying log in an asynchronous fashion, so the tree size
 // will not immediately increase, and inclusion proof checks will not reflect the new entry
 // until it is sequenced.
-func (g *VerifiableLog) Add(e *pb.LeafData) (LogUpdatePromise, error) {
-	resp, err := g.Service.LogAddEntry(context.Background(), &pb.LogAddEntryRequest{
+func (g *VerifiableLog) Add(ctx context.Context, e *pb.LeafData) (LogUpdatePromise, error) {
+	resp, err := g.Service.LogAddEntry(ctx, &pb.LogAddEntryRequest{
 		Log:   g.Log,
 		Value: e,
 	})
@@ -260,8 +244,8 @@ func (g *VerifiableLog) Add(e *pb.LeafData) (LogUpdatePromise, error) {
 // leaf hash to generate the root tree hash for the log.
 //
 // Most clients instead use VerifyInclusion which additionally verifies the returned proof.
-func (g *VerifiableLog) InclusionProof(treeSize int64, leaf []byte) (*pb.LogInclusionProofResponse, error) {
-	return g.Service.LogInclusionProof(context.Background(), &pb.LogInclusionProofRequest{
+func (g *VerifiableLog) InclusionProof(ctx context.Context, treeSize int64, leaf []byte) (*pb.LogInclusionProofResponse, error) {
+	return g.Service.LogInclusionProof(ctx, &pb.LogInclusionProofRequest{
 		Log:      g.Log,
 		MtlHash:  leaf,
 		TreeSize: treeSize,
@@ -273,8 +257,8 @@ func (g *VerifiableLog) InclusionProof(treeSize int64, leaf []byte) (*pb.LogIncl
 // The LogInclusionProof returned by this method will not have the LeafHash filled in and as such will fail to verify.
 //
 // Typical clients will instead use VerifyInclusionProof().
-func (g *VerifiableLog) InclusionProofByIndex(treeSize, leafIndex int64) (*pb.LogInclusionProofResponse, error) {
-	return g.Service.LogInclusionProof(context.Background(), &pb.LogInclusionProofRequest{
+func (g *VerifiableLog) InclusionProofByIndex(ctx context.Context, treeSize, leafIndex int64) (*pb.LogInclusionProofResponse, error) {
+	return g.Service.LogInclusionProof(ctx, &pb.LogInclusionProofRequest{
 		Log:       g.Log,
 		LeafIndex: leafIndex,
 		TreeSize:  treeSize,
@@ -285,8 +269,8 @@ func (g *VerifiableLog) InclusionProofByIndex(treeSize, leafIndex int64) (*pb.Lo
 // that demonstrate how the root hash is calculated for both the first and second tree sizes.
 //
 // Most clients instead use VerifyInclusionProof which additionally verifies the returned proof.
-func (g *VerifiableLog) ConsistencyProof(first, second int64) (*pb.LogConsistencyProofResponse, error) {
-	return g.Service.LogConsistencyProof(context.Background(), &pb.LogConsistencyProofRequest{
+func (g *VerifiableLog) ConsistencyProof(ctx context.Context, first, second int64) (*pb.LogConsistencyProofResponse, error) {
+	return g.Service.LogConsistencyProof(ctx, &pb.LogConsistencyProofRequest{
 		Log:      g.Log,
 		FromSize: first,
 		TreeSize: second,
@@ -297,8 +281,8 @@ func (g *VerifiableLog) ConsistencyProof(first, second int64) (*pb.LogConsistenc
 // This is normally one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
 // If the entry was stored using one of the ObjectHash formats, then the data returned by a RawDataEntryFactory,
 // then the object hash itself is returned as the contents. To get the data itself, use JsonEntryFactory.
-func (g *VerifiableLog) Entry(idx int64) (*pb.LeafData, error) {
-	resp, err := g.Service.LogFetchEntries(context.Background(), &pb.LogFetchEntriesRequest{
+func (g *VerifiableLog) Entry(ctx context.Context, idx int64) (*pb.LeafData, error) {
+	resp, err := g.Service.LogFetchEntries(ctx, &pb.LogFetchEntriesRequest{
 		Log:   g.Log,
 		First: idx,
 		Last:  idx + 1,
@@ -328,7 +312,7 @@ func (g *VerifiableLog) Entries(ctx context.Context, start, end int64) <-chan *p
 				lastToFetch = end
 			}
 
-			resp, err := g.Service.LogFetchEntries(context.Background(), &pb.LogFetchEntriesRequest{
+			resp, err := g.Service.LogFetchEntries(ctx, &pb.LogFetchEntriesRequest{
 				Log:   g.Log,
 				First: start,
 				Last:  lastToFetch,
@@ -390,8 +374,8 @@ func (g *VerifiableMap) TreeHeadLog() *VerifiableLog {
 // to always get the latest value. factory is normally one of RawDataEntryFactory, JsonEntryFactory or RedactedJsonEntryFactory.
 //
 // Clients normally instead call VerifiedGet() with a MapTreeHead returned by VerifiedLatestMapState as this will also perform verification of inclusion.
-func (g *VerifiableMap) Get(key []byte, treeSize int64) (*pb.MapGetValueResponse, error) {
-	return g.Service.MapGetValue(context.Background(), &pb.MapGetValueRequest{
+func (g *VerifiableMap) Get(ctx context.Context, key []byte, treeSize int64) (*pb.MapGetValueResponse, error) {
+	return g.Service.MapGetValue(ctx, &pb.MapGetValueRequest{
 		Key:      key,
 		Map:      g.Map,
 		TreeSize: treeSize,
@@ -401,8 +385,8 @@ func (g *VerifiableMap) Get(key []byte, treeSize int64) (*pb.MapGetValueResponse
 // Set will generate a map mutation to set the given value for the given key.
 // While this will return quickly, the change will be reflected asynchronously in the map.
 // Returns an AddEntryResponse which contains the leaf hash for the mutation log entry.
-func (g *VerifiableMap) Set(key []byte, value *pb.LeafData) (MapUpdatePromise, error) {
-	resp, err := g.Service.MapSetValue(context.Background(), &pb.MapSetValueRequest{
+func (g *VerifiableMap) Set(ctx context.Context, key []byte, value *pb.LeafData) (MapUpdatePromise, error) {
+	resp, err := g.Service.MapSetValue(ctx, &pb.MapSetValueRequest{
 		Map: g.Map,
 		Mutation: &pb.MapMutation{
 			Action: "set",
@@ -423,8 +407,8 @@ func (g *VerifiableMap) Set(key []byte, value *pb.LeafData) (MapUpdatePromise, e
 // is equivalent to calling Set with an empty value.
 // While this will return quickly, the change will be reflected asynchronously in the map.
 // Returns an AddEntryResponse which contains the leaf hash for the mutation log entry.
-func (g *VerifiableMap) Delete(key []byte) (MapUpdatePromise, error) {
-	resp, err := g.Service.MapSetValue(context.Background(), &pb.MapSetValueRequest{
+func (g *VerifiableMap) Delete(ctx context.Context, key []byte) (MapUpdatePromise, error) {
+	resp, err := g.Service.MapSetValue(ctx, &pb.MapSetValueRequest{
 		Map: g.Map,
 		Mutation: &pb.MapMutation{
 			Action: "delete",
@@ -444,8 +428,8 @@ func (g *VerifiableMap) Delete(key []byte) (MapUpdatePromise, error) {
 // previous leaf hash being that specified by previousLeaf.
 // While this will return quickly, the change will be reflected asynchronously in the map.
 // Returns an AddEntryResponse which contains the leaf hash for the mutation log entry.
-func (g *VerifiableMap) Update(key []byte, value *pb.LeafData, previousLeaf []byte) (MapUpdatePromise, error) {
-	resp, err := g.Service.MapSetValue(context.Background(), &pb.MapSetValueRequest{
+func (g *VerifiableMap) Update(ctx context.Context, key []byte, value *pb.LeafData, previousLeaf []byte) (MapUpdatePromise, error) {
+	resp, err := g.Service.MapSetValue(ctx, &pb.MapSetValueRequest{
 		Map: g.Map,
 		Mutation: &pb.MapMutation{
 			Action:           "update",
@@ -465,8 +449,8 @@ func (g *VerifiableMap) Update(key []byte, value *pb.LeafData, previousLeaf []by
 
 // TreeHead returns map root hash for the map at the given tree size. Specify continusec.Head
 // to receive a root hash for the latest tree size.
-func (g *VerifiableMap) TreeHead(treeSize int64) (*pb.MapTreeHashResponse, error) {
-	return g.Service.MapTreeHash(context.Background(), &pb.MapTreeHashRequest{
+func (g *VerifiableMap) TreeHead(ctx context.Context, treeSize int64) (*pb.MapTreeHashResponse, error) {
+	return g.Service.MapTreeHash(ctx, &pb.MapTreeHashRequest{
 		Map:      g.Map,
 		TreeSize: treeSize,
 	})
@@ -481,12 +465,12 @@ func (p *mapSetPromise) LeafHash() []byte {
 	return p.MTL
 }
 
-func (p *mapSetPromise) Wait() (*pb.MapTreeHashResponse, error) {
-	lth, err := p.Map.MutationLog().BlockUntilPresent(p.MTL)
+func (p *mapSetPromise) Wait(ctx context.Context) (*pb.MapTreeHashResponse, error) {
+	lth, err := p.Map.MutationLog().BlockUntilPresent(ctx, p.MTL)
 	if err != nil {
 		return nil, err
 	}
-	return p.Map.TreeHead(lth.TreeSize)
+	return p.Map.TreeHead(ctx, lth.TreeSize)
 }
 
 type logAddPromise struct {
@@ -498,6 +482,6 @@ func (p *logAddPromise) LeafHash() []byte {
 	return p.MTL
 }
 
-func (p *logAddPromise) Wait() (*pb.LogTreeHashResponse, error) {
-	return p.Log.BlockUntilPresent(p.MTL)
+func (p *logAddPromise) Wait(ctx context.Context) (*pb.LogTreeHashResponse, error) {
+	return p.Log.BlockUntilPresent(ctx, p.MTL)
 }

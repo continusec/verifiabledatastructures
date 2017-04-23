@@ -32,7 +32,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
+func testMap(ctx context.Context, t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	account := (&Client{
 		Service: service,
 	}).Account("999", "secret")
@@ -42,25 +42,25 @@ func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	var lastP MapUpdatePromise
 	var err error
 	for i := 0; i < numToDo; i++ {
-		lastP, err = vmap.Set([]byte(fmt.Sprintf("foo%d", i)), &pb.LeafData{LeafInput: []byte(fmt.Sprintf("fooval%d", i))})
+		lastP, err = vmap.Set(ctx, []byte(fmt.Sprintf("foo%d", i)), &pb.LeafData{LeafInput: []byte(fmt.Sprintf("fooval%d", i))})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	_, err = lastP.Wait()
+	_, err = lastP.Wait(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ms, err := vmap.VerifiedLatestMapState(nil)
+	ms, err := vmap.VerifiedLatestMapState(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Make sure we don't break on non-existent entries
 	for i := 0; i < numToDo; i++ {
-		entry, err := vmap.VerifiedGet([]byte(fmt.Sprintf("baz%d", i)), ms)
+		entry, err := vmap.VerifiedGet(ctx, []byte(fmt.Sprintf("baz%d", i)), ms)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -71,7 +71,7 @@ func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 
 	for i := 0; i < numToDo; i++ {
-		entry, err := vmap.VerifiedGet([]byte(fmt.Sprintf("foo%d", i)), ms)
+		entry, err := vmap.VerifiedGet(ctx, []byte(fmt.Sprintf("foo%d", i)), ms)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -82,18 +82,18 @@ func testMap(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 }
 
-func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
+func testLog(ctx context.Context, t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	account := (&Client{
 		Service: service,
 	}).Account("999", "secret")
 	log := account.VerifiableLog("smoketest")
 
-	treeRoot, err := log.TreeHead(0)
+	treeRoot, err := log.TreeHead(ctx, 0)
 	if !(treeRoot == nil || (treeRoot.TreeSize == 0 && len(treeRoot.RootHash) == 0)) {
 		t.Fatal("Expecting log to not exist.")
 	}
 
-	aer, err := log.Add(&pb.LeafData{LeafInput: []byte("foo")})
+	aer, err := log.Add(ctx, &pb.LeafData{LeafInput: []byte("foo")})
 	if err != nil {
 		t.Fatal("Failed adding item", err)
 	}
@@ -104,7 +104,7 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 
 	for treeRoot == nil || treeRoot.TreeSize < 1 {
-		treeRoot, err = log.TreeHead(Head)
+		treeRoot, err = log.TreeHead(ctx, Head)
 		if err != nil {
 			t.Fatal("Failure getting root hash")
 		}
@@ -114,27 +114,27 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 		t.Fatal("Failed calculating tree root")
 	}
 
-	_, err = log.Add(&pb.LeafData{LeafInput: []byte("fooz")})
+	_, err = log.Add(ctx, &pb.LeafData{LeafInput: []byte("fooz")})
 	if err != nil {
 		t.Fatal("Failed adding item")
 	}
 
-	_, err = log.Add(&pb.LeafData{LeafInput: []byte("bar")})
+	_, err = log.Add(ctx, &pb.LeafData{LeafInput: []byte("bar")})
 	if err != nil {
 		t.Fatal("Failed adding item")
 	}
 
-	_, err = log.Add(&pb.LeafData{LeafInput: []byte("baz")})
+	_, err = log.Add(ctx, &pb.LeafData{LeafInput: []byte("baz")})
 	if err != nil {
 		t.Fatal("Failed adding item")
 	}
 
-	p, err := log.Add(&pb.LeafData{LeafInput: []byte("smez")})
+	p, err := log.Add(ctx, &pb.LeafData{LeafInput: []byte("smez")})
 	if err != nil {
 		t.Fatal("Failed adding item")
 	}
 
-	treeRoot, err = p.Wait()
+	treeRoot, err = p.Wait(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 
 	entries := make([]*pb.LeafData, treeRoot.TreeSize)
 	for i := int64(0); i < treeRoot.TreeSize; i++ {
-		entries[i], err = log.Entry(i)
+		entries[i], err = log.Entry(ctx, i)
 		if err != nil {
 			t.Fatal("Failure getting entry")
 		}
@@ -156,13 +156,13 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 
 	for i := 0; i < 200; i++ {
-		p, err = log.Add(&pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
+		p, err = log.Add(ctx, &pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
 		if err != nil {
 			t.Fatal("Failed adding item")
 		}
 	}
 
-	treeRoot, err = p.Wait()
+	treeRoot, err = p.Wait(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 
 	cnt := 0
 	for entry := range log.Entries(context.Background(), 0, treeRoot.TreeSize) {
-		err = log.VerifyInclusion(treeRoot, LeafMerkleTreeHash(entry.LeafInput))
+		err = log.VerifyInclusion(ctx, treeRoot, LeafMerkleTreeHash(entry.LeafInput))
 		if err != nil {
 			t.Fatal("Failure verifiying inclusion")
 		}
@@ -183,17 +183,17 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 		t.Fatal("Failed to get all entries")
 	}
 
-	th3, err := log.TreeHead(3)
+	th3, err := log.TreeHead(ctx, 3)
 	if err != nil {
 		t.Fatal("Failure getting root hash")
 	}
 
-	th7, err := log.TreeHead(7)
+	th7, err := log.TreeHead(ctx, 7)
 	if err != nil {
 		t.Fatal("Failure getting root hash")
 	}
 
-	err = log.VerifyConsistency(th3, th7)
+	err = log.VerifyConsistency(ctx, th3, th7)
 	if err != nil {
 		t.Fatal("Failure to generate consistency between 3 and 7")
 	}
@@ -213,13 +213,13 @@ func testLog(t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
 	}
 
 	for i := 0; i < 200; i++ {
-		p, err = log.Add(&pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
+		p, err = log.Add(ctx, &pb.LeafData{LeafInput: []byte(fmt.Sprintf("foo %d", rand.Int()))})
 		if err != nil {
 			t.Fatal("Failed adding item")
 		}
 	}
 
-	treeRoot, err = p.Wait()
+	treeRoot, err = p.Wait(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,29 +315,30 @@ func TestPermissions(t *testing.T) {
 
 	var err error
 	var v *pb.LeafData
+	ctx := context.TODO()
 
-	_, err = c.Account("0", "secr3t").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	_, err = c.Account("0", "secr3t").VerifiableLog("foo").Add(ctx, &pb.LeafData{LeafInput: []byte("bar")})
 	expectErrCode(t, codes.PermissionDenied, err)
 
-	_, err = c.Account("0", "secret").VerifiableLog("fofo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	_, err = c.Account("0", "secret").VerifiableLog("fofo").Add(ctx, &pb.LeafData{LeafInput: []byte("bar")})
 	expectErrCode(t, codes.PermissionDenied, err)
 
-	_, err = c.Account("1", "secret").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	_, err = c.Account("1", "secret").VerifiableLog("foo").Add(ctx, &pb.LeafData{LeafInput: []byte("bar")})
 	expectErrCode(t, codes.PermissionDenied, err)
 
-	_, err = c.Account("0", "secret").VerifiableLog("foo").Add(&pb.LeafData{LeafInput: []byte("bar")})
+	_, err = c.Account("0", "secret").VerifiableLog("foo").Add(ctx, &pb.LeafData{LeafInput: []byte("bar")})
 	expectErr(t, nil, err)
 
 	v, err = CreateRedactableJSONLeafData([]byte("{\"name\":\"adam\",\"dob\":\"100000\"}"))
 	expectErr(t, nil, err)
-	p, err := c.Account("0", "secret").VerifiableLog("foo").Add(v)
+	p, err := c.Account("0", "secret").VerifiableLog("foo").Add(ctx, v)
 	expectErr(t, nil, err)
 
-	_, err = p.Wait()
+	_, err = p.Wait(ctx)
 	expectErr(t, nil, err)
 
 	// Test less fields
-	resp, err := c.Account("0", "").VerifiableLog("foo").Entry(1)
+	resp, err := c.Account("0", "").VerifiableLog("foo").Entry(ctx, 1)
 	expectErr(t, nil, err)
 	st := string(resp.ExtraData)
 	if !strings.Contains(st, "\"dob\":\"***REDACTED***") {
@@ -351,7 +352,7 @@ func TestPermissions(t *testing.T) {
 	}
 
 	// Test more fields
-	resp, err = c.Account("0", "secret").VerifiableLog("foo").Entry(1)
+	resp, err = c.Account("0", "secret").VerifiableLog("foo").Entry(ctx, 1)
 	expectErr(t, nil, err)
 	st = string(resp.ExtraData)
 	if strings.Contains(st, "\"dob\":\"***REDACTED***") {
@@ -392,8 +393,8 @@ func runSmokeTests(c pb.VerifiableDataStructuresServiceServer, t *testing.T) {
 		NoGrpcSecurity: true,
 	}).MustDial()
 
-	testLog(t, d)
-	testMap(t, d)
+	testLog(context.TODO(), t, d)
+	testMap(context.TODO(), t, d)
 }
 
 func TestClientComms(t *testing.T) {
@@ -402,8 +403,8 @@ func TestClientComms(t *testing.T) {
 
 func TestBatchMutator(t *testing.T) {
 	d := createCleanEmptyBatchMutatorService()
-	testLog(t, d)
-	testMap(t, d)
+	testLog(context.TODO(), t, d)
+	testMap(context.TODO(), t, d)
 }
 
 // GenerateRootHashes is a utility function that emits a channel of root hashes

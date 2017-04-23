@@ -18,9 +18,11 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
+	"context"
 	"crypto/sha256"
+
+	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 func createNeededStack(start int64) [][2]int64 {
@@ -35,7 +37,7 @@ func createNeededStack(start int64) [][2]int64 {
 /* MUST be pow2. Assumes all args are range checked first */
 /* Actually, the above is a lie. If failOnMissing is set, then we fail if any values are missing.
    Otherwise we will return nil in those spots and return what we can. */
-func fetchSubTreeHashes(kr KeyReader, lt pb.LogType, ranges [][2]int64, failOnMissing bool) ([][]byte, error) {
+func fetchSubTreeHashes(ctx context.Context, kr KeyReader, lt pb.LogType, ranges [][2]int64, failOnMissing bool) ([][]byte, error) {
 	/*
 		Deliberately do not always error check above, as we wish to allow
 		for some empty nodes, e.g. 4..7. These must be picked up by
@@ -44,7 +46,7 @@ func fetchSubTreeHashes(kr KeyReader, lt pb.LogType, ranges [][2]int64, failOnMi
 	rv := make([][]byte, len(ranges))
 	for i, r := range ranges {
 		if (r[1] - r[0]) == 1 {
-			m, err := lookupLeafNodeByIndex(kr, lt, r[0])
+			m, err := lookupLeafNodeByIndex(ctx, kr, lt, r[0])
 			if err == nil {
 				rv[i] = m.Mth
 			} else {
@@ -53,7 +55,7 @@ func fetchSubTreeHashes(kr KeyReader, lt pb.LogType, ranges [][2]int64, failOnMi
 				}
 			}
 		} else {
-			m, err := lookupTreeNodeByRange(kr, lt, r[0], r[1])
+			m, err := lookupTreeNodeByRange(ctx, kr, lt, r[0], r[1])
 			if err == nil {
 				rv[i] = m.Mth
 			} else {
@@ -68,7 +70,7 @@ func fetchSubTreeHashes(kr KeyReader, lt pb.LogType, ranges [][2]int64, failOnMi
 }
 
 /* Assumes all args are range checked first */
-func calcSubTreeHash(kr KeyReader, lt pb.LogType, start, end int64) ([]byte, error) {
+func calcSubTreeHash(ctx context.Context, kr KeyReader, lt pb.LogType, start, end int64) ([]byte, error) {
 	r := make([][2]int64, 0, 8) // magic number bad - why did we do this?
 
 	for start != end {
@@ -77,7 +79,7 @@ func calcSubTreeHash(kr KeyReader, lt pb.LogType, start, end int64) ([]byte, err
 		start += k
 	}
 
-	hashes, err := fetchSubTreeHashes(kr, lt, r, true)
+	hashes, err := fetchSubTreeHashes(ctx, kr, lt, r, true)
 	if err != nil {
 		return nil, err
 	}

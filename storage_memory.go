@@ -22,17 +22,20 @@ import (
 	"encoding/hex"
 	"sync"
 
+	"golang.org/x/net/context"
+
 	"github.com/golang/protobuf/proto"
 )
 
-// TransientHashMapStorage gives a service that locks terrible, and does it all in memory
+// TransientHashMapStorage gives a service that does inefficiently locking, keeps everything in memory, and doesn't
+// exit clean from update transactions if there's an error.
 type TransientHashMapStorage struct {
 	dbLock sync.RWMutex
 	data   map[string]map[string][]byte
 }
 
 // ExecuteReadOnly executes a read only query
-func (bbs *TransientHashMapStorage) ExecuteReadOnly(namespace []byte, f func(db KeyReader) error) error {
+func (bbs *TransientHashMapStorage) ExecuteReadOnly(ctx context.Context, namespace []byte, f func(db KeyReader) error) error {
 	key := hex.EncodeToString(namespace)
 
 	bbs.dbLock.RLock()
@@ -50,7 +53,7 @@ func (bbs *TransientHashMapStorage) ExecuteReadOnly(namespace []byte, f func(db 
 }
 
 // ExecuteUpdate executes an update query
-func (bbs *TransientHashMapStorage) ExecuteUpdate(namespace []byte, f func(db KeyWriter) error) error {
+func (bbs *TransientHashMapStorage) ExecuteUpdate(ctx context.Context, namespace []byte, f func(db KeyWriter) error) error {
 	key := hex.EncodeToString(namespace)
 
 	bbs.dbLock.Lock()
@@ -71,7 +74,7 @@ type memoryThing struct {
 	Data map[string][]byte
 }
 
-func (db *memoryThing) Get(bucket, key []byte, value proto.Message) error {
+func (db *memoryThing) Get(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	if db.Data == nil {
 		return ErrNoSuchKey
 	}
@@ -83,7 +86,7 @@ func (db *memoryThing) Get(bucket, key []byte, value proto.Message) error {
 	return proto.Unmarshal(rv, value)
 }
 
-func (db *memoryThing) Set(bucket, key []byte, value proto.Message) error {
+func (db *memoryThing) Set(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	if db.Data == nil {
 		return ErrNotImplemented
 	}

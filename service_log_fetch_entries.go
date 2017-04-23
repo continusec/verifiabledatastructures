@@ -29,7 +29,7 @@ import (
 
 // LogFetchEntries returns the log entries
 func (s *localServiceImpl) LogFetchEntries(ctx context.Context, req *pb.LogFetchEntriesRequest) (*pb.LogFetchEntriesResponse, error) {
-	am, err := s.verifyAccessForLogOperation(req.Log, operationReadEntry)
+	am, err := s.verifyAccessForLogOperation(ctx, req.Log, operationReadEntry)
 	if err != nil {
 		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
@@ -43,8 +43,8 @@ func (s *localServiceImpl) LogFetchEntries(ctx context.Context, req *pb.LogFetch
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "extra getting bucket: %s", err)
 	}
-	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
-		head, err := lookupLogTreeHead(kr, req.Log.LogType)
+	err = s.Reader.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
+		head, err := lookupLogTreeHead(ctx, kr, req.Log.LogType)
 		if err != nil {
 			return err
 		}
@@ -61,14 +61,14 @@ func (s *localServiceImpl) LogFetchEntries(ctx context.Context, req *pb.LogFetch
 			return status.Errorf(codes.InvalidArgument, "tree size out of range")
 		}
 
-		hashes, err := lookupLogEntryHashes(kr, req.Log.LogType, req.First, last)
+		hashes, err := lookupLogEntryHashes(ctx, kr, req.Log.LogType, req.First, last)
 		if err != nil {
 			return err
 		}
 
 		vals := make([]*pb.LeafData, len(hashes))
 		for i, h := range hashes {
-			v, err := lookupDataByLeafHash(kr, req.Log.LogType, h)
+			v, err := lookupDataByLeafHash(ctx, kr, req.Log.LogType, h)
 			if err != nil {
 				return err
 			}

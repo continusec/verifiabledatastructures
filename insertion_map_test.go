@@ -127,9 +127,8 @@ func doInclusionProofCheck(t *testing.T, vmap *VerifiableMap, key, val, rootHash
 	}
 }
 
-func processListOfMutations(t *testing.T, mutations []*mutRes, doAfter func(t *testing.T, vmap *VerifiableMap)) {
+func processListOfMutations(ctx context.Context, t *testing.T, mutations []*mutRes, doAfter func(t *testing.T, vmap *VerifiableMap)) {
 	vmap := (&Client{Service: createCleanEmptyService()}).Account("999", "secret").VerifiableMap("foo")
-	ctx := context.Background()
 	var err error
 	var last *pb.MapSetValueResponse
 	for _, mr := range mutations {
@@ -141,18 +140,18 @@ func processListOfMutations(t *testing.T, mutations []*mutRes, doAfter func(t *t
 			t.Fatal(err)
 		}
 	}
-	lth, err := vmap.MutationLog().BlockUntilPresent(last.LeafHash)
+	lth, err := vmap.MutationLog().BlockUntilPresent(ctx, last.LeafHash)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = vmap.BlockUntilSize(lth.TreeSize)
+	_, err = vmap.BlockUntilSize(ctx, lth.TreeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var mts *MapTreeState
 	for i, mr := range mutations {
-		mts, err = vmap.VerifiedMapState(mts, int64(i+1))
+		mts, err = vmap.VerifiedMapState(ctx, mts, int64(i+1))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -180,7 +179,7 @@ func decodeH(s string) []byte {
 }
 
 func TestStrangeValueRetrieval(t *testing.T) {
-	processListOfMutations(t, []*mutRes{
+	processListOfMutations(context.TODO(), t, []*mutRes{
 		&mutRes{ // 0
 			Mutation: &pb.MapMutation{
 				Action: "set",
@@ -204,7 +203,7 @@ func TestStrangeValueRetrieval(t *testing.T) {
 }
 
 func TestConsUpNewNodesWithDelete(t *testing.T) {
-	processListOfMutations(t, []*mutRes{
+	processListOfMutations(context.TODO(), t, []*mutRes{
 		&mutRes{ // 0
 			Mutation: &pb.MapMutation{
 				Action: "set",
@@ -315,7 +314,7 @@ func TestConsUpNewNodesWithDelete(t *testing.T) {
 }
 
 func TestConsUpNewNodes(t *testing.T) {
-	processListOfMutations(t, []*mutRes{
+	processListOfMutations(context.TODO(), t, []*mutRes{
 		&mutRes{
 			Mutation: &pb.MapMutation{
 				Action: "set",
@@ -443,7 +442,7 @@ func TestConsUpNewNodes(t *testing.T) {
 }
 
 func TestBoringConsUpNewNodes(t *testing.T) {
-	processListOfMutations(t, []*mutRes{
+	processListOfMutations(context.TODO(), t, []*mutRes{
 		&mutRes{Mutation: &pb.MapMutation{Action: "set", Key: []byte("k8882"), Value: &pb.LeafData{LeafInput: []byte("v9391")}}, Result: "uNyV3m0Xhu+WAZMgBmIWsQ1gdMJri++aokKnnNKWe/g="},
 		&mutRes{Mutation: &pb.MapMutation{Action: "set", Key: []byte("k4751"), Value: &pb.LeafData{LeafInput: []byte("v5616")}}, Result: "d4KWFHl9rLNaiPG1JrbptiRSGHwfBw/iu1TxkD1ydWU="},
 		&mutRes{Mutation: &pb.MapMutation{Action: "set", Key: []byte("k3043"), Value: &pb.LeafData{LeafInput: []byte("v3902")}}, Result: "TVMtuc4o+0/zdJpUCm5vdiz5Lg3r8t2h4G7n8BCFCu4="},

@@ -38,7 +38,7 @@ func wrapClientError(err error) error {
 
 // LogInclusionProof returns an inclusion proof
 func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInclusionProofRequest) (*pb.LogInclusionProofResponse, error) {
-	_, err := s.verifyAccessForLogOperation(req.Log, operationProveInclusion)
+	_, err := s.verifyAccessForLogOperation(ctx, req.Log, operationProveInclusion)
 	if err != nil {
 		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
@@ -52,8 +52,8 @@ func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInc
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "extra getting bucket: %s", err)
 	}
-	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
-		head, err := lookupLogTreeHead(kr, req.Log.LogType)
+	err = s.Reader.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
+		head, err := lookupLogTreeHead(ctx, kr, req.Log.LogType)
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInc
 			leafIndex = req.LeafIndex
 		} else {
 			// Then we must fetch the index
-			ei, err := lookupIndexByLeafHash(kr, req.Log.LogType, req.MtlHash)
+			ei, err := lookupIndexByLeafHash(ctx, kr, req.Log.LogType, req.MtlHash)
 			if err != nil {
 				return err
 			}
@@ -92,7 +92,7 @@ func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInc
 
 		// Ranges are good
 		ranges := Path(leafIndex, 0, treeSize)
-		path, err := fetchSubTreeHashes(kr, req.Log.LogType, ranges, false)
+		path, err := fetchSubTreeHashes(ctx, kr, req.Log.LogType, ranges, false)
 		if err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInc
 					// Would have been nice if GetSubTreeHashes could better handle these
 					return ErrNotFound
 				}
-				path[i], err = calcSubTreeHash(kr, req.Log.LogType, rr[0], rr[1])
+				path[i], err = calcSubTreeHash(ctx, kr, req.Log.LogType, rr[0], rr[1])
 				if err != nil {
 					return err
 				}

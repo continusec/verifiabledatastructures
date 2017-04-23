@@ -18,17 +18,20 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"encoding/json"
+
+	"golang.org/x/net/context"
+
+	"github.com/continusec/verifiabledatastructures/pb"
 )
 
-func writeOutLogTreeNodes(db KeyWriter, log *pb.LogRef, entryIndex int64, mtl []byte, stack [][]byte) ([]byte, error) {
+func writeOutLogTreeNodes(ctx context.Context, db KeyWriter, log *pb.LogRef, entryIndex int64, mtl []byte, stack [][]byte) ([]byte, error) {
 	stack = append(stack, mtl)
 	for zz, width := entryIndex, int64(2); (zz & 1) == 1; zz, width = zz>>1, width<<1 {
 		parN := NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1])
 		stack = append(stack[:len(stack)-2], parN)
-		err := writeTreeNodeByRange(db, log.LogType, entryIndex+1-width, entryIndex+1, &pb.TreeNode{Mth: parN})
+		err := writeTreeNodeByRange(ctx, db, log.LogType, entryIndex+1-width, entryIndex+1, &pb.TreeNode{Mth: parN})
 		if err != nil {
 			return nil, err
 		}
@@ -43,12 +46,12 @@ func writeOutLogTreeNodes(db KeyWriter, log *pb.LogRef, entryIndex int64, mtl []
 
 // Must be idempotent, ie call it many times with same result.
 // return nil, nil if already exists
-func addEntryToLog(db KeyWriter, sizeBefore int64, log *pb.LogRef, data *pb.LeafData) (*pb.LogTreeHashResponse, error) {
+func addEntryToLog(ctx context.Context, db KeyWriter, sizeBefore int64, log *pb.LogRef, data *pb.LeafData) (*pb.LogTreeHashResponse, error) {
 	// First, calc our hash
 	mtl := LeafMerkleTreeHash(data.LeafInput)
 
 	// Now, see if we already have it stored
-	ei, err := lookupIndexByLeafHash(db, log.LogType, mtl)
+	ei, err := lookupIndexByLeafHash(ctx, db, log.LogType, mtl)
 	switch err {
 	case nil:
 		if ei.Index < sizeBefore {
@@ -63,35 +66,35 @@ func addEntryToLog(db KeyWriter, sizeBefore int64, log *pb.LogRef, data *pb.Leaf
 	}
 
 	// First write the data
-	err = writeDataByLeafHash(db, log.LogType, mtl, data)
+	err = writeDataByLeafHash(ctx, db, log.LogType, mtl, data)
 	if err != nil {
 		return nil, err
 	}
 
 	// Then write us at the index
-	err = writeLeafNodeByIndex(db, log.LogType, sizeBefore, &pb.LeafNode{Mth: mtl})
+	err = writeLeafNodeByIndex(ctx, db, log.LogType, sizeBefore, &pb.LeafNode{Mth: mtl})
 	if err != nil {
 		return nil, err
 	}
 
 	// And our index by leaf hash
-	err = writeIndexByLeafHash(db, log.LogType, mtl, &pb.EntryIndex{Index: sizeBefore})
+	err = writeIndexByLeafHash(ctx, db, log.LogType, mtl, &pb.EntryIndex{Index: sizeBefore})
 	if err != nil {
 		return nil, err
 	}
 
 	// Write out needed hashes
-	stack, err := fetchSubTreeHashes(db, log.LogType, createNeededStack(sizeBefore), true)
+	stack, err := fetchSubTreeHashes(ctx, db, log.LogType, createNeededStack(sizeBefore), true)
 	if err != nil {
 		return nil, err
 	}
-	rootHash, err := writeOutLogTreeNodes(db, log, sizeBefore, mtl, stack)
+	rootHash, err := writeOutLogTreeNodes(ctx, db, log, sizeBefore, mtl, stack)
 	if err != nil {
 		return nil, err
 	}
 
 	// Write log root hash
-	err = writeLogRootHashBySize(db, log.LogType, sizeBefore+1, &pb.LogTreeHash{Mth: rootHash})
+	err = writeLogRootHashBySize(ctx, db, log.LogType, sizeBefore+1, &pb.LogTreeHash{Mth: rootHash})
 	if err != nil {
 		return nil, err
 	}
@@ -102,9 +105,9 @@ func addEntryToLog(db KeyWriter, sizeBefore int64, log *pb.LogRef, data *pb.Leaf
 	}, nil
 }
 
-func applyLogAddEntry(db KeyWriter, sizeBefore int64, req *pb.LogAddEntryRequest) (int64, error) {
+func applyLogAddEntry(ctx context.Context, db KeyWriter, sizeBefore int64, req *pb.LogAddEntryRequest) (int64, error) {
 	// Step 1 - add entry to log as request
-	mutLogHead, err := addEntryToLog(db, sizeBefore, req.Log, req.Value)
+	mutLogHead, err := addEntryToLog(ctx, db, sizeBefore, req.Log, req.Value)
 	if err != nil {
 		return 0, err
 	}
@@ -122,7 +125,7 @@ func applyLogAddEntry(db KeyWriter, sizeBefore int64, req *pb.LogAddEntryRequest
 		if err != nil {
 			return 0, err
 		}
-		mrh, err := setMapValue(db, mapForMutationLog(req.Log), sizeBefore, &mut)
+		mrh, err := setMapValue(ctx, db, mapForMutationLog(req.Log), sizeBefore, &mut)
 		if err != nil {
 			return 0, err
 		}
@@ -135,7 +138,7 @@ func applyLogAddEntry(db KeyWriter, sizeBefore int64, req *pb.LogAddEntryRequest
 		if err != nil {
 			return 0, err
 		}
-		_, err = addEntryToLog(db, sizeBefore, treeHeadLogForMutationLog(req.Log), thld)
+		_, err = addEntryToLog(ctx, db, sizeBefore, treeHeadLogForMutationLog(req.Log), thld)
 		if err != nil {
 			return 0, err
 		}

@@ -18,10 +18,14 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
+import (
+	"golang.org/x/net/context"
+
+	"github.com/continusec/verifiabledatastructures/pb"
+)
 
 // MutatorService receives requested mutations
 type MutatorService interface {
 	// QueueMutation requests an asynchronous mutation in a namespace.
-	QueueMutation(namespace []byte, mut *pb.Mutation) error
+	QueueMutation(ctx context.Context, namespace []byte, mut *pb.Mutation) error
 }

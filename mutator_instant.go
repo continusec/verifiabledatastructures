@@ -18,7 +18,11 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
+import (
+	"golang.org/x/net/context"
+
+	"github.com/continusec/verifiabledatastructures/pb"
+)
 
 // InstantMutator will synchronously apply the mutation. This is suitable
 // for test and low-usage environments.
@@ -28,18 +32,18 @@ type InstantMutator struct {
 }
 
 // QueueMutation applies the mutation, normally asynchronously, but synchronously for the InstantMutator
-func (m *InstantMutator) QueueMutation(ns []byte, mut *pb.Mutation) error {
-	return m.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
-		startSize, err := readObjectSize(kw)
+func (m *InstantMutator) QueueMutation(ctx context.Context, ns []byte, mut *pb.Mutation) error {
+	return m.Writer.ExecuteUpdate(ctx, ns, func(kw KeyWriter) error {
+		startSize, err := readObjectSize(ctx, kw)
 		if err != nil {
 			return err
 		}
-		nextSize, err := ApplyMutation(kw, startSize, mut)
+		nextSize, err := ApplyMutation(ctx, kw, startSize, mut)
 		if err != nil {
 			return err
 		}
 		if nextSize != startSize {
-			err = writeObjectSize(kw, nextSize)
+			err = writeObjectSize(ctx, kw, nextSize)
 			if err != nil {
 				return err
 			}

@@ -29,7 +29,7 @@ import (
 
 // MapGetValue returns a value from a map
 func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueRequest) (*pb.MapGetValueResponse, error) {
-	am, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
+	am, err := s.verifyAccessForMap(ctx, req.Map, pb.Permission_PERM_MAP_GET_VALUE)
 	if err != nil {
 		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
@@ -43,10 +43,10 @@ func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
-	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
+	err = s.Reader.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
 		kp := BPathFromKey(req.Key)
 
-		th, err := lookupLogTreeHead(kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
+		th, err := lookupLogTreeHead(ctx, kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
 		if err != nil {
 			return err
 		}
@@ -60,13 +60,13 @@ func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueR
 			return status.Errorf(codes.InvalidArgument, "bad tree size")
 		}
 
-		root, err := lookupMapHash(kr, treeSize, BPathEmpty)
+		root, err := lookupMapHash(ctx, kr, treeSize, BPathEmpty)
 
 		if err != nil {
 			return err
 		}
 
-		cur, ancestors, err := descendToFork(kr, kp, root)
+		cur, ancestors, err := descendToFork(ctx, kr, kp, root)
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueR
 				if bytes.Equal(cur.LeafHash, nullLeafHash) {
 					dataRv = &pb.LeafData{} // empty value
 				} else {
-					dataRv, err = lookupDataByLeafHash(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
+					dataRv, err = lookupDataByLeafHash(ctx, kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, cur.LeafHash)
 					if err != nil {
 						return err
 					}

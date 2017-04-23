@@ -18,11 +18,12 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/continusec/objecthash"
+	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 const (
@@ -53,21 +54,21 @@ var (
 	}
 )
 
-func (s *localServiceImpl) verifyAccessForMap(vmap *pb.MapRef, perm pb.Permission) (*AccessModifier, error) {
-	return s.AccessPolicy.VerifyAllowed(vmap.Account.Id, vmap.Account.ApiKey, vmap.Name, perm)
+func (s *localServiceImpl) verifyAccessForMap(ctx context.Context, vmap *pb.MapRef, perm pb.Permission) (*AccessModifier, error) {
+	return s.AccessPolicy.VerifyAllowed(ctx, vmap.Account.Id, vmap.Account.ApiKey, vmap.Name, perm)
 }
 
-func (s *localServiceImpl) verifyAccessForLog(log *pb.LogRef, perm pb.Permission) (*AccessModifier, error) {
-	return s.AccessPolicy.VerifyAllowed(log.Account.Id, log.Account.ApiKey, log.Name, perm)
+func (s *localServiceImpl) verifyAccessForLog(ctx context.Context, log *pb.LogRef, perm pb.Permission) (*AccessModifier, error) {
+	return s.AccessPolicy.VerifyAllowed(ctx, log.Account.Id, log.Account.ApiKey, log.Name, perm)
 }
 
-func (s *localServiceImpl) verifyAccessForLogOperation(log *pb.LogRef, op int) (*AccessModifier, error) {
+func (s *localServiceImpl) verifyAccessForLogOperation(ctx context.Context, log *pb.LogRef, op int) (*AccessModifier, error) {
 	perm, ok := operationForLogType[log.LogType][op]
 	if !ok {
 		return nil, ErrNotAuthorized
 	}
 
-	return s.verifyAccessForLog(log, perm)
+	return s.verifyAccessForLog(ctx, log, perm)
 }
 
 func filterLeafData(ld *pb.LeafData, am *AccessModifier) (*pb.LeafData, error) {

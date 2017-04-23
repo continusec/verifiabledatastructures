@@ -33,7 +33,7 @@ func StartRESTServer(conf *pb.ServerConfig, server pb.VerifiableDataStructuresSe
 	}
 	log.Printf("Listening REST on %s...", conf.RestListenBind)
 	if conf.InsecureServerForTesting {
-		return http.ListenAndServe(conf.RestListenBind, CreateRESTHandler(server))
+		return http.ListenAndServe(conf.RestListenBind, CreateRESTHandler(server, nil))
 	}
-	return http.ListenAndServeTLS(conf.RestListenBind, conf.ServerCertPath, conf.ServerKeyPath, CreateRESTHandler(server))
+	return http.ListenAndServeTLS(conf.RestListenBind, conf.ServerCertPath, conf.ServerKeyPath, CreateRESTHandler(server, nil))
 }

@@ -27,7 +27,7 @@ import (
 
 // LogTreeHash returns the log tree hash
 func (s *localServiceImpl) LogTreeHash(ctx context.Context, req *pb.LogTreeHashRequest) (*pb.LogTreeHashResponse, error) {
-	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
+	_, err := s.verifyAccessForLogOperation(ctx, req.Log, operationReadHash)
 	if err != nil {
 		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
@@ -41,8 +41,8 @@ func (s *localServiceImpl) LogTreeHash(ctx context.Context, req *pb.LogTreeHashR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
-	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
-		head, err := lookupLogTreeHead(kr, req.Log.LogType)
+	err = s.Reader.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
+		head, err := lookupLogTreeHead(ctx, kr, req.Log.LogType)
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func (s *localServiceImpl) LogTreeHash(ctx context.Context, req *pb.LogTreeHashR
 			return status.Errorf(codes.InvalidArgument, "bad tree size")
 		}
 
-		m, err := lookupLogRootHashBySize(kr, req.Log.LogType, req.TreeSize)
+		m, err := lookupLogRootHashBySize(ctx, kr, req.Log.LogType, req.TreeSize)
 		if err != nil {
 			return err
 		}

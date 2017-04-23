@@ -24,6 +24,8 @@ import (
 	"log"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
 )
@@ -84,18 +86,18 @@ type batchMutatorImpl struct {
 }
 
 // It must return nil, ErrNoSuchKey if none found
-func (m *mapNoLockDB) Get(bucket, key []byte, value proto.Message) error {
+func (m *mapNoLockDB) Get(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	k := hex.EncodeToString(bucket) + "|" + hex.EncodeToString(key)
 	b, ok := m.M[k]
 	if ok {
 		return proto.Unmarshal(b, value)
 	}
-	return m.Parent.Get(bucket, key, value)
+	return m.Parent.Get(ctx, bucket, key, value)
 }
 
 // Set sets the thing. Value of nil means delete.
 // It must return nil, ErrNoSuchKey if none found
-func (m *mapNoLockDB) Set(bucket, key []byte, value proto.Message) error {
+func (m *mapNoLockDB) Set(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	k := hex.EncodeToString(bucket) + "|" + hex.EncodeToString(key)
 	b, err := proto.Marshal(value)
 	if err != nil {
@@ -111,7 +113,7 @@ func (m *mapNoLockDB) Set(bucket, key []byte, value proto.Message) error {
 }
 
 // Keep reading and apply until timeout or any other reason
-func (bm *batchMutatorImpl) handleBatch(kw KeyWriter, startSize int64, seed *chObject) (int64, *chObject, error) {
+func (bm *batchMutatorImpl) handleBatch(ctx context.Context, kw KeyWriter, startSize int64, seed *chObject) (int64, *chObject, error) {
 	curSize := startSize
 	var err error
 	obj := seed
@@ -121,7 +123,7 @@ func (bm *batchMutatorImpl) handleBatch(kw KeyWriter, startSize int64, seed *chO
 		if !bytes.Equal(seed.ns, obj.ns) {
 			return curSize, seed, nil
 		}
-		curSize, err = ApplyMutation(kw, curSize, obj.mut)
+		curSize, err = ApplyMutation(ctx, kw, curSize, obj.mut)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -141,6 +143,8 @@ func (bm *batchMutatorImpl) handleBatch(kw KeyWriter, startSize int64, seed *chO
 }
 
 func (bm *batchMutatorImpl) consume() {
+	ctx := context.Background()
+
 	var err error
 	var seed *chObject
 	var ok bool
@@ -158,15 +162,15 @@ func (bm *batchMutatorImpl) consume() {
 		var startSize, nextSize int64
 
 		ns := seed.ns
-		err := bm.Conf.Writer.ExecuteReadOnly(ns, func(kr KeyReader) error {
+		err := bm.Conf.Writer.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
 			wrapper.Parent = kr
 
-			startSize, err = readObjectSize(kr)
+			startSize, err = readObjectSize(ctx, kr)
 			if err != nil {
 				return err
 			}
 
-			nextSize, seed, err = bm.handleBatch(wrapper, startSize, seed)
+			nextSize, seed, err = bm.handleBatch(ctx, wrapper, startSize, seed)
 			if err != nil {
 				return err
 			}
@@ -178,14 +182,14 @@ func (bm *batchMutatorImpl) consume() {
 		}
 
 		if nextSize > startSize { // save it out
-			err = bm.Conf.Writer.ExecuteUpdate(ns, func(kw KeyWriter) error {
+			err = bm.Conf.Writer.ExecuteUpdate(ctx, ns, func(kw KeyWriter) error {
 				for _, o := range wrapper.L {
-					err := kw.Set(o.Bucket, o.Key, o.Value)
+					err := kw.Set(ctx, o.Bucket, o.Key, o.Value)
 					if err != nil {
 						return err
 					}
 				}
-				return writeObjectSize(kw, nextSize)
+				return writeObjectSize(ctx, kw, nextSize)
 			})
 			if err != nil {
 				log.Fatal(err)
@@ -195,7 +199,7 @@ func (bm *batchMutatorImpl) consume() {
 }
 
 // QueueMutation applies the mutation, normally asynchronously, but synchronously for the InstantMutator
-func (bm *batchMutatorImpl) QueueMutation(ns []byte, mut *pb.Mutation) error {
+func (bm *batchMutatorImpl) QueueMutation(ctx context.Context, ns []byte, mut *pb.Mutation) error {
 	bm.Ch <- &chObject{ns: ns, mut: mut}
 	return nil
 }

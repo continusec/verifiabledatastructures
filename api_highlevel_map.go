@@ -25,8 +25,8 @@ import (
 
 // VerifiedGet gets the value for the given key in the specified MapTreeState, and verifies that it is
 // included in the MapTreeHead (wrapped by the MapTreeState) before returning.
-func (vmap *VerifiableMap) VerifiedGet(key []byte, mapHead *MapTreeState) (*pb.LeafData, error) {
-	proof, err := vmap.Get(key, mapHead.TreeSize())
+func (vmap *VerifiableMap) VerifiedGet(ctx context.Context, key []byte, mapHead *MapTreeState) (*pb.LeafData, error) {
+	proof, err := vmap.Get(ctx, key, mapHead.TreeSize())
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +42,11 @@ func (vmap *VerifiableMap) VerifiedGet(key []byte, mapHead *MapTreeState) (*pb.L
 // size.
 //
 // This is intended for test use.
-func (vmap *VerifiableMap) BlockUntilSize(treeSize int64) (*pb.MapTreeHashResponse, error) {
+func (vmap *VerifiableMap) BlockUntilSize(ctx context.Context, treeSize int64) (*pb.MapTreeHashResponse, error) {
 	lastHead := int64(-1)
 	timeToSleep := time.Second
 	for {
-		lth, err := vmap.TreeHead(Head)
+		lth, err := vmap.TreeHead(ctx, Head)
 		if err != nil {
 			return nil, err
 		}
@@ -67,8 +67,8 @@ func (vmap *VerifiableMap) BlockUntilSize(treeSize int64) (*pb.MapTreeHashRespon
 
 // VerifiedLatestMapState fetches the latest MapTreeState, verifies it is consistent with,
 // and newer than, any previously passed state.
-func (vmap *VerifiableMap) VerifiedLatestMapState(prev *MapTreeState) (*MapTreeState, error) {
-	head, err := vmap.VerifiedMapState(prev, Head)
+func (vmap *VerifiableMap) VerifiedLatestMapState(ctx context.Context, prev *MapTreeState) (*MapTreeState, error) {
+	head, err := vmap.VerifiedMapState(ctx, prev, Head)
 	if err != nil {
 		return nil, err
 	}
@@ -93,13 +93,13 @@ func (vmap *VerifiableMap) VerifiedLatestMapState(prev *MapTreeState) (*MapTreeS
 //
 // Typical clients that only need to access current data will instead use VerifiedLatestMapState()
 // Can return nil, nil if the map is empty (and prev was nil)
-func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) (*MapTreeState, error) {
+func (vmap *VerifiableMap) VerifiedMapState(ctx context.Context, prev *MapTreeState, treeSize int64) (*MapTreeState, error) {
 	if treeSize != 0 && prev != nil && prev.TreeSize() == treeSize {
 		return prev, nil
 	}
 
 	// Get latest map head
-	mapHead, err := vmap.TreeHead(treeSize)
+	mapHead, err := vmap.TreeHead(ctx, treeSize)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 	// If we have a previous state, then make sure both logs are consistent with it
 	if prev != nil {
 		// Make sure that the mutation log is consistent with what we had
-		err = vmap.MutationLog().VerifyConsistency(prev.MapTreeHead.MutationLog, mapHead.MutationLog)
+		err = vmap.MutationLog().VerifyConsistency(ctx, prev.MapTreeHead.MutationLog, mapHead.MutationLog)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +135,7 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 		if err != nil {
 			return nil, err
 		}
-		err = vmap.TreeHeadLog().VerifyInclusion(prevThlth, lh.LeafInput)
+		err = vmap.TreeHeadLog().VerifyInclusion(ctx, prevThlth, lh.LeafInput)
 		if err == nil {
 			verifiedInTreeHeadLog = true
 			thlth = prevThlth
@@ -145,7 +145,7 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 	// If we weren't able to take a short-cut above, go back to normal processing:
 	if !verifiedInTreeHeadLog {
 		// Get new tree head
-		thlth, err = vmap.TreeHeadLog().VerifiedLatestTreeHead(prevThlth)
+		thlth, err = vmap.TreeHeadLog().VerifiedLatestTreeHead(ctx, prevThlth)
 		if err != nil {
 			return nil, err
 		}
@@ -155,7 +155,7 @@ func (vmap *VerifiableMap) VerifiedMapState(prev *MapTreeState, treeSize int64) 
 		if err != nil {
 			return nil, err
 		}
-		err = vmap.TreeHeadLog().VerifyInclusion(thlth, LeafMerkleTreeHash(li.LeafInput))
+		err = vmap.TreeHeadLog().VerifyInclusion(ctx, thlth, LeafMerkleTreeHash(li.LeafInput))
 		if err != nil {
 			return nil, err
 		}

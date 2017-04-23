@@ -29,7 +29,7 @@ import (
 
 // LogConsistencyProof verifies the consisitency of a log
 func (s *localServiceImpl) LogConsistencyProof(ctx context.Context, req *pb.LogConsistencyProofRequest) (*pb.LogConsistencyProofResponse, error) {
-	_, err := s.verifyAccessForLogOperation(req.Log, operationReadHash)
+	_, err := s.verifyAccessForLogOperation(ctx, req.Log, operationReadHash)
 	if err != nil {
 		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
@@ -47,8 +47,8 @@ func (s *localServiceImpl) LogConsistencyProof(ctx context.Context, req *pb.LogC
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "extra getting bucket: %s", err)
 	}
-	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
-		head, err := lookupLogTreeHead(kr, req.Log.LogType)
+	err = s.Reader.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
+		head, err := lookupLogTreeHead(ctx, kr, req.Log.LogType)
 		if err != nil {
 			return err
 		}
@@ -66,7 +66,7 @@ func (s *localServiceImpl) LogConsistencyProof(ctx context.Context, req *pb.LogC
 
 		// Ranges are good
 		ranges := SubProof(req.FromSize, 0, second, true)
-		path, err := fetchSubTreeHashes(kr, req.Log.LogType, ranges, false)
+		path, err := fetchSubTreeHashes(ctx, kr, req.Log.LogType, ranges, false)
 		if err != nil {
 			return err
 		}
@@ -76,7 +76,7 @@ func (s *localServiceImpl) LogConsistencyProof(ctx context.Context, req *pb.LogC
 					// Would have been nice if GetSubTreeHashes could better handle these
 					return ErrNoSuchKey
 				}
-				path[i], err = calcSubTreeHash(kr, req.Log.LogType, rr[0], rr[1])
+				path[i], err = calcSubTreeHash(ctx, kr, req.Log.LogType, rr[0], rr[1])
 				if err != nil {
 					return err
 				}

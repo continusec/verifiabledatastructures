@@ -18,10 +18,12 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"path"
 	"strings"
+
+	"github.com/continusec/verifiabledatastructures/pb"
+	"golang.org/x/net/context"
 )
 
 // StaticOracle applies a policy based on the configuration file specified.
@@ -30,7 +32,7 @@ type StaticOracle struct {
 }
 
 // VerifyAllowed returns value as specifed in the policy
-func (o *StaticOracle) VerifyAllowed(account, apiKey, objectName string, permission pb.Permission) (*AccessModifier, error) {
+func (o *StaticOracle) VerifyAllowed(ctx context.Context, account, apiKey, objectName string, permission pb.Permission) (*AccessModifier, error) {
 	// TODO, optimize the following, which is currently a set of nested dumb loops, unsuitable for anything non-trivial
 	for _, acc := range o.Policy { // for each account in the policy
 		if acc.Id == account { // if it is the one we are accessing

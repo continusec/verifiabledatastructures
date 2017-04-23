@@ -18,9 +18,11 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"bytes"
+	"context"
+
+	"github.com/continusec/verifiabledatastructures/pb"
 )
 
 var (
@@ -46,7 +48,7 @@ func mutationLeafHash(mut *pb.MapMutation, prevLeafHash []byte) ([]byte, error) 
 }
 
 // returns root followed by list of map nodes, not including head which is returned separately, as far as we can descend and match
-func descendToFork(db KeyReader, path BPath, root *pb.MapNode) (*pb.MapNode, []*pb.MapNode, error) {
+func descendToFork(ctx context.Context, db KeyReader, path BPath, root *pb.MapNode) (*pb.MapNode, []*pb.MapNode, error) {
 	rv := []*pb.MapNode{}
 	head := root
 	depth := uint(0)
@@ -57,13 +59,13 @@ func descendToFork(db KeyReader, path BPath, root *pb.MapNode) (*pb.MapNode, []*
 				return head, rv, nil
 			}
 			rv = append(rv, head)
-			head, err = lookupMapHash(db, head.RightNumber, path.Slice(0, depth+1))
+			head, err = lookupMapHash(ctx, db, head.RightNumber, path.Slice(0, depth+1))
 		} else { // left
 			if head.LeftNumber == 0 {
 				return head, rv, nil
 			}
 			rv = append(rv, head)
-			head, err = lookupMapHash(db, head.LeftNumber, path.Slice(0, depth+1))
+			head, err = lookupMapHash(ctx, db, head.LeftNumber, path.Slice(0, depth+1))
 		}
 		if err != nil {
 			return nil, nil, err
@@ -72,7 +74,7 @@ func descendToFork(db KeyReader, path BPath, root *pb.MapNode) (*pb.MapNode, []*
 	}
 }
 
-func writeAncestors(db KeyWriter, last *pb.MapNode, ancestors []*pb.MapNode, keyPath BPath, mutationIndex int64) ([]byte, error) {
+func writeAncestors(ctx context.Context, db KeyWriter, last *pb.MapNode, ancestors []*pb.MapNode, keyPath BPath, mutationIndex int64) ([]byte, error) {
 	// Write out ancestor chain
 	curHash, err := calcNodeHash(last, uint(len(ancestors)))
 	if err != nil {
@@ -95,7 +97,7 @@ func writeAncestors(db KeyWriter, last *pb.MapNode, ancestors []*pb.MapNode, key
 				RightHash:   ancestors[i].RightHash,
 			}
 		}
-		err := writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(i)), last)
+		err := writeMapHash(ctx, db, mutationIndex+1, keyPath.Slice(0, uint(i)), last)
 		if err != nil {
 			return nil, err
 		}
@@ -111,17 +113,17 @@ func isEmptyNode(mn *pb.MapNode) bool {
 	return ((len(mn.LeafHash) == 0) || bytes.Equal(mn.LeafHash, nullLeafHash)) && mn.LeftNumber == 0 && mn.RightNumber == 0
 }
 
-func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *pb.MapMutation) ([]byte, error) {
+func setMapValue(ctx context.Context, db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *pb.MapMutation) ([]byte, error) {
 	keyPath := BPathFromKey(mut.Key)
 
 	// Get the root node for tree size, will never be nil
-	root, err := lookupMapHash(db, mutationIndex, BPathEmpty)
+	root, err := lookupMapHash(ctx, db, mutationIndex, BPathEmpty)
 	if err != nil {
 		return nil, err
 	}
 
 	// First, set head to as far down as we can go
-	head, ancestors, err := descendToFork(db, keyPath, root)
+	head, ancestors, err := descendToFork(ctx, db, keyPath, root)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +144,7 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *pb.Map
 	// Can we short-circuit since nothing changed?
 	if bytes.Equal(prevLeafHash, nextLeafHash) {
 		// Then we just need to re-write root with new sequence numbers
-		err = writeMapHash(db, mutationIndex+1, nil, root)
+		err = writeMapHash(ctx, db, mutationIndex+1, nil, root)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +153,7 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *pb.Map
 
 	// Time to start writing our data
 	if !bytes.Equal(nextLeafHash, nullLeafHash) {
-		err = writeDataByLeafHash(db, pb.LogType_STRUCT_TYPE_MUTATION_LOG, nextLeafHash, mut.Value)
+		err = writeDataByLeafHash(ctx, db, pb.LogType_STRUCT_TYPE_MUTATION_LOG, nextLeafHash, mut.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -163,11 +165,11 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *pb.Map
 			LeafHash: nextLeafHash,
 			Path:     keyPath,
 		}
-		err = writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), last)
+		err = writeMapHash(ctx, db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), last)
 		if err != nil {
 			return nil, err
 		}
-		return writeAncestors(db, last, ancestors, keyPath, mutationIndex)
+		return writeAncestors(ctx, db, last, ancestors, keyPath, mutationIndex)
 	}
 
 	if len(head.LeafHash) == 0 { // node
@@ -197,7 +199,7 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *pb.Map
 			par.RightHash = theirHash
 		}
 		// May as well write it out now
-		err = writeMapHash(db, mutationIndex+1, BPathJoin(keyPath.Slice(0, uint(len(ancestors))), appendPath), head)
+		err = writeMapHash(ctx, db, mutationIndex+1, BPathJoin(keyPath.Slice(0, uint(len(ancestors))), appendPath), head)
 		if err != nil {
 			return nil, err
 		}
@@ -211,11 +213,11 @@ func setMapValue(db KeyWriter, vmap *pb.MapRef, mutationIndex int64, mut *pb.Map
 		Path:     keyPath,
 		LeafHash: nextLeafHash,
 	}
-	err = writeMapHash(db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), last)
+	err = writeMapHash(ctx, db, mutationIndex+1, keyPath.Slice(0, uint(len(ancestors))), last)
 	if err != nil {
 		return nil, err
 	}
-	return writeAncestors(db, last, ancestors, keyPath, mutationIndex)
+	return writeAncestors(ctx, db, last, ancestors, keyPath, mutationIndex)
 }
 
 func mapForMutationLog(m *pb.LogRef) *pb.MapRef {

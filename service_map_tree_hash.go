@@ -27,7 +27,7 @@ import (
 
 // MapTreeHash returns the tree hash for a map
 func (s *localServiceImpl) MapTreeHash(ctx context.Context, req *pb.MapTreeHashRequest) (*pb.MapTreeHashResponse, error) {
-	_, err := s.verifyAccessForMap(req.Map, pb.Permission_PERM_MAP_GET_VALUE)
+	_, err := s.verifyAccessForMap(ctx, req.Map, pb.Permission_PERM_MAP_GET_VALUE)
 	if err != nil {
 		return nil, status.Errorf(codes.PermissionDenied, "no access: %s", err)
 	}
@@ -41,8 +41,8 @@ func (s *localServiceImpl) MapTreeHash(ctx context.Context, req *pb.MapTreeHashR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
-	err = s.Reader.ExecuteReadOnly(ns, func(kr KeyReader) error {
-		th, err := lookupLogTreeHead(kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
+	err = s.Reader.ExecuteReadOnly(ctx, ns, func(kr KeyReader) error {
+		th, err := lookupLogTreeHead(ctx, kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
 		if err != nil {
 			return err
 		}
@@ -57,13 +57,13 @@ func (s *localServiceImpl) MapTreeHash(ctx context.Context, req *pb.MapTreeHashR
 		}
 
 		// Need this for response
-		mutHead, err := lookupLogRootHashBySize(kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, treeSize)
+		mutHead, err := lookupLogRootHashBySize(ctx, kr, pb.LogType_STRUCT_TYPE_MUTATION_LOG, treeSize)
 		if err != nil {
 			return err
 		}
 
 		// Get the root node for tree size
-		mapNode, err := lookupMapHash(kr, treeSize, BPathEmpty)
+		mapNode, err := lookupMapHash(ctx, kr, treeSize, BPathEmpty)
 		if err != nil {
 			return err
 		}

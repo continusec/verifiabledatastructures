@@ -18,7 +18,11 @@ limitations under the License.
 
 package verifiabledatastructures
 
-import "github.com/continusec/verifiabledatastructures/pb"
+import (
+	"golang.org/x/net/context"
+
+	"github.com/continusec/verifiabledatastructures/pb"
+)
 
 const (
 	// AllFields is a field filter that represents all fields
@@ -34,5 +38,5 @@ type AccessModifier struct {
 // AuthorizationOracle determines if a user requested operation is allowed or not
 type AuthorizationOracle interface {
 	// VerifyAllowed returns nil if operation is allowed. Other values means no
-	VerifyAllowed(account, apiKey, objectName string, permisson pb.Permission) (*AccessModifier, error)
+	VerifyAllowed(ctx context.Context, account, apiKey, objectName string, permisson pb.Permission) (*AccessModifier, error)
 }

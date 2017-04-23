@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/boltdb/bolt"
 	"github.com/golang/protobuf/proto"
 )
@@ -89,7 +91,7 @@ func (bbs *BoltBackedService) getOrCreateDB(ns []byte) (*bolt.DB, error) {
 }
 
 // ExecuteReadOnly executes a read only query
-func (bbs *BoltBackedService) ExecuteReadOnly(namespace []byte, f func(db KeyReader) error) error {
+func (bbs *BoltBackedService) ExecuteReadOnly(ctx context.Context, namespace []byte, f func(db KeyReader) error) error {
 	db, err := bbs.getOrCreateDB(namespace)
 	if err != nil {
 		return err
@@ -100,7 +102,7 @@ func (bbs *BoltBackedService) ExecuteReadOnly(namespace []byte, f func(db KeyRea
 }
 
 // ExecuteUpdate executes an update query
-func (bbs *BoltBackedService) ExecuteUpdate(namespace []byte, f func(db KeyWriter) error) error {
+func (bbs *BoltBackedService) ExecuteUpdate(ctx context.Context, namespace []byte, f func(db KeyWriter) error) error {
 	db, err := bbs.getOrCreateDB(namespace)
 	if err != nil {
 		return err
@@ -114,7 +116,7 @@ type boltReaderWriter struct {
 	Tx *bolt.Tx
 }
 
-func (db *boltReaderWriter) Get(bucket, key []byte, value proto.Message) error {
+func (db *boltReaderWriter) Get(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	b := db.Tx.Bucket(bucket)
 	if b == nil {
 		return ErrNoSuchKey
@@ -126,7 +128,7 @@ func (db *boltReaderWriter) Get(bucket, key []byte, value proto.Message) error {
 	return proto.Unmarshal(rv, value)
 }
 
-func (db *boltReaderWriter) Set(bucket, key []byte, value proto.Message) error {
+func (db *boltReaderWriter) Set(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	b, err := db.Tx.CreateBucketIfNotExists(bucket)
 	if err != nil {
 		return err

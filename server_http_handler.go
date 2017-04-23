@@ -68,11 +68,22 @@ var (
 
 type apiServer struct {
 	service pb.VerifiableDataStructuresServiceServer
+	cc      ContextCreator
 }
 
+// ContextCreator is a function that can produce a context object based on a request.
+// If not specified, a background context will be used.
+type ContextCreator func(*http.Request) context.Context
+
 // CreateRESTHandler creates handlers for the API
-func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer) http.Handler {
+// Leave cc nil unless you need to be able to create a specialized context, e.g. GAE
+func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer, cc ContextCreator) http.Handler {
 	as := &apiServer{service: s}
+	if cc == nil {
+		as.cc = defaultRequestContext
+	} else {
+		as.cc = cc
+	}
 
 	r := mux.NewRouter()
 
@@ -251,8 +262,8 @@ func wrapMapFunctionWithKeyAndFormat(keyType int, ef int, f func(*pb.MapRef, []b
 	})
 }
 
-func requestContext(r *http.Request) context.Context {
-	return context.TODO()
+func defaultRequestContext(r *http.Request) context.Context {
+	return context.Background()
 }
 
 func writeResponseHeader(w http.ResponseWriter, err error) {
@@ -304,7 +315,7 @@ func (as *apiServer) getLogTreeHashHandler(log *pb.LogRef, vars map[string]strin
 		treeSize = int64(ts)
 	}
 
-	resp, err := as.service.LogTreeHash(requestContext(r), &pb.LogTreeHashRequest{
+	resp, err := as.service.LogTreeHash(as.cc(r), &pb.LogTreeHashRequest{
 		Log:      log,
 		TreeSize: treeSize,
 	})
@@ -334,7 +345,7 @@ func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]
 		return
 	}
 
-	resp, err := as.service.LogConsistencyProof(requestContext(r), &pb.LogConsistencyProofRequest{
+	resp, err := as.service.LogConsistencyProof(as.cc(r), &pb.LogConsistencyProofRequest{
 		Log:      log,
 		FromSize: int64(oldSize),
 		TreeSize: int64(treeSize),
@@ -357,7 +368,7 @@ func (as *apiServer) inclusionProofHandler(log *pb.LogRef, vars map[string]strin
 	partial.Log = log
 	partial.TreeSize = int64(treeSize)
 
-	resp, err := as.service.LogInclusionProof(requestContext(r), partial)
+	resp, err := as.service.LogInclusionProof(as.cc(r), partial)
 	if err != nil {
 		writeResponseHeader(w, err)
 		return
@@ -410,7 +421,7 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 		return
 	}
 
-	resp, err := as.service.LogAddEntry(requestContext(r), &pb.LogAddEntryRequest{
+	resp, err := as.service.LogAddEntry(as.cc(r), &pb.LogAddEntryRequest{
 		Log:   log,
 		Value: ld,
 	})
@@ -430,7 +441,7 @@ func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars ma
 		return
 	}
 
-	resp, err := as.service.LogFetchEntries(requestContext(r), &pb.LogFetchEntriesRequest{
+	resp, err := as.service.LogFetchEntries(as.cc(r), &pb.LogFetchEntriesRequest{
 		Log:   log,
 		First: int64(number),
 		Last:  int64(number + 1),
@@ -462,7 +473,7 @@ func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars 
 		return
 	}
 
-	resp, err := as.service.LogFetchEntries(requestContext(r), &pb.LogFetchEntriesRequest{
+	resp, err := as.service.LogFetchEntries(as.cc(r), &pb.LogFetchEntriesRequest{
 		Log:   log,
 		First: int64(first),
 		Last:  int64(last),
@@ -488,7 +499,7 @@ func (as *apiServer) getMapRootHashHandler(vmap *pb.MapRef, vars map[string]stri
 		}
 	}
 
-	resp, err := as.service.MapTreeHash(requestContext(r), &pb.MapTreeHashRequest{
+	resp, err := as.service.MapTreeHash(as.cc(r), &pb.MapTreeHashRequest{
 		Map:      vmap,
 		TreeSize: int64(treeSize),
 	})
@@ -502,7 +513,7 @@ func (as *apiServer) getMapRootHashHandler(vmap *pb.MapRef, vars map[string]stri
 }
 
 func (as *apiServer) queueMapMutation(vmap *pb.MapRef, mut *pb.MapMutation, w http.ResponseWriter, r *http.Request) {
-	resp, err := as.service.MapSetValue(requestContext(r), &pb.MapSetValueRequest{
+	resp, err := as.service.MapSetValue(as.cc(r), &pb.MapSetValueRequest{
 		Map:      vmap,
 		Mutation: mut,
 	})
@@ -533,7 +544,7 @@ func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 		}
 	}
 
-	resp, err := as.service.MapGetValue(requestContext(r), &pb.MapGetValueRequest{
+	resp, err := as.service.MapGetValue(as.cc(r), &pb.MapGetValueRequest{
 		Map:      vmap,
 		TreeSize: int64(treeSize),
 		Key:      key,
