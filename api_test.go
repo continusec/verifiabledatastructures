@@ -21,6 +21,7 @@ package verifiabledatastructures
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"math/rand"
 	"strings"
 	"testing"
@@ -458,4 +459,29 @@ func verifyRootHash(entries []*pb.LeafData, answer []byte) bool {
 		stack = append(stack[:len(stack)-2], NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1]))
 	}
 	return bytes.Equal(stack[0], answer)
+}
+
+// TestObjectsMeetReq simply includes objects that might compile, but not comply with APIs
+// since possibly we didn't test them properly otherwise.
+func TestObjectsMeetReq(t *testing.T) {
+	var kr StorageReader
+	var kw StorageWriter
+
+	var m MutatorService
+
+	var o AuthorizationOracle
+
+	kr = &TransientHashMapStorage{}
+	kw = &TransientHashMapStorage{}
+
+	kr = &BoltBackedService{}
+	kw = &BoltBackedService{}
+
+	m = &InstantMutator{}
+	m = (&BatchMutator{}).MustCreate()
+
+	o = &AnythingGoesOracle{}
+	o = &StaticOracle{}
+
+	log.Println(kr, kw, m, o) // "use" these so that go compiler will be quiet
 }
