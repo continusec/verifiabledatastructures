@@ -291,7 +291,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 // CheckTreeHeadEntry is the audit function that checks the actual tree head is correct
 func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry *pb.LeafData) error {
 	// Step 0, are we a valid JSON hash?
-	err := ValidateJSONLeafData(entry)
+	err := ValidateJSONLeafData(ctx, entry)
 	if err != nil {
 		return err
 	}

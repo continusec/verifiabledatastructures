@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"golang.org/x/net/context"
+
 	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/golang/protobuf/proto"
@@ -112,7 +114,7 @@ func CreateJSONLeafDataFromObject(o interface{}) (*pb.LeafData, error) {
 
 // ValidateJSONLeafData verifies that the LeafInput is equal to the objecthash of the ExtraData.
 // It ignores the format field.
-func ValidateJSONLeafData(entry *pb.LeafData) error {
+func ValidateJSONLeafData(ctx context.Context, entry *pb.LeafData) error {
 	var o interface{}
 	err := json.Unmarshal(entry.ExtraData, &o)
 	if err != nil {
