@@ -19,7 +19,7 @@ limitations under the License.
 syntax = "proto3";
 
 package com.continusec.verifiabledatastructures.api;
-option go_package = "pb";
+option go_package = "github.com/continusec/verifiabledatastructures/pb";
 
 service VerifiableDataStructuresService {
     rpc LogAddEntry (LogAddEntryRequest) returns (LogAddEntryResponse) {}

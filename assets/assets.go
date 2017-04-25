@@ -88,7 +88,7 @@ func assetsStaticContinusecJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/static/continusec.js", size: 69921, mode: os.FileMode(420), modTime: time.Unix(1492598632, 0)}
+	info := bindataFileInfo{name: "assets/static/continusec.js", size: 69921, mode: os.FileMode(420), modTime: time.Unix(1492640063, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -108,7 +108,7 @@ func assetsStaticFaviconIco() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/static/favicon.ico", size: 15086, mode: os.FileMode(420), modTime: time.Unix(1492598632, 0)}
+	info := bindataFileInfo{name: "assets/static/favicon.ico", size: 15086, mode: os.FileMode(420), modTime: time.Unix(1492640063, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -128,7 +128,7 @@ func assetsStaticIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/static/index.html", size: 51107, mode: os.FileMode(420), modTime: time.Unix(1492598632, 0)}
+	info := bindataFileInfo{name: "assets/static/index.html", size: 51107, mode: os.FileMode(420), modTime: time.Unix(1492640063, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -148,7 +148,7 @@ func assetsStaticLogJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/static/log.js", size: 16685, mode: os.FileMode(420), modTime: time.Unix(1492598632, 0)}
+	info := bindataFileInfo{name: "assets/static/log.js", size: 16685, mode: os.FileMode(420), modTime: time.Unix(1492640063, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -168,7 +168,7 @@ func assetsStaticLogoPng() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/static/logo.png", size: 4627, mode: os.FileMode(420), modTime: time.Unix(1492598632, 0)}
+	info := bindataFileInfo{name: "assets/static/logo.png", size: 4627, mode: os.FileMode(420), modTime: time.Unix(1492640063, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -188,7 +188,7 @@ func assetsStaticMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/static/main.css", size: 4521, mode: os.FileMode(420), modTime: time.Unix(1492598632, 0)}
+	info := bindataFileInfo{name: "assets/static/main.css", size: 4521, mode: os.FileMode(420), modTime: time.Unix(1492640063, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

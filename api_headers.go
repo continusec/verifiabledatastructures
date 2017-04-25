@@ -16,7 +16,7 @@ limitations under the License.
 
 */
 
-//go:generate protoc --go_out=plugins=grpc:pb -Iproto proto/api.proto proto/configuration.proto proto/storage.proto
+//go:generate protoc --go_out=plugins=grpc:../../.. -Iproto proto/api.proto proto/configuration.proto proto/storage.proto
 //go:generate go-bindata -pkg assets -o assets/assets.go assets/static/
 
 package verifiabledatastructures
