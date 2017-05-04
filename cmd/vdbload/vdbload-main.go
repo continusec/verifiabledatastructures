@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
@@ -13,13 +14,15 @@ import (
 func loadLog(acc *verifiabledatastructures.Account) {
 	vlog := acc.VerifiableLog("test")
 
-	count := 20000
+	count := 100000
+
+	ctx := context.Background()
 
 	start := time.Now()
 	var err error
 	var lastLeaf verifiabledatastructures.LogUpdatePromise
 	for i := 0; i < count; i++ {
-		lastLeaf, err = vlog.Add(&pb.LeafData{LeafInput: []byte("v" + strconv.Itoa(i))})
+		lastLeaf, err = vlog.Add(ctx, &pb.LeafData{LeafInput: []byte("v" + strconv.Itoa(i))})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -31,7 +34,7 @@ func loadLog(acc *verifiabledatastructures.Account) {
 	}
 	end := time.Now()
 	fmt.Println("Objects per second:", float64(count)/end.Sub(start).Seconds())
-	treeHead, err := lastLeaf.Wait()
+	treeHead, err := lastLeaf.Wait(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,10 +50,12 @@ func loadMap(acc *verifiabledatastructures.Account) {
 
 	count := 1000000
 
+	ctx := context.Background()
+
 	start := time.Now()
 	var err error
 	for i := 0; i < count; i++ {
-		_, err = vmap.Set([]byte("k"+strconv.Itoa(i)), &pb.LeafData{LeafInput: []byte("v" + strconv.Itoa(i))})
+		_, err = vmap.Set(ctx, []byte("k"+strconv.Itoa(i)), &pb.LeafData{LeafInput: []byte("v" + strconv.Itoa(i))})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -62,7 +67,7 @@ func loadMap(acc *verifiabledatastructures.Account) {
 	}
 	end := time.Now()
 
-	treeHead, err := vmap.TreeHead(0)
+	treeHead, err := vmap.TreeHead(ctx, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,8 +77,8 @@ func loadMap(acc *verifiabledatastructures.Account) {
 }
 
 func main() {
-	db := &verifiabledatastructures.BoltBackedService{Path: "/Users/aeijdenberg/Documents/continusec/vdsdemo/data"}
-	//db := &verifiabledatastructures.TransientHashMapStorage{}
+	//db := &verifiabledatastructures.BoltBackedService{Path: "/Users/aeijdenberg/Documents/continusec/vdsdemo/data"}
+	db := &verifiabledatastructures.TransientHashMapStorage{}
 	acc := (&verifiabledatastructures.Client{Service: (&verifiabledatastructures.LocalService{
 		AccessPolicy: &verifiabledatastructures.AnythingGoesOracle{},
 		Mutator: (&verifiabledatastructures.BatchMutator{
@@ -82,7 +87,7 @@ func main() {
 			BufferSize: 100000,
 			Timeout:    time.Millisecond * 10,
 		}).MustCreate(),
-		//Mutator:      &api.InstantMutator{Writer: db},
+		//Mutator: &verifiabledatastructures.InstantMutator{Writer: db},
 		Reader: db,
 	}).MustCreate()}).Account("0", "")
 	loadLog(acc)
