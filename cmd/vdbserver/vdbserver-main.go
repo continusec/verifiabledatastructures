@@ -76,6 +76,8 @@ func realMode(confPath string) {
 	db := &verifiabledatastructures.BoltBackedService{
 		Path: conf.BoltDbPath,
 	}
+	defer db.Close() // release file locks
+
 	service := (&verifiabledatastructures.LocalService{
 		AccessPolicy: &verifiabledatastructures.StaticOracle{
 			Policy: conf.Accounts,

@@ -77,7 +77,8 @@ func loadMap(acc *verifiabledatastructures.Account) {
 }
 
 func main() {
-	//db := &verifiabledatastructures.BoltBackedService{Path: "/Users/aeijdenberg/Documents/continusec/vdsdemo/data"}
+	//db := &verifiabledatastructures.BoltBackedService{Path: "/tmp/data"}
+	//defer db.Close()
 	db := &verifiabledatastructures.TransientHashMapStorage{}
 	acc := (&verifiabledatastructures.Client{Service: (&verifiabledatastructures.LocalService{
 		AccessPolicy: &verifiabledatastructures.AnythingGoesOracle{},

@@ -87,6 +87,7 @@ BoltBackedService:
 	db := &BoltBackedService{
 		Path: "/path/to/database/dir","
 	}
+	defer db.Close() // Releases file locks
 
 	// pass to LocalService in the same manner as above, e.g.
 	service := (&LocalService{
@@ -164,6 +165,7 @@ Here is a full example of using verifiabledatastructures as an embedded storage 
 		db := &verifiabledatastructures.BoltBackedService{
 			Path: "/path/to/directory/to/store/data",
 		}
+		defer db.Close() // Releases file locks
 
 		// Create an instance of the service
 		service := (&verifiabledatastructures.LocalService{

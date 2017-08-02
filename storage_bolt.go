@@ -39,6 +39,17 @@ type BoltBackedService struct {
 	dbs    map[string]*bolt.DB
 }
 
+// Close calls the underlying Close method on the BoltDBs which releases file locks.
+func (bbs *BoltBackedService) Close() {
+	bbs.dbLock.Lock()
+	defer bbs.dbLock.Unlock()
+
+	for _, db := range bbs.dbs {
+		// Ignore any errors
+		db.Close()
+	}
+}
+
 // Returns nil if not found
 func (bbs *BoltBackedService) getDB(key string) *bolt.DB {
 	bbs.dbLock.RLock()
