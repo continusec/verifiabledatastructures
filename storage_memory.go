@@ -25,6 +25,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/Guardtime/verifiabledatastructures/vdsoff"
 )
 
 // TransientHashMapStorage gives a service that does inefficiently locking, keeps everything in memory, and doesn't
@@ -76,19 +77,19 @@ type memoryThing struct {
 
 func (db *memoryThing) Get(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	if db.Data == nil {
-		return ErrNoSuchKey
+		return vdsoff.ErrNoSuchKey
 	}
 	actKey := string(bucket) + "|" + string(key) // TODO, fix to something guaranteed to be unique
 	rv, ok := db.Data[actKey]
 	if !ok { // as distinct from 0 length
-		return ErrNoSuchKey
+		return vdsoff.ErrNoSuchKey
 	}
 	return proto.Unmarshal(rv, value)
 }
 
 func (db *memoryThing) Set(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	if db.Data == nil {
-		return ErrNotImplemented
+		return vdsoff.ErrNotImplemented
 	}
 	actKey := string(bucket) + "|" + string(key) // TODO, fix to something guaranteed to be unique
 	if value == nil {

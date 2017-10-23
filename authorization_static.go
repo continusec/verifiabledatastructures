@@ -24,6 +24,7 @@ import (
 
 	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
+	"github.com/Guardtime/verifiabledatastructures/vdsoff"
 )
 
 // StaticOracle applies a policy based on the configuration file specified.
@@ -53,5 +54,5 @@ func (o *StaticOracle) VerifyAllowed(ctx context.Context, account, apiKey, objec
 		}
 	}
 	// Default deny
-	return nil, ErrNotAuthorized
+	return nil, vdsoff.ErrNotAuthorized
 }

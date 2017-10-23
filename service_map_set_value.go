@@ -26,6 +26,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"github.com/Guardtime/verifiabledatastructures/vdsoff"
 )
 
 func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) {
@@ -57,7 +58,7 @@ func (s *localServiceImpl) MapSetValue(ctx context.Context, req *pb.MapSetValueR
 		return nil, status.Errorf(codes.Internal, "bad mutation creation: %s", err)
 	}
 
-	mutData, err := CreateJSONLeafDataFromMutation(mm)
+	mutData, err := vdsoff.CreateJSONLeafDataFromMutation(mm)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "bad leaf data creation: %s", err)
 	}
@@ -81,6 +82,6 @@ func (s *localServiceImpl) MapSetValue(ctx context.Context, req *pb.MapSetValueR
 		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
 	return &pb.MapSetValueResponse{
-		LeafHash: LeafMerkleTreeHash(mutData.LeafInput),
+		LeafHash: vdsoff.LeafMerkleTreeHash(mutData.LeafInput),
 	}, nil
 }

@@ -35,6 +35,7 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
+	"github.com/Guardtime/verifiabledatastructures/vdsoff"
 )
 
 const (
@@ -245,11 +246,11 @@ func wrapMapFunctionWithKey(keyType int, f func(*pb.MapRef, []byte, map[string]s
 			var err error
 			k, err = hex.DecodeString(vars["key"])
 			if err != nil {
-				writeResponseHeader(w, ErrInvalidRequest)
+				writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 				return
 			}
 		default:
-			writeResponseHeader(w, ErrNotImplemented)
+			writeResponseHeader(w, vdsoff.ErrNotImplemented)
 			return
 		}
 		f(vmap, k, vars, w, r)
@@ -309,7 +310,7 @@ func (as *apiServer) getLogTreeHashHandler(log *pb.LogRef, vars map[string]strin
 	} else {
 		ts, err := strconv.Atoi(vars["treesize"])
 		if err != nil {
-			writeResponseHeader(w, ErrInvalidRequest)
+			writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 			return
 		}
 		treeSize = int64(ts)
@@ -335,13 +336,13 @@ func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]
 		var err error
 		treeSize, err = strconv.Atoi(vars["treesize"])
 		if err != nil {
-			writeResponseHeader(w, ErrInvalidRequest)
+			writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 			return
 		}
 	}
 	oldSize, err := strconv.Atoi(vars["oldsize"])
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 
@@ -361,7 +362,7 @@ func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]
 func (as *apiServer) inclusionProofHandler(log *pb.LogRef, vars map[string]string, partial *pb.LogInclusionProofRequest, w http.ResponseWriter, r *http.Request) {
 	treeSize, err := strconv.Atoi(vars["treesize"])
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 
@@ -380,7 +381,7 @@ func (as *apiServer) inclusionProofHandler(log *pb.LogRef, vars map[string]strin
 func (as *apiServer) inclusionByIndexProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	number, err := strconv.Atoi(vars["number"])
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 
@@ -391,14 +392,14 @@ func (as *apiServer) inclusionByIndexProofHandler(log *pb.LogRef, vars map[strin
 
 func (as *apiServer) inclusionByStringProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	as.inclusionProofHandler(log, vars, &pb.LogInclusionProofRequest{
-		MtlHash: LeafMerkleTreeHash([]byte(vars["strentry"])),
+		MtlHash: vdsoff.LeafMerkleTreeHash([]byte(vars["strentry"])),
 	}, w, r)
 }
 
 func (as *apiServer) inclusionByHashProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	mtlHash, err := hex.DecodeString(vars["hash"])
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 
@@ -411,13 +412,13 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 	body, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 
 	ld, err := createLeafData(body, ef.EntryFormat)
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 
@@ -437,7 +438,7 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	number, err := strconv.Atoi(vars["number"])
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 
@@ -453,7 +454,7 @@ func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars ma
 
 	// Make sure we get exactly 1 back
 	if len(resp.Values) != 1 {
-		writeResponseHeader(w, ErrNotFound)
+		writeResponseHeader(w, vdsoff.ErrNotFound)
 		return
 	}
 
@@ -463,13 +464,13 @@ func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars ma
 func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	first, err := strconv.Atoi(vars["first"])
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 
 	last, err := strconv.Atoi(vars["last"])
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 
@@ -494,7 +495,7 @@ func (as *apiServer) getMapRootHashHandler(vmap *pb.MapRef, vars map[string]stri
 		var err error
 		treeSize, err = strconv.Atoi(vars["treesize"])
 		if err != nil {
-			writeResponseHeader(w, ErrInvalidRequest)
+			writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 			return
 		}
 	}
@@ -539,7 +540,7 @@ func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 		var err error
 		treeSize, err = strconv.Atoi(vars["treesize"])
 		if err != nil {
-			writeResponseHeader(w, ErrInvalidRequest)
+			writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 			return
 		}
 	}
@@ -573,14 +574,14 @@ func getResponseData(ld *pb.LeafData, ef int) ([]byte, error) {
 	case extraEntry:
 		return json.Marshal(ld)
 	default:
-		return nil, ErrInvalidRequest
+		return nil, vdsoff.ErrInvalidRequest
 	}
 }
 
 func writeResponseData(w http.ResponseWriter, ld *pb.LeafData, ef int) {
 	data, err := getResponseData(ld, ef)
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 	writeSuccessContent(w, data)
@@ -593,26 +594,26 @@ func createLeafData(body []byte, ef int) (*pb.LeafData, error) {
 	case jsonEntry:
 		oh, err := objecthash.CommonJSONHash(body)
 		if err != nil {
-			return nil, ErrInvalidRequest
+			return nil, vdsoff.ErrInvalidRequest
 		}
 		return &pb.LeafData{LeafInput: oh, ExtraData: body, Format: pb.DataFormat_JSON}, nil
 	case redactedEntry:
 		var obj interface{}
 		err := json.Unmarshal(body, &obj)
 		if err != nil {
-			return nil, ErrInvalidRequest
+			return nil, vdsoff.ErrInvalidRequest
 		}
 		redactable, err := objecthash.Redactable(obj)
 		if err != nil {
-			return nil, ErrInvalidRequest
+			return nil, vdsoff.ErrInvalidRequest
 		}
 		oh, err := objecthash.ObjectHash(redactable)
 		if err != nil {
-			return nil, ErrInvalidRequest
+			return nil, vdsoff.ErrInvalidRequest
 		}
 		rb, err := json.Marshal(redactable)
 		if err != nil {
-			return nil, ErrInvalidRequest
+			return nil, vdsoff.ErrInvalidRequest
 		}
 		return &pb.LeafData{LeafInput: oh, ExtraData: rb, Format: pb.DataFormat_JSON}, nil
 	case extraEntry:
@@ -623,7 +624,7 @@ func createLeafData(body []byte, ef int) (*pb.LeafData, error) {
 		}
 		return &req, nil
 	default:
-		return nil, ErrInvalidRequest
+		return nil, vdsoff.ErrInvalidRequest
 	}
 }
 
@@ -634,7 +635,7 @@ func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 		var err error
 		prevLeafHash, err = hex.DecodeString(prevLeafHashString)
 		if err != nil {
-			writeResponseHeader(w, ErrInvalidRequest)
+			writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 			return
 		}
 	}
@@ -642,13 +643,13 @@ func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 	body, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 
 	ld, err := createLeafData(body, ef)
 	if err != nil {
-		writeResponseHeader(w, ErrInvalidRequest)
+		writeResponseHeader(w, vdsoff.ErrInvalidRequest)
 		return
 	}
 

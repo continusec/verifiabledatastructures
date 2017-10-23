@@ -23,6 +23,7 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 
 	"golang.org/x/net/context"
+	"github.com/Guardtime/verifiabledatastructures/vdsoff"
 )
 
 // VerifyInclusion will fetch a proof the the specified MerkleTreeHash is included in the
@@ -33,7 +34,7 @@ func (log *VerifiableLog) VerifyInclusion(ctx context.Context, head *pb.LogTreeH
 		return err
 	}
 
-	err = VerifyLogInclusionProof(proof, leaf, head)
+	err = vdsoff.VerifyLogInclusionProof(proof, leaf, head)
 	if err != nil {
 		return err
 	}
@@ -46,13 +47,13 @@ func (log *VerifiableLog) VerifyInclusion(ctx context.Context, head *pb.LogTreeH
 // and returns the result. The two tree heads may be in either order (even equal), but both must be greater than zero and non-nil.
 func (log *VerifiableLog) VerifyConsistency(ctx context.Context, a, b *pb.LogTreeHashResponse) error {
 	if a == nil || b == nil || a.TreeSize <= 0 || b.TreeSize <= 0 {
-		return ErrVerificationFailed
+		return vdsoff.ErrVerificationFailed
 	}
 
 	// Special case being equal
 	if a.TreeSize == b.TreeSize {
 		if !bytes.Equal(a.RootHash, b.RootHash) {
-			return ErrVerificationFailed
+			return vdsoff.ErrVerificationFailed
 		}
 		// All good
 		return nil
@@ -96,7 +97,7 @@ func (log *VerifiableLog) BlockUntilPresent(ctx context.Context, leaf []byte) (*
 			switch err {
 			case nil: // we found it
 				return lth, nil
-			case ErrNotFound:
+			case vdsoff.ErrNotFound:
 				// no good, continue
 			default:
 				// Should return error, but we're struggling to differentiate not found vs other errors
@@ -171,7 +172,7 @@ func (log *VerifiableLog) VerifySuppliedInclusionProof(ctx context.Context, prev
 		return nil, err
 	}
 
-	err = VerifyLogInclusionProof(proof, leaf, headForInclProof)
+	err = vdsoff.VerifyLogInclusionProof(proof, leaf, headForInclProof)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +187,7 @@ func (log *VerifiableLog) VerifySuppliedInclusionProof(ctx context.Context, prev
 // the contents of all of the log entries retrieved. To start at entry zero, pass nil for prev, which will also bypass consistency proof checking. Head must not be nil.
 func (log *VerifiableLog) VerifyEntries(ctx context.Context, prev *pb.LogTreeHashResponse, head *pb.LogTreeHashResponse, auditFunc LogAuditFunction) error {
 	if head == nil {
-		return ErrNilTreeHead
+		return vdsoff.ErrNilTreeHead
 	}
 
 	if prev != nil && head.TreeSize <= prev.TreeSize {
@@ -210,14 +211,14 @@ func (log *VerifiableLog) VerifyEntries(ctx context.Context, prev *pb.LogTreeHas
 			if firstHash == nil {
 				firstHash = b
 			} else {
-				firstHash = NodeMerkleTreeHash(b, firstHash)
+				firstHash = vdsoff.NodeMerkleTreeHash(b, firstHash)
 			}
 		}
 		if !bytes.Equal(firstHash, prev.RootHash) {
-			return ErrVerificationFailed
+			return vdsoff.ErrVerificationFailed
 		}
 		if len(firstHash) != 32 {
-			return ErrVerificationFailed
+			return vdsoff.ErrVerificationFailed
 		}
 		for i := len(p.AuditPath) - 1; i >= 0; i-- {
 			merkleTreeStack = append(merkleTreeStack, p.AuditPath[i])
@@ -235,34 +236,34 @@ func (log *VerifiableLog) VerifyEntries(ctx context.Context, prev *pb.LogTreeHas
 			}
 		}
 
-		mtlHash := LeafMerkleTreeHash(entry.GetLeafInput())
+		mtlHash := vdsoff.LeafMerkleTreeHash(entry.GetLeafInput())
 
 		merkleTreeStack = append(merkleTreeStack, mtlHash)
 		for z := idx; (z & 1) == 1; z >>= 1 {
-			merkleTreeStack = append(merkleTreeStack[:len(merkleTreeStack)-2], NodeMerkleTreeHash(merkleTreeStack[len(merkleTreeStack)-2], merkleTreeStack[len(merkleTreeStack)-1]))
+			merkleTreeStack = append(merkleTreeStack[:len(merkleTreeStack)-2], vdsoff.NodeMerkleTreeHash(merkleTreeStack[len(merkleTreeStack)-2], merkleTreeStack[len(merkleTreeStack)-1]))
 		}
 
 		idx++
 	}
 
 	if idx != head.TreeSize {
-		return ErrNotAllEntriesReturned
+		return vdsoff.ErrNotAllEntriesReturned
 	}
 
 	if len(merkleTreeStack) == 0 {
-		return ErrVerificationFailed
+		return vdsoff.ErrVerificationFailed
 	}
 
 	headHash := merkleTreeStack[len(merkleTreeStack)-1]
 	for z := len(merkleTreeStack) - 2; z >= 0; z-- {
-		headHash = NodeMerkleTreeHash(merkleTreeStack[z], headHash)
+		headHash = vdsoff.NodeMerkleTreeHash(merkleTreeStack[z], headHash)
 	}
 
 	if !bytes.Equal(headHash, head.RootHash) {
-		return ErrVerificationFailed
+		return vdsoff.ErrVerificationFailed
 	}
 	if len(headHash) != 32 {
-		return ErrVerificationFailed
+		return vdsoff.ErrVerificationFailed
 	}
 
 	// all clear
