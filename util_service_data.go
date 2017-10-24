@@ -25,7 +25,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/continusec/objecthash"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 const (
@@ -159,7 +159,7 @@ func readObjectSize(ctx context.Context, kr KeyReader) (int64, error) {
 	switch err {
 	case nil:
 		return lth.Size, nil
-	case vdsoff.ErrNoSuchKey:
+	case util.ErrNoSuchKey:
 		return 0, nil
 	default:
 		return 0, err
@@ -188,11 +188,11 @@ func lookupLogTreeHead(ctx context.Context, kr KeyReader, lt pb.LogType) (*pb.Lo
 
 // Start pair
 
-func writeMapHash(ctx context.Context, kr KeyWriter, number int64, path vdsoff.BPath, data *pb.MapNode) error {
+func writeMapHash(ctx context.Context, kr KeyWriter, number int64, path util.BPath, data *pb.MapNode) error {
 	return kr.Set(ctx, mapNodeBucket, append(toIntBinary(uint64(number)), path...), data)
 }
 
-func lookupMapHash(ctx context.Context, kr KeyReader, number int64, path vdsoff.BPath) (*pb.MapNode, error) {
+func lookupMapHash(ctx context.Context, kr KeyReader, number int64, path util.BPath) (*pb.MapNode, error) {
 	// Special case 0
 	if number == 0 && path.Length() == 0 {
 		return &pb.MapNode{}, nil

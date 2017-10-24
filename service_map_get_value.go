@@ -25,7 +25,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // MapGetValue returns a value from a map
@@ -45,7 +45,7 @@ func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueR
 		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
 	err = s.Reader.ExecuteReadOnly(ctx, ns, func(ctx context.Context, kr KeyReader) error {
-		kp := vdsoff.BPathFromKey(req.Key)
+		kp := util.BPathFromKey(req.Key)
 
 		th, err := lookupLogTreeHead(ctx, kr, pb.LogType_STRUCT_TYPE_TREEHEAD_LOG)
 		if err != nil {
@@ -61,7 +61,7 @@ func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueR
 			return status.Errorf(codes.InvalidArgument, "bad tree size")
 		}
 
-		root, err := lookupMapHash(ctx, kr, treeSize, vdsoff.BPathEmpty)
+		root, err := lookupMapHash(ctx, kr, treeSize, util.BPathEmpty)
 
 		if err != nil {
 			return err
@@ -106,12 +106,12 @@ func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueR
 				dataRv = &pb.LeafData{} // empty value
 
 				// Add empty proof paths for common ancestors
-				for kp.At(ptr) == vdsoff.BPath(cur.Path).At(ptr) {
+				for kp.At(ptr) == util.BPath(cur.Path).At(ptr) {
 					ptr++
 				}
 
 				// Add sibling hash
-				theirHash, err := vdsoff.CalcNodeHash(cur, uint(ptr+1))
+				theirHash, err := util.CalcNodeHash(cur, uint(ptr+1))
 				if err != nil {
 					return err
 				}
@@ -147,31 +147,31 @@ func (s *localServiceImpl) MapGetValue(ctx context.Context, req *pb.MapGetValueR
 // VerifyMapInclusionProof verifies an inclusion proof against a MapTreeHead
 func VerifyMapInclusionProof(self *pb.MapGetValueResponse, key []byte, head *pb.MapTreeHashResponse) error {
 	if self.TreeSize != head.MutationLog.TreeSize {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
-	kp := vdsoff.ConstructMapKeyPath(key)
-	t := vdsoff.LeafMerkleTreeHash(self.Value.GetLeafInput())
+	kp := util.ConstructMapKeyPath(key)
+	t := util.LeafMerkleTreeHash(self.Value.GetLeafInput())
 	for i := len(kp) - 1; i >= 0; i-- {
 		p := self.AuditPath[i]
 		if len(p) == 0 { // some transport layers change nil to zero length, so we handle either in the same way
-			p = vdsoff.DefaultLeafValues[i+1]
+			p = util.DefaultLeafValues[i+1]
 		}
 
 		if kp[i] {
-			t = vdsoff.NodeMerkleTreeHash(p, t)
+			t = util.NodeMerkleTreeHash(p, t)
 		} else {
-			t = vdsoff.NodeMerkleTreeHash(t, p)
+			t = util.NodeMerkleTreeHash(t, p)
 		}
 	}
 
 	if !bytes.Equal(t, head.RootHash) {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	// should not happen, but guarding anyway
 	if len(t) != 32 {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	// all clear

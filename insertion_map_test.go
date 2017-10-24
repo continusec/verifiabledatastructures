@@ -24,7 +24,7 @@ import (
 	"context"
 	"encoding/base64"
 	"testing"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 type mutRes struct {
@@ -91,17 +91,17 @@ type mutRes struct {
 }*/
 
 func recreateBasedOnProof(key, value []byte, proof [][]byte) []byte {
-	kp := vdsoff.BPathFromKey(key)
-	t := vdsoff.LeafMerkleTreeHash(value)
+	kp := util.BPathFromKey(key)
+	t := util.LeafMerkleTreeHash(value)
 	for i := int(kp.Length()) - 1; i >= 0; i-- {
 		p := proof[i]
 		if p == nil {
-			p = vdsoff.DefaultLeafValues[i+1]
+			p = util.DefaultLeafValues[i+1]
 		}
 		if kp.At(uint(i)) {
-			t = vdsoff.NodeMerkleTreeHash(p, t)
+			t = util.NodeMerkleTreeHash(p, t)
 		} else {
-			t = vdsoff.NodeMerkleTreeHash(t, p)
+			t = util.NodeMerkleTreeHash(t, p)
 		}
 	}
 	return t
@@ -329,7 +329,7 @@ func TestConsUpNewNodes(t *testing.T) {
 				Action:           "update",
 				Key:              []byte("foo"),
 				Value:            &pb.LeafData{LeafInput: []byte("baz")},
-				PreviousLeafHash: vdsoff.LeafMerkleTreeHash([]byte("")),
+				PreviousLeafHash: util.LeafMerkleTreeHash([]byte("")),
 			},
 			Result: "HgoyuytptJC4IKIvqg0Z4xIb/88VCda7MmfCxnNw4Ok=",
 		},
@@ -338,7 +338,7 @@ func TestConsUpNewNodes(t *testing.T) {
 				Action:           "update",
 				Key:              []byte("foo"),
 				Value:            &pb.LeafData{LeafInput: []byte("baz")},
-				PreviousLeafHash: vdsoff.LeafMerkleTreeHash([]byte("bar")),
+				PreviousLeafHash: util.LeafMerkleTreeHash([]byte("bar")),
 			},
 			Result: "Gzf2A+qPyIbLhju/TQhl26kmnKOTMVwx2L51sLKvSWs=",
 		},
@@ -435,7 +435,7 @@ func TestConsUpNewNodes(t *testing.T) {
 				Action:           "update",
 				Key:              []byte("shouldi"),
 				Value:            &pb.LeafData{LeafInput: []byte("dodoit")},
-				PreviousLeafHash: vdsoff.LeafMerkleTreeHash([]byte("testmore")),
+				PreviousLeafHash: util.LeafMerkleTreeHash([]byte("testmore")),
 			},
 			Result: "cmlMaZRei7GrEIHBGu0xuJ+8It4N/JtxVnJ4DTQE0e4=",
 		},

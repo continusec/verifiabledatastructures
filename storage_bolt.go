@@ -28,7 +28,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/golang/protobuf/proto"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // BoltBackedService gives a service that persists to a BoltDB file.
@@ -131,11 +131,11 @@ type boltReaderWriter struct {
 func (db *boltReaderWriter) Get(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	b := db.Tx.Bucket(bucket)
 	if b == nil {
-		return vdsoff.ErrNoSuchKey
+		return util.ErrNoSuchKey
 	}
 	rv := b.Get(key)
 	if rv == nil { // as distinct from 0 length
-		return vdsoff.ErrNoSuchKey
+		return util.ErrNoSuchKey
 	}
 	return proto.Unmarshal(rv, value)
 }

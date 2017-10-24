@@ -214,7 +214,7 @@ package verifiabledatastructures
 import (
 	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // Client is the primary point to begin interaction with
@@ -364,7 +364,7 @@ func (g *VerifiableLog) Entry(ctx context.Context, idx int64) (*pb.LeafData, err
 		return nil, err
 	}
 	if len(resp.Values) != 1 {
-		return nil, vdsoff.ErrNotFound
+		return nil, util.ErrNotFound
 	}
 	return resp.Values[0], nil
 }

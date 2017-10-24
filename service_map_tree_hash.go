@@ -23,7 +23,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // MapTreeHash returns the tree hash for a map
@@ -64,12 +64,12 @@ func (s *localServiceImpl) MapTreeHash(ctx context.Context, req *pb.MapTreeHashR
 		}
 
 		// Get the root node for tree size
-		mapNode, err := lookupMapHash(ctx, kr, treeSize, vdsoff.BPathEmpty)
+		mapNode, err := lookupMapHash(ctx, kr, treeSize, util.BPathEmpty)
 		if err != nil {
 			return err
 		}
 
-		rh, err := vdsoff.CalcNodeHash(mapNode, 0)
+		rh, err := util.CalcNodeHash(mapNode, 0)
 		if err != nil {
 			return err
 		}

@@ -23,7 +23,7 @@ import (
 	"log"
 
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // LocalService is the main object used to create an instance of the server or embedded
@@ -62,6 +62,6 @@ func ApplyMutation(ctx context.Context, db KeyWriter, sizeBefore int64, mut *pb.
 	case mut.LogAddEntry != nil:
 		return applyLogAddEntry(ctx, db, sizeBefore, mut.LogAddEntry)
 	default:
-		return 0, vdsoff.ErrNotImplemented
+		return 0, util.ErrNotImplemented
 	}
 }

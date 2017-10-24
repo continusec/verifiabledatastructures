@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package vdsoff
+package util
 
 import (
 	"bytes"

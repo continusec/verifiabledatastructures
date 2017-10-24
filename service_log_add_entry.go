@@ -23,7 +23,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // LogAddEntry adds an entry to a log
@@ -50,6 +50,6 @@ func (s *localServiceImpl) LogAddEntry(ctx context.Context, req *pb.LogAddEntryR
 	}
 
 	return &pb.LogAddEntryResponse{
-		LeafHash: vdsoff.LeafMerkleTreeHash(req.Value.LeafInput),
+		LeafHash: util.LeafMerkleTreeHash(req.Value.LeafInput),
 	}, nil
 }

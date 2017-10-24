@@ -25,7 +25,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // LogConsistencyProof verifies the consisitency of a log
@@ -66,16 +66,16 @@ func (s *localServiceImpl) LogConsistencyProof(ctx context.Context, req *pb.LogC
 		}
 
 		// Ranges are good
-		ranges := vdsoff.SubProof(req.FromSize, 0, second, true)
+		ranges := util.SubProof(req.FromSize, 0, second, true)
 		path, err := fetchSubTreeHashes(ctx, kr, req.Log.LogType, ranges, false)
 		if err != nil {
 			return err
 		}
 		for i, rr := range ranges {
 			if len(path[i]) == 0 {
-				if vdsoff.IsPow2(rr[1] - rr[0]) {
+				if util.IsPow2(rr[1] - rr[0]) {
 					// Would have been nice if GetSubTreeHashes could better handle these
-					return vdsoff.ErrNoSuchKey
+					return util.ErrNoSuchKey
 				}
 				path[i], err = calcSubTreeHash(ctx, kr, req.Log.LogType, rr[0], rr[1])
 				if err != nil {
@@ -103,23 +103,23 @@ func (s *localServiceImpl) LogConsistencyProof(ctx context.Context, req *pb.LogC
 // VerifyLogConsistencyProof will verify that the consistency proof stored in this object can produce both the LogTreeHeads passed to this method.
 func VerifyLogConsistencyProof(self *pb.LogConsistencyProofResponse, first, second *pb.LogTreeHashResponse) error {
 	if first.TreeSize != self.FromSize {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	if second.TreeSize != self.TreeSize {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	if self.FromSize < 1 {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	if self.FromSize >= second.TreeSize {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	var proof [][]byte
-	if vdsoff.IsPow2(self.FromSize) {
+	if util.IsPow2(self.FromSize) {
 		proof = make([][]byte, 1+len(self.AuditPath))
 		proof[0] = first.RootHash
 		copy(proof[1:], self.AuditPath)
@@ -133,46 +133,46 @@ func VerifyLogConsistencyProof(self *pb.LogConsistencyProofResponse, first, seco
 		sn >>= 1
 	}
 	if len(proof) == 0 {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 	fr := proof[0]
 	sr := proof[0]
 	for _, c := range proof[1:] {
 		if sn == 0 {
-			return vdsoff.ErrVerificationFailed
+			return util.ErrVerificationFailed
 		}
 		if (1 == (fn & 1)) || (fn == sn) {
-			fr = vdsoff.NodeMerkleTreeHash(c, fr)
-			sr = vdsoff.NodeMerkleTreeHash(c, sr)
+			fr = util.NodeMerkleTreeHash(c, fr)
+			sr = util.NodeMerkleTreeHash(c, sr)
 			for !((fn == 0) || (1 == (fn & 1))) {
 				fn >>= 1
 				sn >>= 1
 			}
 		} else {
-			sr = vdsoff.NodeMerkleTreeHash(sr, c)
+			sr = util.NodeMerkleTreeHash(sr, c)
 		}
 		fn >>= 1
 		sn >>= 1
 	}
 
 	if sn != 0 {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	if !bytes.Equal(first.RootHash, fr) {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	if !bytes.Equal(second.RootHash, sr) {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	// should not happen, but guarding anyway
 	if len(fr) != 32 {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 	if len(sr) != 32 {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	// all clear

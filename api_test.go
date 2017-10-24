@@ -31,7 +31,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 func testMap(ctx context.Context, t *testing.T, service pb.VerifiableDataStructuresServiceServer) {
@@ -101,7 +101,7 @@ func testLog(ctx context.Context, t *testing.T, service pb.VerifiableDataStructu
 	}
 
 	lh := aer.LeafHash()
-	if !bytes.Equal(lh, vdsoff.LeafMerkleTreeHash([]byte("foo"))) {
+	if !bytes.Equal(lh, util.LeafMerkleTreeHash([]byte("foo"))) {
 		t.Fatal("Failed adding item")
 	}
 
@@ -112,7 +112,7 @@ func testLog(ctx context.Context, t *testing.T, service pb.VerifiableDataStructu
 		}
 	}
 
-	if !bytes.Equal(treeRoot.RootHash, vdsoff.LeafMerkleTreeHash([]byte("foo"))) {
+	if !bytes.Equal(treeRoot.RootHash, util.LeafMerkleTreeHash([]byte("foo"))) {
 		t.Fatal("Failed calculating tree root")
 	}
 
@@ -175,7 +175,7 @@ func testLog(ctx context.Context, t *testing.T, service pb.VerifiableDataStructu
 
 	cnt := 0
 	for entry := range log.Entries(context.Background(), 0, treeRoot.TreeSize) {
-		err = log.VerifyInclusion(ctx, treeRoot, vdsoff.LeafMerkleTreeHash(entry.LeafInput))
+		err = log.VerifyInclusion(ctx, treeRoot, util.LeafMerkleTreeHash(entry.LeafInput))
 		if err != nil {
 			t.Fatal("Failure verifiying inclusion")
 		}
@@ -331,7 +331,7 @@ func TestPermissions(t *testing.T) {
 	_, err = c.Account("0", "secret").VerifiableLog("foo").Add(ctx, &pb.LeafData{LeafInput: []byte("bar")})
 	expectErr(t, nil, err)
 
-	v, err = vdsoff.CreateRedactableJSONLeafData([]byte("{\"name\":\"adam\",\"dob\":\"100000\"}"))
+	v, err = util.CreateRedactableJSONLeafData([]byte("{\"name\":\"adam\",\"dob\":\"100000\"}"))
 	expectErr(t, nil, err)
 	p, err := c.Account("0", "secret").VerifiableLog("foo").Add(ctx, v)
 	expectErr(t, nil, err)
@@ -425,16 +425,16 @@ func generateRootHashes(ctx context.Context, input <-chan *pb.LeafData) <-chan [
 				if !ok {
 					return
 				}
-				stack = append(stack, vdsoff.LeafMerkleTreeHash(b.GetLeafInput()))
+				stack = append(stack, util.LeafMerkleTreeHash(b.GetLeafInput()))
 			}
 
 			for j := index; (j & 1) == 1; j >>= 1 {
-				stack = append(stack[:len(stack)-2], vdsoff.NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1]))
+				stack = append(stack[:len(stack)-2], util.NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1]))
 			}
 
 			rh := stack[len(stack)-1]
 			for j := len(stack) - 2; j >= 0; j-- {
-				rh = vdsoff.NodeMerkleTreeHash(stack[j], rh)
+				rh = util.NodeMerkleTreeHash(stack[j], rh)
 			}
 
 			select {
@@ -451,13 +451,13 @@ func generateRootHashes(ctx context.Context, input <-chan *pb.LeafData) <-chan [
 func verifyRootHash(entries []*pb.LeafData, answer []byte) bool {
 	stack := make([][]byte, 0)
 	for i, b := range entries {
-		stack = append(stack, vdsoff.LeafMerkleTreeHash(b.LeafInput))
+		stack = append(stack, util.LeafMerkleTreeHash(b.LeafInput))
 		for j := i; (j & 1) == 1; j >>= 1 {
-			stack = append(stack[:len(stack)-2], vdsoff.NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1]))
+			stack = append(stack[:len(stack)-2], util.NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1]))
 		}
 	}
 	for len(stack) > 1 {
-		stack = append(stack[:len(stack)-2], vdsoff.NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1]))
+		stack = append(stack[:len(stack)-2], util.NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1]))
 	}
 	return bytes.Equal(stack[0], answer)
 }

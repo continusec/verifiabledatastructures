@@ -31,7 +31,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 const (
@@ -74,7 +74,7 @@ func (c *httpRestImpl) makeLogRequest(log *pb.LogRef, method, path string, data 
 	case pb.LogType_STRUCT_TYPE_TREEHEAD_LOG:
 		prefix = fmt.Sprintf("/account/%s/map/%s/log/treehead", log.Account.Id, log.Name)
 	default:
-		return nil, nil, vdsoff.ErrInvalidRequest
+		return nil, nil, util.ErrInvalidRequest
 	}
 	return c.makeRequest(log.Account, method, prefix+path, data, headers)
 }
@@ -261,7 +261,7 @@ func (c *httpRestImpl) MapSetValue(ctx context.Context, req *pb.MapSetValueReque
 		}
 		return &rv, nil
 	default:
-		return nil, vdsoff.ErrInvalidRequest
+		return nil, util.ErrInvalidRequest
 	}
 }
 

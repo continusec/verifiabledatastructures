@@ -23,13 +23,13 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 func wrapClientError(err error) error {
 	switch err {
-	case vdsoff.ErrNoSuchKey:
-		return vdsoff.ErrNotFound
+	case util.ErrNoSuchKey:
+		return util.ErrNotFound
 	default:
 		return err
 	}
@@ -90,16 +90,16 @@ func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInc
 		}
 
 		// Ranges are good
-		ranges := vdsoff.Path(leafIndex, 0, treeSize)
+		ranges := util.Path(leafIndex, 0, treeSize)
 		path, err := fetchSubTreeHashes(ctx, kr, req.Log.LogType, ranges, false)
 		if err != nil {
 			return err
 		}
 		for i, rr := range ranges {
 			if len(path[i]) == 0 {
-				if vdsoff.IsPow2(rr[1] - rr[0]) {
+				if util.IsPow2(rr[1] - rr[0]) {
 					// Would have been nice if GetSubTreeHashes could better handle these
-					return vdsoff.ErrNotFound
+					return util.ErrNotFound
 				}
 				path[i], err = calcSubTreeHash(ctx, kr, req.Log.LogType, rr[0], rr[1])
 				if err != nil {

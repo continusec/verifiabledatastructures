@@ -22,7 +22,7 @@ import (
 	"context"
 
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 /* MUST be pow2. Assumes all args are range checked first */
@@ -65,7 +65,7 @@ func calcSubTreeHash(ctx context.Context, kr KeyReader, lt pb.LogType, start, en
 	r := make([][2]int64, 0, 8) // magic number bad - why did we do this?
 
 	for start != end {
-		k := vdsoff.CalcK((end - start) + 1)
+		k := util.CalcK((end - start) + 1)
 		r = append(r, [2]int64{start, start + k})
 		start += k
 	}
@@ -76,12 +76,12 @@ func calcSubTreeHash(ctx context.Context, kr KeyReader, lt pb.LogType, start, en
 	}
 
 	if len(hashes) == 0 {
-		return nil, vdsoff.ErrInvalidTreeRange
+		return nil, util.ErrInvalidTreeRange
 	}
 
 	rv := hashes[len(hashes)-1]
 	for i := len(hashes) - 2; i >= 0; i-- {
-		rv = vdsoff.NodeMerkleTreeHash(hashes[i], rv)
+		rv = util.NodeMerkleTreeHash(hashes[i], rv)
 	}
 
 	return rv, nil

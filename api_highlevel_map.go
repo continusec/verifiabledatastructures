@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"golang.org/x/net/context"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // VerifiedGet gets the value for the given key in the specified MapTreeState, and verifies that it is
@@ -132,7 +132,7 @@ func (vmap *VerifiableMap) VerifiedMapState(ctx context.Context, prev *MapTreeSt
 	// If we already have a tree head that is the size of our map, then we
 	// probably don't need a new one, so try that first.
 	if prevThlth != nil && prevThlth.TreeSize >= mapHead.MutationLog.TreeSize {
-		lh, err := vdsoff.CreateJSONLeafDataFromObject(mapHead)
+		lh, err := util.CreateJSONLeafDataFromObject(mapHead)
 		if err != nil {
 			return nil, err
 		}
@@ -152,11 +152,11 @@ func (vmap *VerifiableMap) VerifiedMapState(ctx context.Context, prev *MapTreeSt
 		}
 
 		// And make sure we are in it
-		li, err := vdsoff.CreateJSONLeafDataFromObject(mapHead)
+		li, err := util.CreateJSONLeafDataFromObject(mapHead)
 		if err != nil {
 			return nil, err
 		}
-		err = vmap.TreeHeadLog().VerifyInclusion(ctx, thlth, vdsoff.LeafMerkleTreeHash(li.LeafInput))
+		err = vmap.TreeHeadLog().VerifyInclusion(ctx, thlth, util.LeafMerkleTreeHash(li.LeafInput))
 		if err != nil {
 			return nil, err
 		}
@@ -208,7 +208,7 @@ func (vmap *VerifiableMap) VerifyMap(ctx context.Context, prev *MapTreeState, he
 	}
 
 	if head == nil {
-		return vdsoff.ErrNilTreeHead
+		return util.ErrNilTreeHead
 	}
 
 	return vmap.TreeHeadLog().VerifyEntries(ctx, prevLth, head.TreeHeadLogTreeHead, (&auditState{

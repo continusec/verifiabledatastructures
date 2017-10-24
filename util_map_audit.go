@@ -24,7 +24,7 @@ import (
 
 	"github.com/continusec/verifiabledatastructures/pb"
 	"golang.org/x/net/context"
-	"github.com/Guardtime/verifiabledatastructures/vdsoff"
+	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // MapAuditNode is an internal structure used for auditing maps
@@ -77,24 +77,24 @@ func (node *mapAuditNode) CalcHash() []byte {
 			node.Hash = node.LeafHash
 			for i := 256; i > node.Depth; i-- {
 				if node.KeyPath[i-1] {
-					node.Hash = vdsoff.NodeMerkleTreeHash(vdsoff.DefaultLeafValues[i], node.Hash)
+					node.Hash = util.NodeMerkleTreeHash(util.DefaultLeafValues[i], node.Hash)
 				} else {
-					node.Hash = vdsoff.NodeMerkleTreeHash(node.Hash, vdsoff.DefaultLeafValues[i])
+					node.Hash = util.NodeMerkleTreeHash(node.Hash, util.DefaultLeafValues[i])
 				}
 			}
 		} else {
 			var left, right []byte
 			if node.Left == nil {
-				left = vdsoff.DefaultLeafValues[node.Depth+1]
+				left = util.DefaultLeafValues[node.Depth+1]
 			} else {
 				left = node.Left.CalcHash()
 			}
 			if node.Right == nil {
-				right = vdsoff.DefaultLeafValues[node.Depth+1]
+				right = util.DefaultLeafValues[node.Depth+1]
 			} else {
 				right = node.Right.CalcHash()
 			}
-			node.Hash = vdsoff.NodeMerkleTreeHash(left, right)
+			node.Hash = util.NodeMerkleTreeHash(left, right)
 		}
 	}
 	return node.Hash
@@ -103,7 +103,7 @@ func (node *mapAuditNode) CalcHash() []byte {
 // Given a root node, update it with a given map mutation, returning the new
 // root hash.
 func addMutationToTree(root *mapAuditNode, mut *pb.MapMutation) ([]byte, error) {
-	keyPath := vdsoff.ConstructMapKeyPath(mut.Key)
+	keyPath := util.ConstructMapKeyPath(mut.Key)
 	head := root
 
 	// First, set head to as far down as we can go
@@ -141,7 +141,7 @@ func addMutationToTree(root *mapAuditNode, mut *pb.MapMutation) ([]byte, error) 
 			Depth:    head.Depth + 1,
 			Leaf:     true,
 			KeyPath:  keyPath,
-			LeafHash: vdsoff.DefaultLeafValues[256],
+			LeafHash: util.DefaultLeafValues[256],
 		}
 		if child.KeyPath[head.Depth] {
 			head.Right = child
@@ -154,15 +154,15 @@ func addMutationToTree(root *mapAuditNode, mut *pb.MapMutation) ([]byte, error) 
 
 	switch mut.Action {
 	case "set":
-		head.LeafHash = vdsoff.LeafMerkleTreeHash(mut.Value.LeafInput)
+		head.LeafHash = util.LeafMerkleTreeHash(mut.Value.LeafInput)
 	case "delete":
-		head.LeafHash = vdsoff.DefaultLeafValues[256]
+		head.LeafHash = util.DefaultLeafValues[256]
 	case "update":
 		if bytes.Equal(head.LeafHash, mut.PreviousLeafHash) {
-			head.LeafHash = vdsoff.LeafMerkleTreeHash(mut.Value.LeafInput)
+			head.LeafHash = util.LeafMerkleTreeHash(mut.Value.LeafInput)
 		}
 	default:
-		return nil, vdsoff.ErrVerificationFailed
+		return nil, util.ErrVerificationFailed
 	}
 	head.Hash = nil
 
@@ -211,7 +211,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 		// to our copy of the map
 		err = mutLog.VerifyEntries(ctx, a.MutLogHead, mutLogHead, func(ctx context.Context, idx int64, entry *pb.LeafData) error {
 			// First, verify that the pb.LeafData is in fact well formed objecthash
-			err := vdsoff.ValidateJSONLeafDataFromMutation(entry)
+			err := util.ValidateJSONLeafDataFromMutation(entry)
 			if err != nil {
 				return err
 			}
@@ -240,18 +240,18 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 
 			// Keep our own copy of the mutation log hash stack so that we can
 			// verify the mutation log heads as well.
-			lh := vdsoff.LeafMerkleTreeHash(entry.LeafInput)
+			lh := util.LeafMerkleTreeHash(entry.LeafInput)
 
 			// Apply to stack
 			a.MutLogHashStack = append(a.MutLogHashStack, lh)
 			for z := idx; (z & 1) == 1; z >>= 1 {
-				a.MutLogHashStack = append(a.MutLogHashStack[:len(a.MutLogHashStack)-2], vdsoff.NodeMerkleTreeHash(a.MutLogHashStack[len(a.MutLogHashStack)-2], a.MutLogHashStack[len(a.MutLogHashStack)-1]))
+				a.MutLogHashStack = append(a.MutLogHashStack[:len(a.MutLogHashStack)-2], util.NodeMerkleTreeHash(a.MutLogHashStack[len(a.MutLogHashStack)-2], a.MutLogHashStack[len(a.MutLogHashStack)-1]))
 			}
 
 			// Save off current one
 			headHash := a.MutLogHashStack[len(a.MutLogHashStack)-1]
 			for z := len(a.MutLogHashStack) - 2; z >= 0; z-- {
-				headHash = vdsoff.NodeMerkleTreeHash(a.MutLogHashStack[z], headHash)
+				headHash = util.NodeMerkleTreeHash(a.MutLogHashStack[z], headHash)
 			}
 
 			// Now add both to our saved copy of the tree head log.
@@ -283,7 +283,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 	}
 
 	if size > a.Size {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	return nil
@@ -292,7 +292,7 @@ func (a *auditState) ProcessUntilAtLeast(ctx context.Context, size int64) error 
 // CheckTreeHeadEntry is the audit function that checks the actual tree head is correct
 func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry *pb.LeafData) error {
 	// Step 0, are we a valid JSON hash?
-	err := vdsoff.ValidateJSONLeafData(ctx, entry)
+	err := util.ValidateJSONLeafData(ctx, entry)
 	if err != nil {
 		return err
 	}
@@ -313,12 +313,12 @@ func (a *auditState) CheckTreeHeadEntry(ctx context.Context, idx int64, entry *p
 
 	// Check map root hash (subtract 1 from index since size 1 is the first meaningful)
 	if !bytes.Equal(a.MapTreeHeads[mth.MutationLog.TreeSize-1], mth.RootHash) {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	// Check mutation log hash (subtract 1 from index since size 1 is the first meaningful)
 	if !bytes.Equal(a.MutationLogTreeHeads[mth.MutationLog.TreeSize-1], mth.MutationLog.RootHash) {
-		return vdsoff.ErrVerificationFailed
+		return util.ErrVerificationFailed
 	}
 
 	// All good
