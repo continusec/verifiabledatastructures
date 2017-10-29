@@ -24,7 +24,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/Guardtime/verifiabledatastructures/util"
+	"github.com/continusec/verifiabledatastructures/util"
 )
 
 func writeOutLogTreeNodes(ctx context.Context, db KeyWriter, log *pb.LogRef, entryIndex int64, mtl []byte, stack [][]byte) ([]byte, error) {

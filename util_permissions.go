@@ -24,7 +24,7 @@ import (
 
 	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/Guardtime/verifiabledatastructures/util"
+	"github.com/continusec/verifiabledatastructures/util"
 )
 
 const (

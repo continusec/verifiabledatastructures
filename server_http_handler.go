@@ -35,7 +35,7 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
-	"github.com/Guardtime/verifiabledatastructures/util"
+	"github.com/continusec/verifiabledatastructures/util"
 )
 
 const (

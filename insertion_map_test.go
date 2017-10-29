@@ -24,7 +24,7 @@ import (
 	"context"
 	"encoding/base64"
 	"testing"
-	"github.com/Guardtime/verifiabledatastructures/util"
+	"github.com/continusec/verifiabledatastructures/util"
 )
 
 type mutRes struct {

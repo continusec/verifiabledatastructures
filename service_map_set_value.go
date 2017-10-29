@@ -22,11 +22,11 @@ import (
 	"time"
 
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 func makeJSONMutationEntry(req *pb.MapSetValueRequest) (*pb.MapMutation, error) {

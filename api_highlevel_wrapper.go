@@ -213,8 +213,8 @@ package verifiabledatastructures
 
 import (
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"golang.org/x/net/context"
-	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // Client is the primary point to begin interaction with

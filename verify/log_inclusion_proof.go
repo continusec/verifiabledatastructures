@@ -2,8 +2,9 @@ package verify
 
 import (
 	"bytes"
+
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/Guardtime/verifiabledatastructures/util"
+	"github.com/continusec/verifiabledatastructures/util"
 )
 
 // VerifyLogInclusionProof verifies an inclusion proof against a LogTreeHead

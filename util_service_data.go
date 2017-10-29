@@ -25,7 +25,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/continusec/objecthash"
-	"github.com/Guardtime/verifiabledatastructures/util"
+	"github.com/continusec/verifiabledatastructures/util"
 )
 
 const (

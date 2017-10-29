@@ -23,8 +23,8 @@ import (
 	"reflect"
 
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"golang.org/x/net/context"
-	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // MapAuditNode is an internal structure used for auditing maps

@@ -22,7 +22,7 @@ import (
 	"context"
 
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/Guardtime/verifiabledatastructures/util"
+	"github.com/continusec/verifiabledatastructures/util"
 )
 
 /* MUST be pow2. Assumes all args are range checked first */
@@ -86,4 +86,3 @@ func calcSubTreeHash(ctx context.Context, kr KeyReader, lt pb.LogType, start, en
 
 	return rv, nil
 }
-

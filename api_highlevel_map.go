@@ -20,8 +20,8 @@ import "github.com/continusec/verifiabledatastructures/pb"
 import (
 	"time"
 
+	"github.com/continusec/verifiabledatastructures/util"
 	"golang.org/x/net/context"
-	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // VerifiedGet gets the value for the given key in the specified MapTreeState, and verifies that it is

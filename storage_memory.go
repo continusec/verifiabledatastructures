@@ -24,8 +24,8 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/continusec/verifiabledatastructures/util"
 	"github.com/golang/protobuf/proto"
-	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // TransientHashMapStorage gives a service that does inefficiently locking, keeps everything in memory, and doesn't

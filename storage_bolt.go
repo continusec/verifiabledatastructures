@@ -27,8 +27,8 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/boltdb/bolt"
+	"github.com/continusec/verifiabledatastructures/util"
 	"github.com/golang/protobuf/proto"
-	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // BoltBackedService gives a service that persists to a BoltDB file.

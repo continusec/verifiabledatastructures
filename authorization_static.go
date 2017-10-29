@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"golang.org/x/net/context"
-	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // StaticOracle applies a policy based on the configuration file specified.

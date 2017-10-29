@@ -20,10 +20,10 @@ package verifiabledatastructures
 
 import (
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/Guardtime/verifiabledatastructures/util"
 )
 
 // MapTreeHash returns the tree hash for a map

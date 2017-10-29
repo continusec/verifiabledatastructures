@@ -23,7 +23,7 @@ import (
 	"log"
 
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/Guardtime/verifiabledatastructures/util"
+	"github.com/continusec/verifiabledatastructures/util"
 )
 
 // LocalService is the main object used to create an instance of the server or embedded

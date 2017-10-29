@@ -22,9 +22,9 @@ import (
 
 	"github.com/continusec/verifiabledatastructures/pb"
 
+	"github.com/continusec/verifiabledatastructures/util"
+	"github.com/continusec/verifiabledatastructures/verify"
 	"golang.org/x/net/context"
-	"github.com/Guardtime/verifiabledatastructures/util"
-	"github.com/Guardtime/verifiabledatastructures/verify"
 )
 
 // VerifyInclusion will fetch a proof the the specified MerkleTreeHash is included in the
