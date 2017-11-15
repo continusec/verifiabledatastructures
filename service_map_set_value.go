@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -57,7 +58,7 @@ func (s *localServiceImpl) MapSetValue(ctx context.Context, req *pb.MapSetValueR
 		return nil, status.Errorf(codes.Internal, "bad mutation creation: %s", err)
 	}
 
-	mutData, err := CreateJSONLeafDataFromMutation(mm)
+	mutData, err := util.CreateJSONLeafDataFromMutation(mm)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "bad leaf data creation: %s", err)
 	}
@@ -81,6 +82,6 @@ func (s *localServiceImpl) MapSetValue(ctx context.Context, req *pb.MapSetValueR
 		return nil, status.Errorf(codes.Internal, "unknown err: %s", err)
 	}
 	return &pb.MapSetValueResponse{
-		LeafHash: LeafMerkleTreeHash(mutData.LeafInput),
+		LeafHash: util.LeafMerkleTreeHash(mutData.LeafInput),
 	}, nil
 }

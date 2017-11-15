@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"golang.org/x/net/context"
 )
 
@@ -53,5 +54,5 @@ func (o *StaticOracle) VerifyAllowed(ctx context.Context, account, apiKey, objec
 		}
 	}
 	// Default deny
-	return nil, ErrNotAuthorized
+	return nil, util.ErrNotAuthorized
 }

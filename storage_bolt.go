@@ -27,6 +27,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/boltdb/bolt"
+	"github.com/continusec/verifiabledatastructures/util"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -130,11 +131,11 @@ type boltReaderWriter struct {
 func (db *boltReaderWriter) Get(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	b := db.Tx.Bucket(bucket)
 	if b == nil {
-		return ErrNoSuchKey
+		return util.ErrNoSuchKey
 	}
 	rv := b.Get(key)
 	if rv == nil { // as distinct from 0 length
-		return ErrNoSuchKey
+		return util.ErrNoSuchKey
 	}
 	return proto.Unmarshal(rv, value)
 }

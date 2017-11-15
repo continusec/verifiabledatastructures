@@ -24,12 +24,13 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 )
 
 func writeOutLogTreeNodes(ctx context.Context, db KeyWriter, log *pb.LogRef, entryIndex int64, mtl []byte, stack [][]byte) ([]byte, error) {
 	stack = append(stack, mtl)
 	for zz, width := entryIndex, int64(2); (zz & 1) == 1; zz, width = zz>>1, width<<1 {
-		parN := NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1])
+		parN := util.NodeMerkleTreeHash(stack[len(stack)-2], stack[len(stack)-1])
 		stack = append(stack[:len(stack)-2], parN)
 		err := writeTreeNodeByRange(ctx, db, log.LogType, entryIndex+1-width, entryIndex+1, &pb.TreeNode{Mth: parN})
 		if err != nil {
@@ -39,7 +40,7 @@ func writeOutLogTreeNodes(ctx context.Context, db KeyWriter, log *pb.LogRef, ent
 	// Collapse stack to get tree head
 	headHash := stack[len(stack)-1]
 	for z := len(stack) - 2; z >= 0; z-- {
-		headHash = NodeMerkleTreeHash(stack[z], headHash)
+		headHash = util.NodeMerkleTreeHash(stack[z], headHash)
 	}
 	return headHash, nil
 }
@@ -48,7 +49,7 @@ func writeOutLogTreeNodes(ctx context.Context, db KeyWriter, log *pb.LogRef, ent
 // return nil, nil if already exists
 func addEntryToLog(ctx context.Context, db KeyWriter, sizeBefore int64, log *pb.LogRef, data *pb.LeafData) (*pb.LogTreeHashResponse, error) {
 	// First, calc our hash
-	mtl := LeafMerkleTreeHash(data.LeafInput)
+	mtl := util.LeafMerkleTreeHash(data.LeafInput)
 
 	// Now, see if we already have it stored
 	ei, err := lookupIndexByLeafHash(ctx, db, log.LogType, mtl)
@@ -59,7 +60,7 @@ func addEntryToLog(ctx context.Context, db KeyWriter, sizeBefore int64, log *pb.
 			return nil, nil
 		}
 		// else, we don't technically have it yet, so continue
-	case ErrNoSuchKey:
+	case util.ErrNoSuchKey:
 		// good, continue
 	default:
 		return nil, err
@@ -84,7 +85,7 @@ func addEntryToLog(ctx context.Context, db KeyWriter, sizeBefore int64, log *pb.
 	}
 
 	// Write out needed hashes
-	stack, err := fetchSubTreeHashes(ctx, db, log.LogType, createNeededStack(sizeBefore), true)
+	stack, err := fetchSubTreeHashes(ctx, db, log.LogType, util.CreateNeededStack(sizeBefore), true)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +132,7 @@ func applyLogAddEntry(ctx context.Context, db KeyWriter, sizeBefore int64, req *
 		}
 
 		// Step 3 - add entries to treehead log if neeed
-		thld, err := CreateJSONLeafDataFromProto(&pb.MapTreeHashResponse{
+		thld, err := util.CreateJSONLeafDataFromProto(&pb.MapTreeHashResponse{
 			RootHash:    mrh,
 			MutationLog: mutLogHead,
 		})

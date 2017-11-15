@@ -213,6 +213,7 @@ package verifiabledatastructures
 
 import (
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"golang.org/x/net/context"
 )
 
@@ -363,7 +364,7 @@ func (g *VerifiableLog) Entry(ctx context.Context, idx int64) (*pb.LeafData, err
 		return nil, err
 	}
 	if len(resp.Values) != 1 {
-		return nil, ErrNotFound
+		return nil, util.ErrNotFound
 	}
 	return resp.Values[0], nil
 }

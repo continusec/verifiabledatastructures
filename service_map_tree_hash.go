@@ -20,6 +20,7 @@ package verifiabledatastructures
 
 import (
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -63,12 +64,12 @@ func (s *localServiceImpl) MapTreeHash(ctx context.Context, req *pb.MapTreeHashR
 		}
 
 		// Get the root node for tree size
-		mapNode, err := lookupMapHash(ctx, kr, treeSize, BPathEmpty)
+		mapNode, err := lookupMapHash(ctx, kr, treeSize, util.BPathEmpty)
 		if err != nil {
 			return err
 		}
 
-		rh, err := calcNodeHash(mapNode, 0)
+		rh, err := util.CalcNodeHash(mapNode, 0)
 		if err != nil {
 			return err
 		}

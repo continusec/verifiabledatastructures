@@ -20,6 +20,7 @@ package verifiabledatastructures
 
 import (
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -49,6 +50,6 @@ func (s *localServiceImpl) LogAddEntry(ctx context.Context, req *pb.LogAddEntryR
 	}
 
 	return &pb.LogAddEntryResponse{
-		LeafHash: LeafMerkleTreeHash(req.Value.LeafInput),
+		LeafHash: util.LeafMerkleTreeHash(req.Value.LeafInput),
 	}, nil
 }

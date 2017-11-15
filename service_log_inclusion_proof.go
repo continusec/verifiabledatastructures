@@ -19,9 +19,8 @@ limitations under the License.
 package verifiabledatastructures
 
 import (
-	"bytes"
-
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -29,8 +28,8 @@ import (
 
 func wrapClientError(err error) error {
 	switch err {
-	case ErrNoSuchKey:
-		return ErrNotFound
+	case util.ErrNoSuchKey:
+		return util.ErrNotFound
 	default:
 		return err
 	}
@@ -91,16 +90,16 @@ func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInc
 		}
 
 		// Ranges are good
-		ranges := Path(leafIndex, 0, treeSize)
+		ranges := util.Path(leafIndex, 0, treeSize)
 		path, err := fetchSubTreeHashes(ctx, kr, req.Log.LogType, ranges, false)
 		if err != nil {
 			return err
 		}
 		for i, rr := range ranges {
 			if len(path[i]) == 0 {
-				if IsPow2(rr[1] - rr[0]) {
+				if util.IsPow2(rr[1] - rr[0]) {
 					// Would have been nice if GetSubTreeHashes could better handle these
-					return ErrNotFound
+					return util.ErrNotFound
 				}
 				path[i], err = calcSubTreeHash(ctx, kr, req.Log.LogType, rr[0], rr[1])
 				if err != nil {
@@ -124,47 +123,4 @@ func (s *localServiceImpl) LogInclusionProof(ctx context.Context, req *pb.LogInc
 		return nil, err
 	}
 	return rv, nil
-}
-
-// VerifyLogInclusionProof verifies an inclusion proof against a LogTreeHead
-func VerifyLogInclusionProof(self *pb.LogInclusionProofResponse, leafHash []byte, head *pb.LogTreeHashResponse) error {
-	if self.TreeSize != head.TreeSize {
-		return ErrVerificationFailed
-	}
-	if self.LeafIndex >= self.TreeSize {
-		return ErrVerificationFailed
-	}
-	if self.LeafIndex < 0 {
-		return ErrVerificationFailed
-	}
-
-	fn, sn := self.LeafIndex, self.TreeSize-1
-	r := leafHash
-	for _, p := range self.AuditPath {
-		if (fn == sn) || ((fn & 1) == 1) {
-			r = NodeMerkleTreeHash(p, r)
-			for !((fn == 0) || ((fn & 1) == 1)) {
-				fn >>= 1
-				sn >>= 1
-			}
-		} else {
-			r = NodeMerkleTreeHash(r, p)
-		}
-		fn >>= 1
-		sn >>= 1
-	}
-	if sn != 0 {
-		return ErrVerificationFailed
-	}
-	if !bytes.Equal(r, head.RootHash) {
-		return ErrVerificationFailed
-	}
-
-	// should not happen, but guarding anyway
-	if len(r) != 32 {
-		return ErrVerificationFailed
-	}
-
-	// all clear
-	return nil
 }

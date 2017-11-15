@@ -24,6 +24,7 @@ import (
 
 	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/util"
 )
 
 const (
@@ -65,7 +66,7 @@ func (s *localServiceImpl) verifyAccessForLog(ctx context.Context, log *pb.LogRe
 func (s *localServiceImpl) verifyAccessForLogOperation(ctx context.Context, log *pb.LogRef, op int) (*AccessModifier, error) {
 	perm, ok := operationForLogType[log.LogType][op]
 	if !ok {
-		return nil, ErrNotAuthorized
+		return nil, util.ErrNotAuthorized
 	}
 
 	return s.verifyAccessForLog(ctx, log, perm)
@@ -81,7 +82,7 @@ func filterLeafData(ld *pb.LeafData, am *AccessModifier) (*pb.LeafData, error) {
 		var o interface{}
 		err := json.Unmarshal(ld.ExtraData, &o)
 		if err != nil {
-			return nil, ErrInvalidJSON
+			return nil, util.ErrInvalidJSON
 		}
 		o, err = objecthash.Filtered(o, am.FieldFilter)
 		if err != nil {
@@ -96,6 +97,6 @@ func filterLeafData(ld *pb.LeafData, am *AccessModifier) (*pb.LeafData, error) {
 			ExtraData: rv, // redacted form
 		}, nil
 	default:
-		return nil, ErrNotImplemented
+		return nil, util.ErrNotImplemented
 	}
 }

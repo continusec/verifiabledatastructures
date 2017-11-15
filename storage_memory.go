@@ -24,6 +24,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/continusec/verifiabledatastructures/util"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -76,19 +77,19 @@ type memoryThing struct {
 
 func (db *memoryThing) Get(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	if db.Data == nil {
-		return ErrNoSuchKey
+		return util.ErrNoSuchKey
 	}
 	actKey := string(bucket) + "|" + string(key) // TODO, fix to something guaranteed to be unique
 	rv, ok := db.Data[actKey]
 	if !ok { // as distinct from 0 length
-		return ErrNoSuchKey
+		return util.ErrNoSuchKey
 	}
 	return proto.Unmarshal(rv, value)
 }
 
 func (db *memoryThing) Set(ctx context.Context, bucket, key []byte, value proto.Message) error {
 	if db.Data == nil {
-		return ErrNotImplemented
+		return util.ErrNotImplemented
 	}
 	actKey := string(bucket) + "|" + string(key) // TODO, fix to something guaranteed to be unique
 	if value == nil {
