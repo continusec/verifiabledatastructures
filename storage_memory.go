@@ -74,23 +74,22 @@ type memoryThing struct {
 	Data map[string][]byte
 }
 
-func (db *memoryThing) Get(ctx context.Context, bucket, key []byte, value proto.Message) error {
+func (db *memoryThing) Get(ctx context.Context, key []byte, value proto.Message) error {
 	if db.Data == nil {
 		return ErrNoSuchKey
 	}
-	actKey := string(bucket) + "|" + string(key) // TODO, fix to something guaranteed to be unique
-	rv, ok := db.Data[actKey]
+	rv, ok := db.Data[string(key)]
 	if !ok { // as distinct from 0 length
 		return ErrNoSuchKey
 	}
 	return proto.Unmarshal(rv, value)
 }
 
-func (db *memoryThing) Set(ctx context.Context, bucket, key []byte, value proto.Message) error {
+func (db *memoryThing) Set(ctx context.Context, key []byte, value proto.Message) error {
 	if db.Data == nil {
 		return ErrNotImplemented
 	}
-	actKey := string(bucket) + "|" + string(key) // TODO, fix to something guaranteed to be unique
+	actKey := string(key)
 	if value == nil {
 		delete(db.Data, actKey)
 		return nil

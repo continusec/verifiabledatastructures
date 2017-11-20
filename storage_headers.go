@@ -43,7 +43,7 @@ type StorageWriter interface {
 type KeyReader interface {
 	// Get reads the value for key in a bucket into a proto.
 	// It must return nil, ErrNoSuchKey if none found
-	Get(ctx context.Context, bucket, key []byte, value proto.Message) error
+	Get(ctx context.Context, key []byte, value proto.Message) error
 }
 
 // KeyWriter allows write access to a namespace
@@ -51,5 +51,5 @@ type KeyWriter interface {
 	KeyReader
 
 	// Set sets the thing. Value of nil means delete.
-	Set(ctx context.Context, bucket, key []byte, value proto.Message) error
+	Set(ctx context.Context, key []byte, value proto.Message) error
 }

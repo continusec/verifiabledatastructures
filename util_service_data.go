@@ -56,7 +56,7 @@ func generateBucketNames() map[int]map[pb.LogType][]byte {
 			{LogType: pb.LogType_STRUCT_TYPE_MUTATION_LOG, Prefix: "mutation"},
 			{LogType: pb.LogType_STRUCT_TYPE_TREEHEAD_LOG, Prefix: "treehead"},
 		} {
-			rv[b.BucketType][lt.LogType] = []byte(lt.Prefix + "_" + b.Suffix)
+			rv[b.BucketType][lt.LogType] = []byte(lt.Prefix + "_" + b.Suffix + "/")
 		}
 	}
 	return rv
@@ -65,20 +65,27 @@ func generateBucketNames() map[int]map[pb.LogType][]byte {
 var (
 	buckets = generateBucketNames()
 
-	objSizeKey    = []byte("size")
-	mapNodeBucket = []byte("map_node")
-	metadata      = []byte("metadata")
+	objSizeKey    = []byte("metadata/size")
+	mapNodeBucket = []byte("map_node/")
 )
 
 // Start pair
 
+func makeStorageKey(prefix, suffix []byte) []byte {
+	lp := len(prefix)
+	rv := make([]byte, lp+len(suffix))
+	copy(rv, prefix)
+	copy(rv[len(prefix):], suffix)
+	return rv
+}
+
 func writeDataByLeafHash(ctx context.Context, kr KeyWriter, lt pb.LogType, lh []byte, data *pb.LeafData) error {
-	return kr.Set(ctx, buckets[dataByLeafHash][lt], lh, data)
+	return kr.Set(ctx, makeStorageKey(buckets[dataByLeafHash][lt], lh), data)
 }
 
 func lookupDataByLeafHash(ctx context.Context, kr KeyReader, lt pb.LogType, lh []byte) (*pb.LeafData, error) {
 	var m pb.LeafData
-	err := kr.Get(ctx, buckets[dataByLeafHash][lt], lh, &m)
+	err := kr.Get(ctx, makeStorageKey(buckets[dataByLeafHash][lt], lh), &m)
 	if err != nil {
 		return nil, err
 	}
@@ -88,12 +95,12 @@ func lookupDataByLeafHash(ctx context.Context, kr KeyReader, lt pb.LogType, lh [
 // Start pair
 
 func writeLeafNodeByIndex(ctx context.Context, kr KeyWriter, lt pb.LogType, idx int64, data *pb.LeafNode) error {
-	return kr.Set(ctx, buckets[leafNodeByIndex][lt], toIntBinary(uint64(idx)), data)
+	return kr.Set(ctx, makeStorageKey(buckets[leafNodeByIndex][lt], toIntBinary(uint64(idx))), data)
 }
 
 func lookupLeafNodeByIndex(ctx context.Context, kr KeyReader, lt pb.LogType, idx int64) (*pb.LeafNode, error) {
 	var m pb.LeafNode
-	err := kr.Get(ctx, buckets[leafNodeByIndex][lt], toIntBinary(uint64(idx)), &m)
+	err := kr.Get(ctx, makeStorageKey(buckets[leafNodeByIndex][lt], toIntBinary(uint64(idx))), &m)
 	if err != nil {
 		return nil, err
 	}
@@ -103,12 +110,12 @@ func lookupLeafNodeByIndex(ctx context.Context, kr KeyReader, lt pb.LogType, idx
 // Start pair
 
 func writeTreeNodeByRange(ctx context.Context, kr KeyWriter, lt pb.LogType, a, b int64, data *pb.TreeNode) error {
-	return kr.Set(ctx, buckets[treeNodeByRange][lt], toDoubleIntBinary(uint64(a), uint64(b)), data)
+	return kr.Set(ctx, makeStorageKey(buckets[treeNodeByRange][lt], toDoubleIntBinary(uint64(a), uint64(b))), data)
 }
 
 func lookupTreeNodeByRange(ctx context.Context, kr KeyReader, lt pb.LogType, a, b int64) (*pb.TreeNode, error) {
 	var m pb.TreeNode
-	err := kr.Get(ctx, buckets[treeNodeByRange][lt], toDoubleIntBinary(uint64(a), uint64(b)), &m)
+	err := kr.Get(ctx, makeStorageKey(buckets[treeNodeByRange][lt], toDoubleIntBinary(uint64(a), uint64(b))), &m)
 	if err != nil {
 		return nil, err
 	}
@@ -118,13 +125,13 @@ func lookupTreeNodeByRange(ctx context.Context, kr KeyReader, lt pb.LogType, a, 
 // Start pair
 
 func writeLogRootHashBySize(ctx context.Context, kr KeyWriter, lt pb.LogType, size int64, data *pb.LogTreeHash) error {
-	return kr.Set(ctx, buckets[rootHashBySize][lt], toIntBinary(uint64(size)), data)
+	return kr.Set(ctx, makeStorageKey(buckets[rootHashBySize][lt], toIntBinary(uint64(size))), data)
 }
 
 // size must be > 0
 func lookupLogRootHashBySize(ctx context.Context, kr KeyReader, lt pb.LogType, size int64) (*pb.LogTreeHash, error) {
 	var m pb.LogTreeHash
-	err := kr.Get(ctx, buckets[rootHashBySize][lt], toIntBinary(uint64(size)), &m)
+	err := kr.Get(ctx, makeStorageKey(buckets[rootHashBySize][lt], toIntBinary(uint64(size))), &m)
 	if err != nil {
 		return nil, err
 	}
@@ -134,12 +141,12 @@ func lookupLogRootHashBySize(ctx context.Context, kr KeyReader, lt pb.LogType, s
 // Start pair
 
 func writeIndexByLeafHash(ctx context.Context, kr KeyWriter, lt pb.LogType, lh []byte, data *pb.EntryIndex) error {
-	return kr.Set(ctx, buckets[indexByLeafHash][lt], lh, data)
+	return kr.Set(ctx, makeStorageKey(buckets[indexByLeafHash][lt], lh), data)
 }
 
 func lookupIndexByLeafHash(ctx context.Context, kr KeyReader, lt pb.LogType, lh []byte) (*pb.EntryIndex, error) {
 	var m pb.EntryIndex
-	err := kr.Get(ctx, buckets[indexByLeafHash][lt], lh, &m)
+	err := kr.Get(ctx, makeStorageKey(buckets[indexByLeafHash][lt], lh), &m)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +156,12 @@ func lookupIndexByLeafHash(ctx context.Context, kr KeyReader, lt pb.LogType, lh 
 // Start pair
 
 func writeObjectSize(ctx context.Context, kr KeyWriter, size int64) error {
-	return kr.Set(ctx, metadata, objSizeKey, &pb.ObjectSize{Size: size})
+	return kr.Set(ctx, objSizeKey, &pb.ObjectSize{Size: size})
 }
 
 func readObjectSize(ctx context.Context, kr KeyReader) (int64, error) {
 	var lth pb.ObjectSize
-	err := kr.Get(ctx, metadata, objSizeKey, &lth)
+	err := kr.Get(ctx, objSizeKey, &lth)
 	switch err {
 	case nil:
 		return lth.Size, nil
@@ -188,7 +195,7 @@ func lookupLogTreeHead(ctx context.Context, kr KeyReader, lt pb.LogType) (*pb.Lo
 // Start pair
 
 func writeMapHash(ctx context.Context, kr KeyWriter, number int64, path BPath, data *pb.MapNode) error {
-	return kr.Set(ctx, mapNodeBucket, append(toIntBinary(uint64(number)), path...), data)
+	return kr.Set(ctx, makeStorageKey(mapNodeBucket, append(toIntBinary(uint64(number)), path...)), data)
 }
 
 func lookupMapHash(ctx context.Context, kr KeyReader, number int64, path BPath) (*pb.MapNode, error) {
@@ -197,7 +204,7 @@ func lookupMapHash(ctx context.Context, kr KeyReader, number int64, path BPath) 
 		return &pb.MapNode{}, nil
 	}
 	var m pb.MapNode
-	err := kr.Get(ctx, mapNodeBucket, append(toIntBinary(uint64(number)), path...), &m)
+	err := kr.Get(ctx, makeStorageKey(mapNodeBucket, append(toIntBinary(uint64(number)), path...)), &m)
 	if err != nil {
 		return nil, err
 	}

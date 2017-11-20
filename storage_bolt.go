@@ -127,8 +127,12 @@ type boltReaderWriter struct {
 	Tx *bolt.Tx
 }
 
-func (db *boltReaderWriter) Get(ctx context.Context, bucket, key []byte, value proto.Message) error {
-	b := db.Tx.Bucket(bucket)
+var (
+	rootBucket = []byte("root")
+)
+
+func (db *boltReaderWriter) Get(ctx context.Context, key []byte, value proto.Message) error {
+	b := db.Tx.Bucket(rootBucket)
 	if b == nil {
 		return ErrNoSuchKey
 	}
@@ -139,8 +143,8 @@ func (db *boltReaderWriter) Get(ctx context.Context, bucket, key []byte, value p
 	return proto.Unmarshal(rv, value)
 }
 
-func (db *boltReaderWriter) Set(ctx context.Context, bucket, key []byte, value proto.Message) error {
-	b, err := db.Tx.CreateBucketIfNotExists(bucket)
+func (db *boltReaderWriter) Set(ctx context.Context, key []byte, value proto.Message) error {
+	b, err := db.Tx.CreateBucketIfNotExists(rootBucket)
 	if err != nil {
 		return err
 	}
