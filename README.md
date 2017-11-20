@@ -12,7 +12,6 @@ For more information about how Verifiable Logs and Verifiable Maps work, please 
 
 Please drop us a note (<adam@continusec.com>) if you find this useful.
 
-
 # Quickstart
 
 ```bash
@@ -36,11 +35,13 @@ go generate
 (will need `go get -u github.com/jteeuwen/go-bindata/... github.com/golang/protobuf/protoc-gen-go`)
 
 ## Rebuild server
+
 ```bash
 go install github.com/continusec/verifiabledatastructures/cmd/vdbserver
 ```
 
 ## Run tests
+
 ```bash
 go test
 ```

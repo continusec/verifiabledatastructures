@@ -7,11 +7,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/continusec/verifiabledatastructures"
+	"github.com/continusec/verifiabledatastructures/mutator/batch"
+	"github.com/continusec/verifiabledatastructures/oracle/policy"
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/storage/memory"
+	"github.com/continusec/verifiabledatastructures/verifiable"
 )
 
-func loadLog(acc *verifiabledatastructures.Account) {
+func loadLog(acc *verifiable.Account) {
 	vlog := acc.VerifiableLog("test")
 
 	count := 100000
@@ -20,7 +23,7 @@ func loadLog(acc *verifiabledatastructures.Account) {
 
 	start := time.Now()
 	var err error
-	var lastLeaf verifiabledatastructures.LogUpdatePromise
+	var lastLeaf verifiable.LogUpdatePromise
 	for i := 0; i < count; i++ {
 		lastLeaf, err = vlog.Add(ctx, &pb.LeafData{LeafInput: []byte("v" + strconv.Itoa(i))})
 		if err != nil {
@@ -45,7 +48,7 @@ func loadLog(acc *verifiabledatastructures.Account) {
 	fmt.Println("Tree head:", treeHead)
 }
 
-func loadMap(acc *verifiabledatastructures.Account) {
+func loadMap(acc *verifiable.Account) {
 	vmap := acc.VerifiableMap("maptest")
 
 	count := 1000000
@@ -79,16 +82,16 @@ func loadMap(acc *verifiabledatastructures.Account) {
 func main() {
 	//db := &verifiabledatastructures.BoltBackedService{Path: "/tmp/data"}
 	//defer db.Close()
-	db := &verifiabledatastructures.TransientHashMapStorage{}
-	acc := (&verifiabledatastructures.Client{Service: (&verifiabledatastructures.LocalService{
-		AccessPolicy: &verifiabledatastructures.AnythingGoesOracle{},
-		Mutator: (&verifiabledatastructures.BatchMutator{
+	db := &memory.TransientStorage{}
+	acc := (&verifiable.Client{Service: (&verifiable.Service{
+		AccessPolicy: policy.Open,
+		Mutator: (&batch.Mutator{
 			Writer:     db,
 			BatchSize:  1000,
 			BufferSize: 100000,
 			Timeout:    time.Millisecond * 10,
 		}).MustCreate(),
-		//Mutator: &verifiabledatastructures.InstantMutator{Writer: db},
+		//Mutator: &instant.Mutator{Writer: db},
 		Reader: db,
 	}).MustCreate()}).Account("0", "")
 	loadLog(acc)
