@@ -24,8 +24,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/continusec/verifiabledatastructures"
+	"github.com/continusec/verifiabledatastructures/mutator/instant"
+	"github.com/continusec/verifiabledatastructures/oracle/policy"
 	"github.com/continusec/verifiabledatastructures/pb"
+	"github.com/continusec/verifiabledatastructures/server/grpc"
+	"github.com/continusec/verifiabledatastructures/server/httprest"
+	"github.com/continusec/verifiabledatastructures/storage/bolt"
+	"github.com/continusec/verifiabledatastructures/storage/memory"
+	"github.com/continusec/verifiabledatastructures/verifiable"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/browser"
@@ -37,13 +43,13 @@ func demoMode() {
 
 	bind := ":8092"
 
-	db := &verifiabledatastructures.TransientHashMapStorage{}
-	go verifiabledatastructures.StartRESTServer(&pb.ServerConfig{
+	db := &memory.TransientStorage{}
+	go httprest.StartServer(&pb.ServerConfig{
 		RestListenBind:           bind,
 		InsecureServerForTesting: true,
-	}, (&verifiabledatastructures.LocalService{
-		AccessPolicy: &verifiabledatastructures.AnythingGoesOracle{},
-		Mutator: &verifiabledatastructures.InstantMutator{
+	}, (&verifiable.Service{
+		AccessPolicy: policy.Open,
+		Mutator: &instant.Mutator{
 			Writer: db,
 		},
 		Reader: db,
@@ -73,26 +79,26 @@ func realMode(confPath string) {
 		log.Fatalf("Error parsing server configuration: %s\n", err)
 	}
 
-	db := &verifiabledatastructures.BoltBackedService{
+	db := &bolt.Storage{
 		Path: conf.BoltDbPath,
 	}
 	defer db.Close() // release file locks
 
-	service := (&verifiabledatastructures.LocalService{
-		AccessPolicy: &verifiabledatastructures.StaticOracle{
+	service := (&verifiable.Service{
+		AccessPolicy: &policy.Static{
 			Policy: conf.Accounts,
 		},
-		Mutator: &verifiabledatastructures.InstantMutator{
+		Mutator: &instant.Mutator{
 			Writer: db,
 		},
 		Reader: db,
 	}).MustCreate()
 
 	if conf.GrpcServer {
-		go verifiabledatastructures.StartGRPCServer(conf, service)
+		go grpc.StartServer(conf, service)
 	}
 	if conf.RestServer {
-		go verifiabledatastructures.StartRESTServer(conf, service)
+		go httprest.StartServer(conf, service)
 	}
 	select {} // wait forever
 }
