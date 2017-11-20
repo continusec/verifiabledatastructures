@@ -70,8 +70,8 @@ type chObject struct {
 }
 
 type op struct {
-	Key, Bucket []byte
-	Value       proto.Message
+	Key   []byte
+	Value proto.Message
 }
 
 type mapNoLockDB struct {
@@ -86,28 +86,27 @@ type batchMutatorImpl struct {
 }
 
 // It must return nil, ErrNoSuchKey if none found
-func (m *mapNoLockDB) Get(ctx context.Context, bucket, key []byte, value proto.Message) error {
-	k := hex.EncodeToString(bucket) + "|" + hex.EncodeToString(key)
+func (m *mapNoLockDB) Get(ctx context.Context, key []byte, value proto.Message) error {
+	k := hex.EncodeToString(key)
 	b, ok := m.M[k]
 	if ok {
 		return proto.Unmarshal(b, value)
 	}
-	return m.Parent.Get(ctx, bucket, key, value)
+	return m.Parent.Get(ctx, key, value)
 }
 
 // Set sets the thing. Value of nil means delete.
 // It must return nil, ErrNoSuchKey if none found
-func (m *mapNoLockDB) Set(ctx context.Context, bucket, key []byte, value proto.Message) error {
-	k := hex.EncodeToString(bucket) + "|" + hex.EncodeToString(key)
+func (m *mapNoLockDB) Set(ctx context.Context, key []byte, value proto.Message) error {
+	k := hex.EncodeToString(key)
 	b, err := proto.Marshal(value)
 	if err != nil {
 		return err
 	}
 	m.M[k] = b
 	m.L = append(m.L, &op{
-		Bucket: bucket,
-		Key:    key,
-		Value:  value,
+		Key:   key,
+		Value: value,
 	})
 	return nil
 }
@@ -184,7 +183,7 @@ func (bm *batchMutatorImpl) consume() {
 		if nextSize > startSize { // save it out
 			err = bm.Conf.Writer.ExecuteUpdate(ctx, ns, func(ctx context.Context, kw KeyWriter) error {
 				for _, o := range wrapper.L {
-					err := kw.Set(ctx, o.Bucket, o.Key, o.Value)
+					err := kw.Set(ctx, o.Key, o.Value)
 					if err != nil {
 						return err
 					}
