@@ -477,6 +477,9 @@ func TestObjectsMeetReq(t *testing.T) {
 	kr = &BoltBackedService{}
 	kw = &BoltBackedService{}
 
+	kr = &BadgerBackedService{}
+	kw = &BadgerBackedService{}
+
 	m = &InstantMutator{}
 	m = (&BatchMutator{}).MustCreate()
 
