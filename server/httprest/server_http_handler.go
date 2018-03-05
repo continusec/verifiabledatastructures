@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -71,6 +72,7 @@ var (
 type apiServer struct {
 	service pb.VerifiableDataStructuresServiceServer
 	cc      ContextCreator
+	logger  *log.Logger
 }
 
 // ContextCreator is a function that can produce a context object based on a request.
@@ -79,8 +81,12 @@ type ContextCreator func(*http.Request) context.Context
 
 // CreateRESTHandler creates handlers for the API
 // Leave cc nil unless you need to be able to create a specialized context, e.g. GAE
-func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer, cc ContextCreator) http.Handler {
-	as := &apiServer{service: s}
+// logger can be nil - set for debug
+func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer, cc ContextCreator, logger *log.Logger) http.Handler {
+	as := &apiServer{
+		service: s,
+		logger:  logger,
+	}
 	if cc == nil {
 		as.cc = defaultRequestContext
 	} else {
@@ -134,15 +140,15 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer, cc ContextCre
 	} {
 		for _, f := range commonSuffixes {
 			// Insert and modify map entry
-			r.HandleFunc(version+"/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/"+h.Ch+f.Suffix, wrapMapFunctionWithKeyAndFormat(h.KeyFormat, f.EntryFormat, as.setMapEntry)).Methods("PUT")
+			r.HandleFunc(version+"/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/"+h.Ch+f.Suffix, wrapMapFunctionWithKeyAndFormat(logger, h.KeyFormat, f.EntryFormat, as.setMapEntry)).Methods("PUT")
 
 			if f.Gettable {
 				// Get value + proof
-				r.HandleFunc(version+"/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/"+h.Ch+f.Suffix, wrapMapFunctionWithKeyAndFormat(h.KeyFormat, f.EntryFormat, as.getMapEntry)).Methods("GET")
+				r.HandleFunc(version+"/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/tree/{treesize:(?:[0-9]+)|head}/key/"+h.Ch+f.Suffix, wrapMapFunctionWithKeyAndFormat(logger, h.KeyFormat, f.EntryFormat, as.getMapEntry)).Methods("GET")
 			}
 		}
 		// Delete a map entry
-		r.HandleFunc(version+"/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/"+h.Ch, wrapMapFunctionWithKey(h.KeyFormat, as.deleteMapEntryHandler)).Methods("DELETE")
+		r.HandleFunc(version+"/account/{account:[0-9]+}/map/{map:[0-9a-z-_]+}/key/"+h.Ch, wrapMapFunctionWithKey(logger, h.KeyFormat, as.deleteMapEntryHandler)).Methods("DELETE")
 	}
 
 	// Get STH
@@ -153,12 +159,12 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer, cc ContextCre
 		w.WriteHeader(200)
 	}).Methods("OPTIONS")
 
-	r.HandleFunc("/", staticHandler("text/html", "index.html"))
-	r.HandleFunc("/continusec.js", staticHandler("text/javascript", "continusec.js"))
-	r.HandleFunc("/favicon.ico", staticHandler("image/x-icon", "favicon.ico"))
-	r.HandleFunc("/log.js", staticHandler("text/javascript", "log.js"))
-	r.HandleFunc("/logo.png", staticHandler("image/png", "logo.png"))
-	r.HandleFunc("/main.css", staticHandler("text/css", "main.css"))
+	r.HandleFunc("/", staticHandler(logger, "text/html", "index.html"))
+	r.HandleFunc("/continusec.js", staticHandler(logger, "text/javascript", "continusec.js"))
+	r.HandleFunc("/favicon.ico", staticHandler(logger, "image/x-icon", "favicon.ico"))
+	r.HandleFunc("/log.js", staticHandler(logger, "text/javascript", "log.js"))
+	r.HandleFunc("/logo.png", staticHandler(logger, "image/png", "logo.png"))
+	r.HandleFunc("/main.css", staticHandler(logger, "text/css", "main.css"))
 
 	// Since we do NO cookie or basic auth, allow CORS
 	return handlers.CORS(
@@ -169,11 +175,11 @@ func CreateRESTHandler(s pb.VerifiableDataStructuresServiceServer, cc ContextCre
 	)(r)
 }
 
-func staticHandler(mime, name string) func(http.ResponseWriter, *http.Request) {
+func staticHandler(logger *log.Logger, mime, name string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, err := assets.Asset("assets/static/" + name)
 		if err != nil {
-			writeResponseHeader(w, err)
+			writeResponseHeader(logger, w, err)
 			return
 		}
 		w.Header().Set("Content-Type", mime)
@@ -237,7 +243,7 @@ func wrapLogFunctionWithFormat(logType pb.LogType, ef *formatMetadata, f func(*p
 	})
 }
 
-func wrapMapFunctionWithKey(keyType int, f func(*pb.MapRef, []byte, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func wrapMapFunctionWithKey(logger *log.Logger, keyType int, f func(*pb.MapRef, []byte, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return wrapMapFunction(func(vmap *pb.MapRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		var k []byte
 		switch keyType {
@@ -247,19 +253,19 @@ func wrapMapFunctionWithKey(keyType int, f func(*pb.MapRef, []byte, map[string]s
 			var err error
 			k, err = hex.DecodeString(vars["key"])
 			if err != nil {
-				writeResponseHeader(w, verifiable.ErrInvalidRequest)
+				writeResponseHeader(logger, w, verifiable.ErrInvalidRequest)
 				return
 			}
 		default:
-			writeResponseHeader(w, verifiable.ErrNotImplemented)
+			writeResponseHeader(logger, w, verifiable.ErrNotImplemented)
 			return
 		}
 		f(vmap, k, vars, w, r)
 	})
 }
 
-func wrapMapFunctionWithKeyAndFormat(keyType int, ef int, f func(*pb.MapRef, []byte, int, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
-	return wrapMapFunctionWithKey(keyType, func(vmap *pb.MapRef, k []byte, vars map[string]string, w http.ResponseWriter, r *http.Request) {
+func wrapMapFunctionWithKeyAndFormat(logger *log.Logger, keyType int, ef int, f func(*pb.MapRef, []byte, int, map[string]string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return wrapMapFunctionWithKey(logger, keyType, func(vmap *pb.MapRef, k []byte, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 		f(vmap, k, ef, vars, w, r)
 	})
 }
@@ -268,10 +274,14 @@ func defaultRequestContext(r *http.Request) context.Context {
 	return context.Background()
 }
 
-func writeResponseHeader(w http.ResponseWriter, err error) {
+func writeResponseHeader(logger *log.Logger, w http.ResponseWriter, err error) {
 	if err == nil {
 		w.WriteHeader(http.StatusOK)
 		return
+	}
+
+	if logger != nil {
+		logger.Println(err.Error())
 	}
 
 	s, ok := status.FromError(err)
@@ -311,7 +321,7 @@ func (as *apiServer) getLogTreeHashHandler(log *pb.LogRef, vars map[string]strin
 	} else {
 		ts, err := strconv.Atoi(vars["treesize"])
 		if err != nil {
-			writeResponseHeader(w, verifiable.ErrInvalidRequest)
+			writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 			return
 		}
 		treeSize = int64(ts)
@@ -322,7 +332,7 @@ func (as *apiServer) getLogTreeHashHandler(log *pb.LogRef, vars map[string]strin
 		TreeSize: treeSize,
 	})
 	if err != nil {
-		writeResponseHeader(w, err)
+		writeResponseHeader(as.logger, w, err)
 		return
 	}
 
@@ -337,13 +347,13 @@ func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]
 		var err error
 		treeSize, err = strconv.Atoi(vars["treesize"])
 		if err != nil {
-			writeResponseHeader(w, verifiable.ErrInvalidRequest)
+			writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 			return
 		}
 	}
 	oldSize, err := strconv.Atoi(vars["oldsize"])
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
@@ -353,7 +363,7 @@ func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]
 		TreeSize: int64(treeSize),
 	})
 	if err != nil {
-		writeResponseHeader(w, err)
+		writeResponseHeader(as.logger, w, err)
 		return
 	}
 
@@ -363,7 +373,7 @@ func (as *apiServer) getConsistencyProofHandler(log *pb.LogRef, vars map[string]
 func (as *apiServer) inclusionProofHandler(log *pb.LogRef, vars map[string]string, partial *pb.LogInclusionProofRequest, w http.ResponseWriter, r *http.Request) {
 	treeSize, err := strconv.Atoi(vars["treesize"])
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
@@ -372,7 +382,7 @@ func (as *apiServer) inclusionProofHandler(log *pb.LogRef, vars map[string]strin
 
 	resp, err := as.service.LogInclusionProof(as.cc(r), partial)
 	if err != nil {
-		writeResponseHeader(w, err)
+		writeResponseHeader(as.logger, w, err)
 		return
 	}
 
@@ -382,7 +392,7 @@ func (as *apiServer) inclusionProofHandler(log *pb.LogRef, vars map[string]strin
 func (as *apiServer) inclusionByIndexProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	number, err := strconv.Atoi(vars["number"])
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
@@ -400,7 +410,7 @@ func (as *apiServer) inclusionByStringProofHandler(log *pb.LogRef, vars map[stri
 func (as *apiServer) inclusionByHashProofHandler(log *pb.LogRef, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	mtlHash, err := hex.DecodeString(vars["hash"])
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
@@ -413,13 +423,13 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 	body, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
 	ld, err := createLeafData(body, ef.EntryFormat)
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
@@ -428,7 +438,7 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 		Value: ld,
 	})
 	if err != nil {
-		writeResponseHeader(w, err)
+		writeResponseHeader(as.logger, w, err)
 		return
 	}
 
@@ -439,7 +449,7 @@ func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars
 func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	number, err := strconv.Atoi(vars["number"])
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
@@ -449,29 +459,29 @@ func (as *apiServer) getEntryHandler(log *pb.LogRef, ef *formatMetadata, vars ma
 		Last:  int64(number + 1),
 	})
 	if err != nil {
-		writeResponseHeader(w, err)
+		writeResponseHeader(as.logger, w, err)
 		return
 	}
 
 	// Make sure we get exactly 1 back
 	if len(resp.Values) != 1 {
-		writeResponseHeader(w, verifiable.ErrNotFound)
+		writeResponseHeader(as.logger, w, verifiable.ErrNotFound)
 		return
 	}
 
-	writeResponseData(w, resp.Values[0], ef.EntryFormat)
+	writeResponseData(as.logger, w, resp.Values[0], ef.EntryFormat)
 }
 
 func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
 	first, err := strconv.Atoi(vars["first"])
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
 	last, err := strconv.Atoi(vars["last"])
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
@@ -481,7 +491,7 @@ func (as *apiServer) getEntriesHandler(log *pb.LogRef, ef *formatMetadata, vars 
 		Last:  int64(last),
 	})
 	if err != nil {
-		writeResponseHeader(w, err)
+		writeResponseHeader(as.logger, w, err)
 		return
 	}
 
@@ -496,7 +506,7 @@ func (as *apiServer) getMapRootHashHandler(vmap *pb.MapRef, vars map[string]stri
 		var err error
 		treeSize, err = strconv.Atoi(vars["treesize"])
 		if err != nil {
-			writeResponseHeader(w, verifiable.ErrInvalidRequest)
+			writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 			return
 		}
 	}
@@ -506,7 +516,7 @@ func (as *apiServer) getMapRootHashHandler(vmap *pb.MapRef, vars map[string]stri
 		TreeSize: int64(treeSize),
 	})
 	if err != nil {
-		writeResponseHeader(w, err)
+		writeResponseHeader(as.logger, w, err)
 		return
 	}
 
@@ -520,7 +530,7 @@ func (as *apiServer) queueMapMutation(vmap *pb.MapRef, mut *pb.MapMutation, w ht
 		Mutation: mut,
 	})
 	if err != nil {
-		writeResponseHeader(w, err)
+		writeResponseHeader(as.logger, w, err)
 		return
 	}
 	writeSuccessJSON(w, resp)
@@ -541,7 +551,7 @@ func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 		var err error
 		treeSize, err = strconv.Atoi(vars["treesize"])
 		if err != nil {
-			writeResponseHeader(w, verifiable.ErrInvalidRequest)
+			writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 			return
 		}
 	}
@@ -552,7 +562,7 @@ func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 		Key:      key,
 	})
 	if err != nil {
-		writeResponseHeader(w, err)
+		writeResponseHeader(as.logger, w, err)
 		return
 	}
 
@@ -563,7 +573,7 @@ func (as *apiServer) getMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 		}
 	}
 
-	writeResponseData(w, resp.Value, ef)
+	writeResponseData(as.logger, w, resp.Value, ef)
 }
 
 func getResponseData(ld *pb.LeafData, ef int) ([]byte, error) {
@@ -579,10 +589,10 @@ func getResponseData(ld *pb.LeafData, ef int) ([]byte, error) {
 	}
 }
 
-func writeResponseData(w http.ResponseWriter, ld *pb.LeafData, ef int) {
+func writeResponseData(logger *log.Logger, w http.ResponseWriter, ld *pb.LeafData, ef int) {
 	data, err := getResponseData(ld, ef)
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 	writeSuccessContent(w, data)
@@ -636,7 +646,7 @@ func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 		var err error
 		prevLeafHash, err = hex.DecodeString(prevLeafHashString)
 		if err != nil {
-			writeResponseHeader(w, verifiable.ErrInvalidRequest)
+			writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 			return
 		}
 	}
@@ -644,13 +654,13 @@ func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 	body, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
 	ld, err := createLeafData(body, ef)
 	if err != nil {
-		writeResponseHeader(w, verifiable.ErrInvalidRequest)
+		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
 		return
 	}
 
