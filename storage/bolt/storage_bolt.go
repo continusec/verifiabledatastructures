@@ -1,6 +1,6 @@
 /*
 
-Copyright 2017 Continusec Pty Ltd
+Copyright 2019 Continusec Pty Ltd
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/boltdb/bolt"
+	bolt "go.etcd.io/bbolt"
 	"github.com/continusec/verifiabledatastructures/verifiable"
 	"github.com/golang/protobuf/proto"
 )
