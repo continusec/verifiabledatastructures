@@ -37,7 +37,7 @@ go generate
 ## Rebuild server
 
 ```bash
-go install github.com/continusec/verifiabledatastructures/cmd/vdbserver
+make
 ```
 
 ## Run tests
