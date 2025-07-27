@@ -15,11 +15,11 @@ Please drop us a note (<adam@continusec.com>) if you find this useful.
 # Quickstart
 
 ```bash
-go get github.com/continusec/verifiabledatastructures/cmd/vdbserver
+make
 ```
 
 ```bash
-vdbserver
+./target/vdbserver
 ```
 
 # Development Commands
@@ -43,7 +43,7 @@ go install github.com/continusec/verifiabledatastructures/cmd/vdbserver
 ## Run tests
 
 ```bash
-go test
+make test
 ```
 
 ## Sample config file for server

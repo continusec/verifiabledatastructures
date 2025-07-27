@@ -91,12 +91,8 @@ func (bbs *Storage) getOrCreateDB(ns []byte) (*badger.DB, error) {
 		return rv, nil
 	}
 
-	// Get or create on distk
-	opts := badger.DefaultOptions
-	dir := filepath.Join(bbs.Path, key)
-	opts.Dir = dir
-	opts.ValueDir = dir
-	db, err := badger.Open(opts)
+	// Get or create on disk
+	db, err := badger.Open(badger.DefaultOptions(filepath.Join(bbs.Path, key)))
 	if err != nil {
 		return nil, err
 	}
@@ -136,11 +132,9 @@ func (db *badgerReaderWriter) Get(ctx context.Context, key []byte, value proto.M
 	if err != nil {
 		return verifiable.ErrNoSuchKey
 	}
-	rv, err := item.Value()
-	if err != nil {
-		return err
-	}
-	return proto.Unmarshal(rv, value)
+	return item.Value(func(bb []byte) error {
+		return proto.Unmarshal(bb, value)
+	})
 }
 
 func (db *badgerReaderWriter) Set(ctx context.Context, key []byte, value proto.Message) error {
