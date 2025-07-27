@@ -9,13 +9,14 @@ import (
 
 	"github.com/continusec/verifiabledatastructures/verifiable"
 	"github.com/golang/protobuf/proto"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Storage implements a Postgresql backed storage layer, suitable for use with the
 // verifiabledatastructures library.
 type Storage struct {
-	Pool *pgx.ConnPool
+	Pool *pgxpool.Conn
 
 	knownTableMutex sync.RWMutex
 	knownTables     map[string]string
@@ -23,7 +24,7 @@ type Storage struct {
 
 type txWriter struct {
 	// Tx is the transaction asssociated with this session
-	Tx *pgx.Tx
+	Tx pgx.Tx
 
 	// Table is the name of the table on which we are operating
 	Table string
@@ -32,7 +33,7 @@ type txWriter struct {
 // Get must return ErrNoSuchKey if none found
 func (t *txWriter) Get(ctx context.Context, key []byte, value proto.Message) error {
 	var data []byte
-	err := t.Tx.QueryRow(fmt.Sprintf(`SELECT value FROM "%s" WHERE key = $1`, t.Table), key).Scan(&data)
+	err := t.Tx.QueryRow(ctx, fmt.Sprintf(`SELECT value FROM "%s" WHERE key = $1`, t.Table), key).Scan(&data)
 	switch err {
 	case nil:
 		return proto.Unmarshal(data, value)
@@ -46,7 +47,7 @@ func (t *txWriter) Get(ctx context.Context, key []byte, value proto.Message) err
 // Set with value of nil means delete
 func (t *txWriter) Set(ctx context.Context, key []byte, value proto.Message) error {
 	if value == nil {
-		_, err := t.Tx.Exec(fmt.Sprintf(`DELETE FROM "%s" WHERE key = $1`, t.Table), key)
+		_, err := t.Tx.Exec(ctx, fmt.Sprintf(`DELETE FROM "%s" WHERE key = $1`, t.Table), key)
 		return err
 	}
 
@@ -55,7 +56,7 @@ func (t *txWriter) Set(ctx context.Context, key []byte, value proto.Message) err
 		return err
 	}
 
-	_, err = t.Tx.Exec(fmt.Sprintf(`INSERT INTO "%s" (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2`, t.Table), key, data)
+	_, err = t.Tx.Exec(ctx, fmt.Sprintf(`INSERT INTO "%s" (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2`, t.Table), key, data)
 	return err
 }
 
@@ -78,21 +79,21 @@ func (pgs *Storage) getOrCreateNS(ctx context.Context, namespace []byte) (string
 	sh := sha256.Sum256(namespace) // NOTE we just use the first 16 bytes of the SHA256 hash, else we hit PG identifier limits.
 	nameToUser := fmt.Sprintf("vds_%s", hex.EncodeToString(sh[:16]))
 
-	tx, err := pgs.Pool.Begin()
+	tx, err := pgs.Pool.Begin(ctx)
 	if err != nil {
 		return "", err
 	}
-	_, err = tx.Exec(fmt.Sprintf(`
+	_, err = tx.Exec(ctx, fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			key   bytea PRIMARY KEY,
 			value bytea
 		)
 	`, nameToUser))
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback(ctx)
 		return "", err
 	}
-	err = tx.Commit()
+	err = tx.Commit(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -116,11 +117,11 @@ func (pgs *Storage) ExecuteReadOnly(ctx context.Context, namespace []byte, f fun
 		return err
 	}
 
-	tx, err := pgs.Pool.Begin()
+	tx, err := pgs.Pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(ctx)
 
 	return f(ctx, &txWriter{
 		Table: tableName,
@@ -136,14 +137,14 @@ func (pgs *Storage) ExecuteUpdate(ctx context.Context, namespace []byte, f func(
 		return err
 	}
 
-	tx, err := pgs.Pool.Begin()
+	tx, err := pgs.Pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(ctx)
 
 	// Only one update per table to run at once...
-	_, err = tx.Exec(fmt.Sprintf(`LOCK TABLE "%s" IN EXCLUSIVE MODE`, tableName))
+	_, err = tx.Exec(ctx, fmt.Sprintf(`LOCK TABLE "%s" IN EXCLUSIVE MODE`, tableName))
 	if err != nil {
 		return err
 	}
@@ -156,5 +157,5 @@ func (pgs *Storage) ExecuteUpdate(ctx context.Context, namespace []byte, f func(
 		return err
 	}
 
-	return tx.Commit()
+	return tx.Commit(ctx)
 }
