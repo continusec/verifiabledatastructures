@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/continusec/verifiabledatastructures/verifiable"
-	"github.com/golang/protobuf/proto"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/protobuf/proto"
 )
 
 // Storage implements a Postgresql backed storage layer, suitable for use with the

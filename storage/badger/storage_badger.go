@@ -27,7 +27,7 @@ import (
 
 	"github.com/continusec/verifiabledatastructures/verifiable"
 	"github.com/dgraph-io/badger"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // Storage gives a service that persists to a Badger DB file.

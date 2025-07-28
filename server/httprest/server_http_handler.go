@@ -21,7 +21,7 @@ package httprest
 import (
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -420,7 +420,7 @@ func (as *apiServer) inclusionByHashProofHandler(log *pb.LogRef, vars map[string
 }
 
 func (as *apiServer) insertEntryHandler(log *pb.LogRef, ef *formatMetadata, vars map[string]string, w http.ResponseWriter, r *http.Request) {
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
 		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)
@@ -651,7 +651,7 @@ func (as *apiServer) setMapEntry(vmap *pb.MapRef, key []byte, ef int, vars map[s
 		}
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
 		writeResponseHeader(as.logger, w, verifiable.ErrInvalidRequest)

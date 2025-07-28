@@ -28,7 +28,7 @@ import (
 
 	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/continusec/verifiabledatastructures/verifiable"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // Mutator has configuration data for a batch mutator service

@@ -87,6 +87,7 @@ func (g *Client) MustDial() pb.VerifiableDataStructuresServiceServer {
 }
 
 type wrapSillyClientAsServer struct {
+	pb.UnimplementedVerifiableDataStructuresServiceServer
 	Client pb.VerifiableDataStructuresServiceClient
 }
 

@@ -19,7 +19,6 @@ limitations under the License.
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -32,8 +31,8 @@ import (
 	"github.com/continusec/verifiabledatastructures/storage/bolt"
 	"github.com/continusec/verifiabledatastructures/storage/memory"
 	"github.com/continusec/verifiabledatastructures/verifiable"
+	"google.golang.org/protobuf/encoding/prototext"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/browser"
 )
 
@@ -68,13 +67,13 @@ func demoMode() {
 }
 
 func realMode(confPath string) {
-	confData, err := ioutil.ReadFile(confPath)
+	confData, err := os.ReadFile(confPath)
 	if err != nil {
 		log.Fatalf("Error reading server configuration: %s\n", err)
 	}
 
 	conf := &pb.ServerConfig{}
-	err = proto.UnmarshalText(string(confData), conf)
+	err = prototext.Unmarshal(confData, conf)
 	if err != nil {
 		log.Fatalf("Error parsing server configuration: %s\n", err)
 	}

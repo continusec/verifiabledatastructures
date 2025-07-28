@@ -21,7 +21,7 @@ package verifiable
 import (
 	"golang.org/x/net/context"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // StorageReader can execute read-only transactions on a given namespace

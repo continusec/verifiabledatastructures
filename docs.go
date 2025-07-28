@@ -162,7 +162,7 @@ Here is a full example of using verifiabledatastructures as an embedded storage 
 		"github.com/continusec/verifiabledatastructures/pb"
 		"github.com/continusec/verifiabledatastructures/storage/bolt"
 		"github.com/continusec/verifiabledatastructures/verifiable"
-		"github.com/golang/protobuf/proto"
+		"google.golang.org/protobuf/proto"
 	)
 
 	func main() {
@@ -214,8 +214,5 @@ Here is a full example of using verifiabledatastructures as an embedded storage 
 	}
 
 */
-
-//go:generate protoc --go_out=plugins=grpc:../../.. -Iproto proto/api.proto proto/configuration.proto proto/storage.proto
-//go:generate go-bindata -pkg assets -o assets/assets.go assets/static/
 
 package verifiabledatastructures

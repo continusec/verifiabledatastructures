@@ -21,7 +21,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -41,6 +41,8 @@ const (
 // Client provides a way to access the API over HTTP REST.
 // Where possible it is suggested that the grpc.Client be used in preference.
 type Client struct {
+	pb.UnimplementedVerifiableDataStructuresServiceServer
+
 	// BaseURL is the URL (with no trailing slash) of the server, e.g. http://localhost:8081
 	BaseURL string
 
@@ -108,7 +110,7 @@ func (c *httpRestImpl) makeRequest(account *pb.AccountRef, method, path string, 
 	}
 
 	defer resp.Body.Close()
-	contents, err := ioutil.ReadAll(resp.Body)
+	contents, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, nil, err
 	}

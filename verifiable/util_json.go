@@ -24,7 +24,7 @@ import (
 
 	"github.com/continusec/objecthash"
 	"github.com/continusec/verifiabledatastructures/pb"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // CreateJSONLeafDataFromMutation serializes the map mutation to JSON,

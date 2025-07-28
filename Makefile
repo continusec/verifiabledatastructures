@@ -24,3 +24,8 @@ clean:
 
 test:
 	go test ./...
+
+pb: proto/*.proto
+	mkdir -p pb
+	protoc --go_out=pb --go_opt=paths=source_relative --go-grpc_out=pb --go-grpc_opt=paths=source_relative -Iproto proto/api.proto proto/configuration.proto proto/storage.proto
+	touch pb

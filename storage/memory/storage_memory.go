@@ -25,7 +25,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/continusec/verifiabledatastructures/verifiable"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // TransientStorage gives a service that does inefficiently locking, keeps everything in memory, and doesn't

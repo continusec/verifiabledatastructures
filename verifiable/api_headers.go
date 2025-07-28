@@ -16,9 +16,6 @@ limitations under the License.
 
 */
 
-//go:generate protoc --go_out=plugins=grpc:../../.. -Iproto proto/api.proto proto/configuration.proto proto/storage.proto
-//go:generate go-bindata -pkg assets -o assets/assets.go assets/static/
-
 package verifiable
 
 import (
@@ -133,5 +130,6 @@ type LeafDataAuditFunction func(context.Context, *pb.LeafData) error
 // reasons outlined above.
 // key is the key that is being changed
 // value (produced by VerifiableEntryFactory specified when creating the auditor) is the
-//  value being set/deleted/modified.
+//
+//	value being set/deleted/modified.
 type MapAuditFunction func(ctx context.Context, idx int64, key []byte, value *pb.LeafData) error

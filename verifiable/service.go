@@ -29,6 +29,8 @@ import (
 // Verifiable Data Structures API. It may be wrapped by client directly, or used to
 // start a gRPC and/or HTTP REST server
 type Service struct {
+	pb.UnimplementedVerifiableDataStructuresServiceServer
+
 	// Mutator, if set is where mutations for the logs and maps are sent. If nil, we are readonly
 	Mutator MutatorService
 

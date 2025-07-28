@@ -29,10 +29,10 @@ The following commands are useful for those working with the source.
 ## Re-generate proto and asset files
 
 ```bash
-go generate
+make generate
 ```
 
-(will need `go get -u github.com/jteeuwen/go-bindata/... github.com/golang/protobuf/protoc-gen-go`)
+(will need `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest` and `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest`)
 
 ## Rebuild server
 

@@ -26,9 +26,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	bolt "go.etcd.io/bbolt"
 	"github.com/continusec/verifiabledatastructures/verifiable"
-	"github.com/golang/protobuf/proto"
+	bolt "go.etcd.io/bbolt"
+	"google.golang.org/protobuf/proto"
 )
 
 // Storage gives a service that persists to a BoltDB file.

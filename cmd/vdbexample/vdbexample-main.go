@@ -9,7 +9,6 @@ import (
 	"github.com/continusec/verifiabledatastructures/pb"
 	"github.com/continusec/verifiabledatastructures/storage/bolt"
 	"github.com/continusec/verifiabledatastructures/verifiable"
-	"github.com/golang/protobuf/proto"
 )
 
 func main() {
@@ -57,5 +56,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(proto.CompactTextString(th))
+	log.Println(th.String())
 }
